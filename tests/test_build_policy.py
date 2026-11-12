@@ -41,7 +41,7 @@ class BuildPolicy(unittest.TestCase):
         exporter = module("export_source")
         with tempfile.TemporaryDirectory() as folder:
             exporter.ROOT = Path(folder)
-            for name in ["README.md", "Cargo.lock", "crates/core/src/lib.rs", "data/chat.sqlite3", "apps/app/user.db-wal", "apps/app/key.pem", "apps/app/node_modules/package.json", "plugins/test/android/.tauri/copied-sdk.kt", "plugins/test/android/build/outputs/aar/plugin.aar", "plugins/test/android/.gradle/cache.bin", "backups/private.bak", "apps/app/notes.backup", ".env"]:
+            for name in ["README.md", ".gitattributes", "Cargo.lock", "crates/core/src/lib.rs", "data/chat.sqlite3", "apps/app/user.db-wal", "apps/app/key.pem", "apps/app/node_modules/package.json", "plugins/test/android/.tauri/copied-sdk.kt", "plugins/test/android/build/outputs/aar/plugin.aar", "plugins/test/android/.gradle/cache.bin", "backups/private.bak", "apps/app/notes.backup", ".env"]:
                 file = exporter.ROOT / name
                 file.parent.mkdir(parents=True, exist_ok=True)
                 file.write_text("fixture")
@@ -50,7 +50,7 @@ class BuildPolicy(unittest.TestCase):
             except (OSError, NotImplementedError):
                 pass
             names = {str(relative) for _, relative in exporter.source_files()}
-            self.assertEqual(names, {"README.md", "Cargo.lock", "crates/core/src/lib.rs"})
+            self.assertEqual(names, {"README.md", ".gitattributes", "Cargo.lock", "crates/core/src/lib.rs"})
 
     def test_export_rejects_credential_shaped_content_even_in_env_example(self):
         exporter = module("export_source")

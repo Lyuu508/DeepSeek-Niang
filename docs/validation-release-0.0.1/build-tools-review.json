@@ -1,0 +1,21 @@
+{
+  "reviewed_on": "2026-11-13",
+  "manual_build_only": true,
+  "automatic_release": false,
+  "github_token_permissions": {
+    "contents": "read"
+  },
+  "pinned_official_actions": {
+    "actions/checkout": "3d3c42e5aac5ba805825da76410c181273ba90b1",
+    "actions/setup-node": "949feb2413d6458794dcd2491c4babbbce0c15c1",
+    "actions/upload-artifact": "cf430e030ddbb5b0abf93d22962f4752f3646cd9"
+  },
+  "inspected": [
+    "action.yml",
+    "package.json",
+    "project build scripts",
+    "locked dependency manifests"
+  ],
+  "original_png_sha256": "070adedf4a8896745ea8fb7755b3cbe4b673bcb51d1edc88cc76e46ea937aff1",
+  "android_signing_key_uploaded": false
+}

@@ -9,8 +9,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SKIP = {".git", ".tauri", ".gradle", ".kotlin", "build", "node_modules", "target", "dist", ".cache", "__pycache__", "gen", "data", "private", "backups", "exports", "media-cache", "secrets", "output", "work", "artifacts"}
-ROOT_FILES = {".env.example", ".gitignore", ".npmrc", "AGENTS.md", "README.md", "CHANGELOG.md", "SECURITY.md", "DEVELOPMENT_PLAN.md", "Cargo.toml", "Cargo.lock", "package.json", "package-lock.json"}
-SOURCE_DIRS = {"apps", "assets", "crates", "db", "docs", "packages", "plugins", "scripts", "tests"}
+ROOT_FILES = {".env.example", ".gitattributes", ".gitignore", ".npmrc", "AGENTS.md", "README.md", "CHANGELOG.md", "SECURITY.md", "DEVELOPMENT_PLAN.md", "Cargo.toml", "Cargo.lock", "package.json", "package-lock.json"}
+SOURCE_DIRS = {".github", "apps", "assets", "crates", "db", "docs", "packages", "plugins", "scripts", "tests"}
 DENIED = re.compile(r"\.(?:db|sqlite|sqlite3|pem|key|p12|pfx|jks|keystore|age|bak|backup|log|zip|class|aar|jar|apk|aab|exe|dll|msi|so|dylib)(?:[-.]|$)", re.I)
 
 

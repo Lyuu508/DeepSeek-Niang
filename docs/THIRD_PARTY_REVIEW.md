@@ -63,3 +63,11 @@ npm audit 的当次结果单独记录在 VALIDATION；零已知告警不等于�
 已有Pillow13.0.0仅用于本地确定性裁切/缩放及临时纯色夹具测试；未下载新库/模型，未把夹具当角色。原始PNG缺失时校验非零退出，Tauri原生dev/build和本机脚本不以旧DS图标交付新版。当前只做资源脚本/哈希/安全区算法测试，实际人物裁切与系统显示仍须原图及真机。
 
 PowerShell脚本静态检查沿用已审阅的官方工具命令，当前环境未在Windows执行；Android准备脚本只改生成工程的名称/资源/网络/备份/键盘策略，applicationId/签名不变。没有GitHub工作流或自动发布。静态检查不构成绝对安全证明。
+
+## 0.0.1正式图标与Windows构建（2026-11-13）
+
+原始PNG仅从用户ZIP提取单个PNG，限制大小、拒绝符号链接、不执行归档内容。Pillow只缩放/裁切；master原字节校验。没有引入角色/声音/视觉模型或新API。
+
+Windows构建为手动workflow_dispatch，contents:read，没有push/tag触发或发布操作。固定GitHub官方actions/checkout v7.0.1、setup-node v7.1.0、upload-artifact v7.0.2的完整提交（见workflow）。已静态核对其action.yml、package.json与运行入口，都是Node24分发代码，不执行其开发期npm脚本；checkout不保留凭据，禁自动包缓存。有限静态复查不能证明绝对无风险。
+
+Windows smoke脚本只允许在GITHUB_ACTIONS临时runner中执行，安装本次编译的NSIS，启动安装后的程序并记录实际窗口/进程状态；只上传安装器、编译程序、测试结果和应用截图，不上传数据库、用户Key或签名私钥。Android签名仍只留本地，未上传CI。

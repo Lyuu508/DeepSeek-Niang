@@ -6,7 +6,7 @@
 
 Windows + Android 本地优先陪伴应用，当前准备 **0.0.1 测试版**，继承本地开发版0.1.0-dev.2。继承原阶段 0/1，改为“一人格一个永久聊天空间”：新增/切换/编辑人格，独立上下文、记忆、Token 统计，重启恢复上次选择。保留 DeepSeek 流式聊天、停止、重生成和双端系统密钥存储。
 
-**当前提供 0.0.1 测试版源码，EXE/APK 尚未生成。** [公开仓库](https://github.com/Lyuu508/DeepSeek-Niang)由用户创建，本次上传保留其初始化README历史。指定的海滩图目前只有聊天内嵌预览，工具未得到可读取的原始PNG；正式图标/安装包等待原图文件。可将原PNG作为ZIP文件附件，或放到 `assets/branding/deepseek-niang-master.png` 再运行资源脚本。[本次发布状态与安装说明](docs/RELEASE_0.0.1.md)。
+**0.0.1 测试版**使用用户提供的正式海滩PNG，原图按字节保留，Windows/Android图标和聊天头像已生成。安装文件通过 [GitHub Releases](https://github.com/Lyuu508/DeepSeek-Niang/releases) 交付，分别选择Windows EXE或Android ARM64 APK；实际构建及设备验证范围见附件说明与 [安装测试说明](docs/RELEASE_0.0.1.md)。
 
 见 [本次报告](docs/PERSONA_BRANDING_REPORT.md)、[迁移与回滚](docs/PERSONA_MIGRATION.md)、[品牌素材状态](assets/branding/README.md)。阶段 2～9 本次仅交付[八份独立计划](DEVELOPMENT_PLAN.md)，没有启用后续功能。
 
@@ -26,7 +26,7 @@ npm run test:ui
 
 UI 测试需要已安装 Chromium，可用 COMPANION_CHROMIUM_EXECUTABLE 指定路径。普通浏览器只预览，DEV 且显式 `?test=mock` 才使用有横幅的内存夹具；它不验证 SQLite/系统凭据，生产打包不包含夹具。
 
-收到同一原始 PNG 后，使用已审核的本地 Pillow（本轮环境已有）生成资源，再构建：
+仓库已包含正式原图及派生资源。重新制作图标时使用已审核的Pillow；日常构建直接校验资源即可：
 
 ```powershell
 python scripts/prepare_branding.py --source "C:\你的目录\原图.png"

@@ -1,8 +1,8 @@
 # DeepSeek娘品牌资源
 
-当前状态：**工具仍待取得原始PNG文件字节**。2026-11-13用户再次发送了同一张海滩图，聊天中可见，但消息接口未给工具可读取的PNG路径或下载ID。请通过ZIP文件附件或仓库的 `assets/branding/deepseek-niang-master.png` 提供原图；不能从预览重绘或用旧DS资源冒充。
+当前状态：**原始PNG已于2026-11-13从用户提供的ZIP成功导入**，尺寸1254×1254，1724316字节。master与上传文件逐字节一致，SHA-256为 `070adedf4a8896745ea8fb7755b3cbe4b673bcb51d1edc88cc76e46ea937aff1`。头像及平台资源共69个派生文件，清单为ready。
 
-`manifest.json` 的 `pending_source` 是实际状态；以下目标文件尚未生成：
+`manifest.json`记录原图和每个派生文件哈希，以下资源已生成：
 
 | 目标 | 用途 |
 |---|---|
@@ -13,7 +13,7 @@
 | ../../apps/companion/src-tauri/icons/*.png、icon.ico | 窗口、任务栏、快捷方式及安装器，多尺寸 |
 | android/ | mdpi～xxxhdpi launcher、adaptive foreground/background、启动画面和白色通知蒙版 |
 
-收到原图后，使用已审核的本地 Pillow，仅裁切、缩放和制作平台要求的透明/单色蒙版：
+如需重新生成，使用已审核的本地 Pillow，仅裁切、缩放和制作平台要求的透明/单色蒙版：
 
 ```powershell
 python scripts/prepare_branding.py --source "C:\你的目录\原图.png"

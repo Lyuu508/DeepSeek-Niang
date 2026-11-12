@@ -1,6 +1,6 @@
 # Android 安装与 Windows 本机构建 APK
 
-当前源码版本 0.1.0-dev.2，正式原始PNG尚缺失，新版APK未生成；旧dev.1 APK不包含本次人格改造。以下为补齐原图后构建/安装步骤。目标Android 10/API 29+、ARM64。开发 APK 使用开发签名，不能视为已正式发布或已经真机测试；实际状态以随包 BUILD-RESULTS.json 为准。
+当前源码版本 0.0.1，正式原始PNG已于2026-11-13导入并生成图标；以下为本次构建/安装步骤，实际产物与测试范围见RELEASE_0.0.1。旧dev.1 APK不作为本版附件。目标Android 10/API 29+、ARM64。开发 APK 使用开发签名，不能视为已正式发布或已经真机测试；实际状态以随包 BUILD-RESULTS.json 为准。
 
 ## 安装实际 APK
 
@@ -53,4 +53,4 @@ npm run tauri -- android build --apk --debug --target aarch64
 
 遇到 Java 版本错误，应让 JAVA_HOME 与 Gradle 所用 JDK 一致；遇到 NDK 缺失，检查 NDK_HOME 下是否有 toolchains\llvm；遇到证书/代理错误，配置受信任 CA，不禁用 TLS 校验。真实密钥只在手机设置页输入。
 
-本轮只通过Android ARM64原生Rust编译检查及名称/资源脚本测试，没有新版Gradle APK打包、AAPT资源验证或设备运行。收到PNG后必须重建完整APK并验收图标/启动画面。若已有dev.1安装，使用原签名覆盖；签名与Key不可放源码ZIP。原签名缺失时不能靠换applicationId或卸载来冒充升级成功。
+本次从正式PNG重新构建完整APK并核验资源；真实设备运行仍需独立验收。实际打包日志与签名以本次BUILD-RESULTS为准。若已有dev.1安装，使用原签名覆盖；签名与Key不可放源码ZIP。原签名缺失时不能靠换applicationId或卸载来冒充升级成功。
