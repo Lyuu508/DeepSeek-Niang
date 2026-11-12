@@ -1,0 +1,6 @@
+   Compiling tauri-plugin-companion-keystore v0.0.1 (/workspace/output/deepseek-ai-companion/plugins/companion-keystore)
+    Checking companion-secrets v0.0.1 (/workspace/output/deepseek-ai-companion/crates/companion-secrets)
+    Checking companion-core v0.0.1 (/workspace/output/deepseek-ai-companion/crates/companion-core)
+   Compiling companion-app v0.0.1 (/workspace/output/deepseek-ai-companion/apps/companion/src-tauri)
+    Checking companion-chat v0.0.1 (/workspace/output/deepseek-ai-companion/crates/companion-chat)
+    Finished `dev` profile [optimized] target(s) in 3.38s

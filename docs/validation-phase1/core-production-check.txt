@@ -1,0 +1,12 @@
+   Compiling syn v3.0.10
+   Compiling libc v0.2.191
+    Checking getrandom v0.4.3
+    Checking smallvec v1.16.5
+    Checking rusqlite v0.42.0
+   Compiling serde_derive v1.0.229
+   Compiling thiserror-impl v2.0.21
+    Checking thiserror v2.0.21
+    Checking uuid v1.29.2
+    Checking serde v1.0.229
+    Checking companion-core v0.1.0-dev.1 (/workspace/output/deepseek-ai-companion/crates/companion-core)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.90s

@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "rust_tests_passed": 57,
+  "ui_mock_passed": 16,
+  "policy_tests_passed": 6,
+  "typecheck": "passed",
+  "frontend_build": "passed",
+  "fmt": "passed",
+  "clippy": "passed",
+  "sqlite_schema": "passed",
+  "android_native_rust_check": "passed",
+  "windows_installer": "blocked_missing_original_png",
+  "android_apk": "blocked_missing_original_png",
+  "runtime_device_tests": "not_performed",
+  "real_deepseek_api": "not_performed",
+  "repository_target": "Lyuu508/DeepSeek-Niang",
+  "visibility_requested": "public",
+  "release_publication": "waiting_for_actual_installers"
+}

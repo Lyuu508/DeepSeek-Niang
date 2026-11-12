@@ -1,0 +1,67 @@
+{
+  "os": "Linux",
+  "architecture": "x86_64",
+  "tools": {
+    "node": {
+      "available": true,
+      "exit_code": 0,
+      "version": [
+        "v24.22.1"
+      ]
+    },
+    "npm": {
+      "available": true,
+      "exit_code": 0,
+      "version": [
+        "11.9.0"
+      ]
+    },
+    "rustc": {
+      "available": true,
+      "exit_code": 0,
+      "version": [
+        "rustc 1.99.1 (58cf8f9c3 2026-10-13)"
+      ]
+    },
+    "cargo": {
+      "available": true,
+      "exit_code": 0,
+      "version": [
+        "cargo 1.99.1 (5f94df478 2026-08-27)"
+      ]
+    },
+    "java": {
+      "available": true,
+      "exit_code": 0,
+      "version": [
+        "openjdk version \"21.0.13\" 2026-10-20",
+        "OpenJDK Runtime Environment (build 21.0.13+9-1-deb13u2-Debian)"
+      ]
+    },
+    "javac": {
+      "available": false
+    },
+    "adb": {
+      "available": false
+    },
+    "sdkmanager": {
+      "available": false
+    },
+    "cl": {
+      "available": false
+    },
+    "pkg-config": {
+      "available": true,
+      "exit_code": 0,
+      "version": [
+        "1.8.1"
+      ]
+    }
+  },
+  "android_sdk_configured": false,
+  "android_ndk_configured": false,
+  "limits": [
+    "This check does not prove Windows/Android build or device compatibility.",
+    "No API key, chat database, signing key or account data was inspected."
+  ]
+}

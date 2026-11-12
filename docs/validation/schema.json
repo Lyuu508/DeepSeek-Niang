@@ -1,0 +1,9 @@
+{
+  "sqlite_version": "3.53.1",
+  "required_tables": 33,
+  "all_required_tables_exist": true,
+  "foreign_keys": "passed",
+  "bounds": "passed",
+  "chinese_trigram_search": "passed",
+  "integrity": "ok"
+}

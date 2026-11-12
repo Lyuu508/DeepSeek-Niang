@@ -1,0 +1,20 @@
+{
+  "scope": "UI Mock only; no actual DeepSeek, SQLite or OS keystore verified",
+  "checks": [
+    "normal browser is read-only and shows native-disconnected state",
+    "Mock mode is explicitly labeled on every test page",
+    "key form clears input; no credential in localStorage or cookies",
+    "editable character title and preferences reach the UI fixture",
+    "Chinese Enter send, streaming updates and stop preserve one user turn",
+    "regeneration keeps the same user and exposes previous reply versions",
+    "simulated network failure is visible and sent text remains",
+    "new conversation and reloading history do not mix conversations",
+    "Shift Enter inserts newline and IME Enter does not send",
+    "theme can change without losing visible messages",
+    "desktop page has no JS exceptions or external requests",
+    "mobile drawer and native-style send interaction",
+    "390px viewport fits and includes explicit Mock notice"
+  ],
+  "passed": 13,
+  "browser": "156.0.8078.79"
+}

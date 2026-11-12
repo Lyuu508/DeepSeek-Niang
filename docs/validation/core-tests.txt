@@ -1,0 +1,48 @@
+   Compiling companion-core v0.1.0-dev.0 (<project>/crates/companion-core)
+   Compiling companion-node v0.1.0-dev.0 (<project>/crates/companion-node)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.90s
+     Running unittests src/lib.rs (target/debug/deps/companion_core-ca93a2371a52ca0f)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/invariants.rs (target/debug/deps/invariants-48d271916b7001f3)
+
+running 21 tests
+test checkpoint_never_skips_missing_sequence ... ok
+test authority_restart_invalidates_all_previous_boot_leases ... ok
+test concurrent_memory_edits_choose_same_logical_version ... ok
+test corrupted_batch_is_rejected_without_partial_commit ... ok
+test delete_wins_even_when_received_before_create ... ok
+test empty_incremental_vector_can_bootstrap_a_new_replica ... ok
+test expired_lease_requires_reconciliation_and_old_fence_cannot_commit ... ok
+test identity_equivocation_rolls_back_prior_valid_events_in_same_transaction ... ok
+test keyword_index_tracks_updates_and_deletion_and_short_chinese_queries ... ok
+test message_deletion_propagates_without_overwriting_other_messages ... ok
+test one_authority_grants_one_lease_and_task_key_deduplicates ... ok
+test ordinary_chat_never_mechanically_adds_affection ... ok
+test pause_resume_cancel_and_bounded_retry_work ... ok
+test relationship_cooldown_decay_caps_and_evidence_validation_apply ... ok
+test relationship_events_deduplicate_and_replay_order_is_stable ... ok
+test restart_preserves_identity_history_clock_and_integrity ... ok
+test simultaneous_offline_messages_converge_and_deduplicate ... ok
+test untrusted_and_wrong_profile_origins_are_rejected ... ok
+test video_progress_uses_union_and_joint_modal_coverage ... ok
+test video_segmentation_covers_the_entire_timeline_including_tail ... ok
+test incremental_pagination_drains_more_than_one_batch ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.23s
+
+     Running unittests src/main.rs (target/debug/deps/companion_node-05a7f759977c3952)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests companion_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

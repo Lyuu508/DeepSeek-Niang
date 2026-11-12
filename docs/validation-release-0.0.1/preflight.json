@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "schema": 3,
+  "android_version_code": 1001,
+  "previous_android_version_code": 1000,
+  "identifier": "io.local.deepseekcompanion",
+  "source_files": 209,
+  "source_privacy_policy": "passed",
+  "branding": "pending_source",
+  "installer_state": "blocked_pending_original_png"
+}

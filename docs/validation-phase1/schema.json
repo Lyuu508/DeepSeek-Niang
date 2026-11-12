@@ -1,0 +1,10 @@
+{
+  "sqlite_version": "3.53.1",
+  "required_tables": 33,
+  "all_required_tables_exist": true,
+  "chat_tables": 4,
+  "foreign_keys": "passed",
+  "bounds": "passed",
+  "chinese_trigram_search": "passed",
+  "integrity": "ok"
+}

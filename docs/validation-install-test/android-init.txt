@@ -1,0 +1,20 @@
+
+> deepseek-ai-companion@0.1.0-dev.1 tauri
+> npm run tauri --workspace @deepseek/companion -- android init --ci
+
+
+> @deepseek/companion@0.1.0-dev.1 tauri
+> tauri android init --ci
+
+        Info Using installed NDK: /workspace/work/install-build/android-sdk/ndk/28.2.13676358
+        Info Installing Android Rust targets...
+        Info Installing target armv7-linux-androideabi
+info: downloading component rust-std
+        Info Installing target i686-linux-android
+info: downloading component rust-std
+        Info Installing target x86_64-linux-android
+info: downloading component rust-std
+Generating Android Studio project...
+        Info "/workspace/output/deepseek-ai-companion/apps/companion/src-tauri" relative to "/workspace/output/deepseek-ai-companion/apps/companion/src-tauri/gen/android/companion_app" is "../../../"
+victory: Project generated successfully!
+    Make cool apps! 🌻 🐕 🎉

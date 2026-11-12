@@ -1,0 +1,66 @@
+"""Build/export policy tests with temporary fixtures; not Android native verification."""
+import importlib.util
+import tempfile
+import unittest
+from pathlib import Path
+import xml.etree.ElementTree as ET
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def module(name):
+    spec = importlib.util.spec_from_file_location(name, ROOT / "scripts" / f"{name}.py")
+    value = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(value)
+    return value
+
+
+class BuildPolicy(unittest.TestCase):
+    def test_android_preparation_is_idempotent_and_disables_automatic_backup(self):
+        prepare = module("prepare_android")
+        with tempfile.TemporaryDirectory() as folder:
+            project = Path(folder)
+            manifest = project / "app/src/main/AndroidManifest.xml"
+            manifest.parent.mkdir(parents=True)
+            manifest.write_text('<manifest xmlns:android="http://schemas.android.com/apk/res/android"><application><activity android:name=".MainActivity"/></application></manifest>')
+            gradle = project / "app/build.gradle.kts"
+            gradle.write_text("android {\n    compileSdk = 37\n    defaultConfig {\n        targetSdk = 37\n    }\n}\n")
+            prepare.prepare(project)
+            prepare.prepare(project)
+            root = ET.parse(manifest).getroot()
+            android = "{http://schemas.android.com/apk/res/android}"
+            self.assertEqual(len(root.findall("uses-permission")), 1)
+            self.assertEqual(root.find("application").get(android + "allowBackup"), "false")
+            self.assertEqual(root.find("application").get(android + "usesCleartextTraffic"), "false")
+            self.assertEqual(root.find("application/activity").get(android + "windowSoftInputMode"), "adjustResize")
+            self.assertTrue((project / "app/src/main/res/xml/companion_data_extraction_rules.xml").is_file())
+            self.assertIn("compileSdk = 36", gradle.read_text())
+            self.assertIn("targetSdk = 36", gradle.read_text())
+
+    def test_export_excludes_databases_keys_dependencies_and_symlinks(self):
+        exporter = module("export_source")
+        with tempfile.TemporaryDirectory() as folder:
+            exporter.ROOT = Path(folder)
+            for name in ["README.md", "Cargo.lock", "crates/core/src/lib.rs", "data/chat.sqlite3", "apps/app/user.db-wal", "apps/app/key.pem", "apps/app/node_modules/package.json", "plugins/test/android/.tauri/copied-sdk.kt", "plugins/test/android/build/outputs/aar/plugin.aar", "plugins/test/android/.gradle/cache.bin", "backups/private.bak", "apps/app/notes.backup", ".env"]:
+                file = exporter.ROOT / name
+                file.parent.mkdir(parents=True, exist_ok=True)
+                file.write_text("fixture")
+            try:
+                (exporter.ROOT / "apps/app/linked.rs").symlink_to(exporter.ROOT / ".env")
+            except (OSError, NotImplementedError):
+                pass
+            names = {str(relative) for _, relative in exporter.source_files()}
+            self.assertEqual(names, {"README.md", "Cargo.lock", "crates/core/src/lib.rs"})
+
+    def test_export_rejects_credential_shaped_content_even_in_env_example(self):
+        exporter = module("export_source")
+        with tempfile.TemporaryDirectory() as folder:
+            exporter.ROOT = Path(folder)
+            # Construct a synthetic pattern for the scanner; never an actual credential.
+            (exporter.ROOT / ".env.example").write_text("KEY=" + "sk-" + "x" * 30)
+            with self.assertRaises(SystemExit):
+                list(exporter.source_files())
+
+
+if __name__ == "__main__":
+    unittest.main()

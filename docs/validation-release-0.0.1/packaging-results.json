@@ -1,0 +1,10 @@
+{
+  "windows": {
+    "exit_code": 1,
+    "blocked_by_missing_original_png": true
+  },
+  "android": {
+    "exit_code": 1,
+    "blocked_by_missing_original_png": true
+  }
+}

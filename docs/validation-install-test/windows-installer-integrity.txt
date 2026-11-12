@@ -1,0 +1,23 @@
+
+7-Zip 25.01 (x64) : Copyright (c) 1999-2025 Igor Pavlov : 2025-08-03
+ 64-bit locale=C.UTF-8 Threads:3 OPEN_MAX:16384, ASM
+
+Scanning the drive for archives:
+1 file, 3749417 bytes (3662 KiB)
+
+Testing archive: /workspace/output/install-test-v0.1.0-dev.1/DeepSeek-Companion_0.1.0-dev.1_x64-setup.exe
+--
+Path = /workspace/output/install-test-v0.1.0-dev.1/DeepSeek-Companion_0.1.0-dev.1_x64-setup.exe
+Type = Nsis
+Physical Size = 3749417
+Method = LZMA:23
+Solid = +
+Headers Size = 74144
+Embedded Stub Size = 116224
+SubType = NSIS-3 Unicode BadCmd=13
+
+Everything is Ok
+
+Files: 7
+Size:       288642
+Compressed: 3749417

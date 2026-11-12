@@ -1,0 +1,21 @@
+
+> deepseek-ai-companion@0.1.0-dev.2 tauri
+> npm run tauri --workspace @deepseek/companion -- android build --apk --debug --target aarch64
+
+
+> @deepseek/companion@0.1.0-dev.2 tauri
+> tauri android build --apk --debug --target aarch64
+
+        Info Using installed NDK: /workspace/work/install-build/android-sdk/ndk/28.2.13676358
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `node ../../scripts/check-branding.mjs && npm run build`
+原始海滩 PNG 尚未导入。请提供同一张原始文件并运行 scripts/prepare_branding.py；禁止使用旧 DS 图标打包新版。
+beforeBuildCommand `node ../../scripts/check-branding.mjs && npm run build` failed with exit code 1
+       Error beforeBuildCommand `node ../../scripts/check-branding.mjs && npm run build` failed with exit code 1
+npm error Lifecycle script `tauri` failed with error:
+npm error code 1
+npm error path /workspace/output/deepseek-ai-companion/apps/companion
+npm error workspace @deepseek/companion@0.1.0-dev.2
+npm error location /workspace/output/deepseek-ai-companion/apps/companion
+npm error command failed
+npm error command sh -c tauri android build --apk --debug --target aarch64

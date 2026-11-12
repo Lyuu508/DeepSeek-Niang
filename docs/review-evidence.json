@@ -1,0 +1,98 @@
+[
+  {
+    "repository": "C2006L_dafeiyu",
+    "path": "LICENSE",
+    "bytes": 1057,
+    "sha256": "75054b6a08e1008c86b6045ab99add2c8fa571987880951a9929f11ee56a7d64"
+  },
+  {
+    "repository": "C2006L_dafeiyu",
+    "path": "README.md",
+    "bytes": 17836,
+    "sha256": "9550e9f6806f00932d0257da8e87efba6bfc5da95398c4c9369aca7480684386"
+  },
+  {
+    "repository": "C2006L_dafeiyu",
+    "path": "dsh-pet-ref/dsh-pet/package.json",
+    "bytes": 4714,
+    "sha256": "ba97b34bb54da55c5d6f6d670bc00ac6fcd1fdac08fc78cffd08d15d230c957e"
+  },
+  {
+    "repository": "C2006L_dafeiyu",
+    "path": "dsh-pet-ref/dsh-pet/scripts/prepare.js",
+    "bytes": 3988,
+    "sha256": "843814c7a315cc95c1220a19375430720600dca2ea18cfb594b3e27424a8eafb"
+  },
+  {
+    "repository": "C2006L_dafeiyu",
+    "path": "启动大肥鱼桌宠.bat",
+    "bytes": 10420,
+    "sha256": "64367a8fc111b306c1c9ccb6419f70cdabc7ffa815cdfb150ed7c40cb86fd231"
+  },
+  {
+    "repository": "c-dom_deepseek-pet",
+    "path": "backend_server.py",
+    "bytes": 5621,
+    "sha256": "0e190766496ef01c300df410fb96c3165a40a40ce26079c640d20ad8bf59fbfb"
+  },
+  {
+    "repository": "c-dom_deepseek-pet",
+    "path": "build_app.py",
+    "bytes": 5851,
+    "sha256": "adfa53077d6012d2b84af44e97bdfc56a556872cfeb2a852608465bd120bda98"
+  },
+  {
+    "repository": "c-dom_deepseek-pet",
+    "path": "main.py",
+    "bytes": 50243,
+    "sha256": "36abf649eaebbc8e6791c63694fe293fb0a2d7bc616e95946d5fbb7cbe5356bc"
+  },
+  {
+    "repository": "c-dom_deepseek-pet",
+    "path": "requirements.txt",
+    "bytes": 148,
+    "sha256": "798331ca8b835ce145c1a1b5444fd6b0a03dd2f9df07998125903f411929d252"
+  },
+  {
+    "repository": "c-dom_deepseek-pet",
+    "path": "scripts/install.ps1",
+    "bytes": 890,
+    "sha256": "583b186305e921fda8d1b06bd6b309143a56ee84869d4b46dd0526e116bfb3e3"
+  },
+  {
+    "repository": "Andersen216_dsh-whale-girl-live2d",
+    "path": "NOTICE.md",
+    "bytes": 2660,
+    "sha256": "9848837b505d7525fe330b6d9d6afdc3d4fb7d9c49a0cdf45413ffeb727af49d"
+  },
+  {
+    "repository": "Andersen216_dsh-whale-girl-live2d",
+    "path": "PROVENANCE.md",
+    "bytes": 4240,
+    "sha256": "9c5ed301b54dd891b59821c1b1d45b4699b352fb636b0b78bf4074d08ef60262"
+  },
+  {
+    "repository": "Andersen216_dsh-whale-girl-live2d",
+    "path": "desktop/windows/main.js",
+    "bytes": 33693,
+    "sha256": "424d702bc8d1d10d3b83fea1ee0c238cb644b0c0a37d6032350ec0a66a55fba7"
+  },
+  {
+    "repository": "Andersen216_dsh-whale-girl-live2d",
+    "path": "desktop/windows/package.json",
+    "bytes": 1344,
+    "sha256": "e739b0b7bfd1ef39158291d270ddc18e2bc3636086e7509e62bbb40a9a1e94b6"
+  },
+  {
+    "repository": "Andersen216_dsh-whale-girl-live2d",
+    "path": "lib/index.js",
+    "bytes": 49488,
+    "sha256": "c7370f1cf3c179e68af49458f2368f32ca2dd941968148e1f88c65dc87858107"
+  },
+  {
+    "repository": "Andersen216_dsh-whale-girl-live2d",
+    "path": "package.json",
+    "bytes": 2557,
+    "sha256": "da46626dc9f76c55ac7bc6d780746b4617134c7a3f032683756ec037cf4e2419"
+  }
+]

@@ -1,0 +1,40 @@
+
+> deepseek-ai-companion@0.1.0-dev.1 tauri
+> npm run tauri --workspace @deepseek/companion -- info
+
+
+> @deepseek/companion@0.1.0-dev.1 tauri
+> tauri info
+
+
+[✘] Environment
+    - OS: Debian 13.0.0 x86_64 (X64) (Unknown DE on Unknown Session)
+    ✘ webkit2gtk-4.1: not installed
+      Visit https://v2.tauri.app/start/prerequisites/ to learn more about tauri prerequisites
+    ✘ rsvg2: not installed
+      Visit https://v2.tauri.app/start/prerequisites/ to learn more about tauri prerequisites
+    ✔ rustc: 1.99.1 (58cf8f9c3 2026-10-13)
+    ✔ cargo: 1.99.1 (5f94df478 2026-08-27)
+    ✔ rustup: 1.29.3 (edbc831ce 2026-11-02)
+    ✔ Rust toolchain: stable-x86_64-unknown-linux-gnu (default)
+    - node: 24.22.1
+    - pnpm: 11.25.0
+    - npm: 11.9.0
+
+[-] Packages
+    - tauri 🦀: 2.12.5
+    - tauri-build 🦀: 2.7.4
+    - wry 🦀: 0.57.2
+    - tao 🦀: 0.37.2
+    - @tauri-apps/api  ⱼₛ: 2.12.4
+    - @tauri-apps/cli  ⱼₛ: 2.12.4
+
+[-] Plugins
+
+[-] App
+    - build-type: bundle
+    - CSP: default-src 'self'; connect-src ipc: http://ipc.localhost https://ipc.localhost; img-src 'self' data:; style-src 'self' 'unsafe-inline'
+    - frontendDist: ../dist
+    - devUrl: http://localhost:1420/
+    - framework: React
+    - bundler: Vite

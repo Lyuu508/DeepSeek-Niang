@@ -1,0 +1,41 @@
+{
+  "version": "0.1.0-dev.1",
+  "date": "2026-11-12",
+  "windows_nsis_built": true,
+  "windows_payload": "x86_64",
+  "windows_installer_runtime_tested": false,
+  "windows_authenticode_signed": false,
+  "android_apk_built": true,
+  "android_abi": "arm64-v8a",
+  "android_min_sdk": 29,
+  "android_target_sdk": 36,
+  "android_signature_verified": true,
+  "android_runtime_tested": false,
+  "os_secure_storage_runtime_tested": false,
+  "real_deepseek_api_tested": false,
+  "new_python_policy_tests_passed": 3,
+  "prior_rust_tests_passed": 48,
+  "prior_ui_mock_checks_passed": 13,
+  "github_updated": false,
+  "phase2_started": false,
+  "tools": {
+    "node": "24.22.1",
+    "rust": "1.99.1",
+    "tauri_cli": "2.12.4",
+    "tauri_rust": "2.12.5",
+    "cargo_xwin": "0.23.1",
+    "llvm": "19.1.7",
+    "nsis": "3.11",
+    "jdk": "Temurin 21.0.13+9",
+    "ndk": "28.2.13676358",
+    "gradle": "9.6.1",
+    "agp": "9.3.1",
+    "kotlin": "2.2.10"
+  },
+  "notes": [
+    "Linux host cross compiled Windows using the documented NSIS workflow",
+    "SDK dependencies were provisioned from official sources with metadata/hash checks",
+    "Temporary SDK/build caches were pruned to fit workspace disk limits",
+    "Signing keys and proxy trust settings are not included in source or installer packages"
+  ]
+}

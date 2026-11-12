@@ -1,0 +1,41 @@
+{
+  "date": "2026-11-12",
+  "local_version": "0.1.0-dev.1",
+  "rust_tests": {
+    "total": 48,
+    "original_stage0": 21,
+    "chat_storage": 11,
+    "network_service_mock": 13,
+    "credential_base": 3,
+    "passed": true
+  },
+  "ui_tests": {
+    "total": 13,
+    "scope": "Explicit browser Mock only",
+    "passed": true
+  },
+  "python_policy_tests": 3,
+  "typecheck_frontend_build": true,
+  "clippy": true,
+  "schema_integrity": "ok",
+  "cross_checks": [
+    "Windows credential Rust code",
+    "Android credential Rust code",
+    "Android private plugin Rust bridge"
+  ],
+  "real_deepseek_api_tested": false,
+  "windows_native_runtime_tested": false,
+  "android_kotlin_compiled": false,
+  "android_native_runtime_tested": false,
+  "windows_installer_built": false,
+  "android_apk_built": false,
+  "github_updated": false,
+  "npm_audit_known_vulnerabilities": 0,
+  "limits": [
+    "No DeepSeek credential configured",
+    "No Windows MSVC toolchain (lib.exe missing)",
+    "No Android SDK/NDK/JDK compiler",
+    "No GTK/WebKit development environment for Linux Tauri runtime"
+  ],
+  "source_zip_clean_npm_install_and_frontend_build": true
+}

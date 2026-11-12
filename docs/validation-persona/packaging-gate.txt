@@ -1,0 +1,1 @@
+原始海滩 PNG 尚未导入。请提供同一张原始文件并运行 scripts/prepare_branding.py；禁止使用旧 DS 图标打包新版。

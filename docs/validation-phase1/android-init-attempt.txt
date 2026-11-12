@@ -1,0 +1,18 @@
+
+> deepseek-ai-companion@0.1.0-dev.0 tauri
+> npm run tauri --workspace @deepseek/companion -- android init --ci
+
+
+> @deepseek/companion@0.1.0-dev.0 tauri
+> tauri android init --ci
+
+        Info ANDROID_HOME not set, trying to locate Android SDK...
+failed to ensure Android environment: Android SDK not found. Make sure the SDK and NDK are installed and the ANDROID_HOME and NDK_HOME environment variables are set.
+       Error failed to ensure Android environment: Android SDK not found. Make sure the SDK and NDK are installed and the ANDROID_HOME and NDK_HOME environment variables are set.
+npm error Lifecycle script `tauri` failed with error:
+npm error code 1
+npm error path /workspace/output/deepseek-ai-companion/apps/companion
+npm error workspace @deepseek/companion@0.1.0-dev.0
+npm error location /workspace/output/deepseek-ai-companion/apps/companion
+npm error command failed
+npm error command sh -c tauri android init --ci

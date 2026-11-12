@@ -1,0 +1,2 @@
+   Compiling companion-app v0.1.0-dev.2 (/workspace/output/deepseek-ai-companion/apps/companion/src-tauri)
+    Finished `dev` profile [optimized] target(s) in 1.76s

@@ -1,0 +1,37 @@
+{
+  "local_version": "0.1.0-dev.2",
+  "date": "2026-11-12",
+  "rust_tests_passed": 57,
+  "original_core_tests_passed": 21,
+  "ui_mock_checks_passed": 16,
+  "policy_tests_passed": 6,
+  "typecheck": "passed",
+  "frontend_build": "passed",
+  "clippy": "passed",
+  "fmt": "passed",
+  "schema": "passed",
+  "android_native_rust_check": "passed",
+  "windows_vault_rust_check": "passed",
+  "production_fixture_exclusion": "passed",
+  "original_brand_png": "missing_file",
+  "branding_generation": "blocked_pending_original_png",
+  "native_packaging_gate": "expected_failure",
+  "windows_dev2_installer": "not_generated",
+  "android_dev2_apk": "not_generated",
+  "target_device_runtime": "not_tested",
+  "real_deepseek_api": "not_tested",
+  "user_database_migration": "synthetic_file_fixture_only",
+  "later_phases": "documentation_only",
+  "github_updated": false,
+  "packaging_attempts": {
+    "windows": {
+      "exit_code": 1,
+      "blocked_by_missing_original_png": true
+    },
+    "android": {
+      "exit_code": 1,
+      "blocked_by_missing_original_png": true
+    }
+  },
+  "source_delivery": "local_zip_verified; Drive_upload_rejected_pending_explicit_source_authorization"
+}

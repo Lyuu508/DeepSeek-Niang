@@ -1,0 +1,33 @@
+{
+  "baseline_archive": "DeepSeek-Companion-stage0-v0.1.0-dev.0.zip",
+  "baseline_files": 85,
+  "preserved_important_files": [
+    {
+      "path": "db/migrations/0001_initial.sql",
+      "sha256": "869ad019603970110a1efeb5baccaf2f152263de5e7b24da9236ffae6d0273e7",
+      "unchanged": true
+    },
+    {
+      "path": "crates/companion-core/tests/invariants.rs",
+      "sha256": "e784c53c669134bb9aabb4c5c9835016b7276441d0fcd6ee479d50ade8bbfa0b",
+      "unchanged": true
+    },
+    {
+      "path": "crates/companion-core/src/task.rs",
+      "sha256": "8eeba0c00affcfce8ffa018d1a801dd63fed599864b3f44d7efedde473756422",
+      "unchanged": true
+    },
+    {
+      "path": "crates/companion-core/src/relationship.rs",
+      "sha256": "115e588db44a73c4c4f2018880e8e3dc3c37f62101d610950832759917d9abc8",
+      "unchanged": true
+    },
+    {
+      "path": "crates/companion-core/src/video.rs",
+      "sha256": "fe47b272d9de7f6385afa966e123cf0f37e5137f3a5451435373989faef3c708",
+      "unchanged": true
+    }
+  ],
+  "all_original_invariant_tests": 21,
+  "note": "File hashes prove the listed source preservation, not Windows/Android runtime compatibility."
+}

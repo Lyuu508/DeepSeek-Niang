@@ -1,0 +1,25 @@
+{
+  "name": "deepseek-ai-companion",
+  "version": "0.0.1",
+  "private": true,
+  "workspaces": [
+    "apps/companion",
+    "packages/contracts"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "npm run dev --workspace @deepseek/companion",
+    "build": "npm run build --workspace @deepseek/companion",
+    "typecheck": "npm run typecheck --workspace @deepseek/companion",
+    "tauri": "npm run tauri --workspace @deepseek/companion --",
+    "test:core": "cargo test --workspace --locked",
+    "check:schema": "python3 scripts/check_schema.py",
+    "check:environment": "python3 scripts/check_environment.py",
+    "check:branding": "node scripts/check-branding.mjs",
+    "test:ui": "node tests/browser/chat.cjs",
+    "test:policy": "python3 -m unittest discover -s tests -p test_*.py",
+    "export:source": "python3 scripts/export_source.py"
+  }
+}

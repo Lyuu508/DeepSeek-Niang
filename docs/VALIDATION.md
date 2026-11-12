@@ -1,0 +1,88 @@
+# 阶段 0 实际验证记录
+
+日期：2026-11-12。本地版本：`0.1.0-dev.0`。以下仅记录确实执行的检查，不将计划、fixture 或文档支持当成真机结果。
+
+## 环境
+
+| 项目 | 实际情况 |
+|---|---|
+| 执行系统 | Debian 13 / Linux x86_64 |
+| Node / npm | 24.22.1 / 11.9.0 |
+| Rust / Cargo | 安装后均为 1.99.1；官方 rustup-init SHA-256 核对通过，安装在工作目录 |
+| Python | 3.12.14 |
+| SQLite | Rust bundled 3.54.1；Python 运行时 3.53.1，分别实测 |
+| Java | OpenJDK 21.0.13 JRE；没有 javac，不能视为 Android 完整 JDK |
+| Android | adb、sdkmanager、SDK、NDK 不存在，未连接手机 |
+| Windows | 没有 Windows 主机、MSVC/WebView2 验证条件，未执行 Windows 构建 |
+| Linux GUI | 缺 GLib/GTK/WebKit 开发依赖，原生桌面检查受阻 |
+| 凭据 | 未配置/读取用户 DeepSeek 或多模态 Key，未执行模型 API 请求 |
+
+安全环境检查报告见 [environment.json](validation/environment.json)，不含凭据值。
+
+## 已通过
+
+| 检查 | 实际结果 | 范围 |
+|---|---|---|
+| `cargo test --workspace --locked` | **21 passed, 0 failed** | 应用实际 Rust/SQLite 内核与明确测试夹具；不含网络或真实模型 |
+| `cargo clippy --workspace --all-targets --locked -- -D warnings` | 通过，无 warning | 共享内核及 CLI；不含 Tauri GUI crate |
+| `cargo check -p companion-core --no-default-features --locked` | 通过 | 原生默认核心不包含 lab 导入/伪配对入口 |
+| `cargo fmt --all` 与 native manifest format | 完成 | 代码格式化，不等于 native 编译成功 |
+| `cargo run --locked -p companion-node -- lab-sync` | 两个真实 SQLite 文件各 2 条消息，收敛，完整性均 ok | 临时数据、进程内交换；network_tested=false |
+| CLI `check` 新建诊断夹具 DB | schema 1，integrity ok，SQLite 3.54.1 | 临时夹具位于项目外工作目录，未进入交付 |
+| `python3 scripts/check_schema.py` | **33/33** 要求表存在；外键/范围/中文 FTS/完整性通过 | 初始迁移共 42 张声明表，含 FTS 表，排除内部 shadow tables |
+| `npm ci --ignore-scripts --no-audit` | 从锁文件干净安装成功 | 安装生命周期脚本保持禁用 |
+| `npm run build` | TypeScript 检查及 Vite 生产构建成功 | 主 JS 229.95 kB / gzip 72.82 kB；CSS 7.71 kB / gzip 2.36 kB |
+| Chromium/Playwright 界面检查 | 8 项通过 | 浏览器模式；1440px 与 390px、导航、主题、无原生写入、同步提示、无 pageerror/外部请求 |
+| Tauri CLI `info` | 正常读取配置和前端框架；报告系统缺依赖 | 不是安装包成功记录 |
+| Tauri CLI 图标生成 | 由本项目原创 SVG 生成 PNG/ICO/Android 图标 | 通用 DS 应用标识，不是 DeepSeek 娘角色素材 |
+| 原生 manifest metadata / lock resolution | 通过，独立 native Cargo.lock 固定依赖图 | 依赖解析不等于编译或逐行审计 |
+| npm audit | 当前数据库报告 **0 已知漏洞** | 不证明绝对安全；未完成 RustSec/原生依赖全量审计 |
+| `.gitignore` | DB/WAL、.env、私钥、备份、导出与本机配置被忽略；.env.example 可保留 | 在新建的本地 Git 仓库执行 check-ignore |
+
+核心测试原始结果：[core-tests.txt](validation/core-tests.txt)。实验输出：[sqlite-lab.json](validation/sqlite-lab.json)。其他摘要：[schema.json](validation/schema.json)、[browser.json](validation/browser.json)、[frontend-build.txt](validation/frontend-build.txt)。
+
+## 测试确实覆盖的故障
+
+- 两端同时离线新增消息，恢复合并保留两端；事件重发不重复。
+- seq=2 先到不会推进连续检查点；分页交换大于单批数据后收敛。
+- 并发记忆修改确定性选主；delete 比 create 更早到达、迟到编辑及消息删除都不复活原 ID。
+- checksum 篡改、未知来源、错误档案、同原序号异内容被拒绝；批内已处理的好事件在冲突时一起回滚。
+- 中文 FTS 随修订/删除更新，短词与通配符转义有效；重启保留身份、内容、序号和完整性。
+- 任务 dedupe key 重用不同输入被拒绝；单协调节点只签发一个有效租约。
+- 暂停、恢复、取消、失败/次数上限；过期和权威重启进入 uncertain；旧 fence/boot/负时钟不能提交。
+- 关系普通问答不固定加分；证据去重、冷却、来源验证、稳定重放和范围保护。
+- 分段覆盖完整尾段；重叠不重复计数；分析进度使用画面/音频交集，不以播放进度替代；不确定区间阻止完成。
+
+## 原生构建阻塞
+
+实际执行：
+
+```bash
+cargo check --manifest-path apps/companion/src-tauri/Cargo.toml --locked
+```
+
+退出码 **101**，失败于 `glib-sys` 的系统依赖探测：
+
+```text
+Package glib-2.0 was not found in the pkg-config search path.
+The system library glib-2.0 required by crate glib-sys was not found.
+```
+
+Tauri `info` 同时报告 webkit2gtk-4.1、rsvg2 未安装。因此原生 crate 没有完成编译，IPC/窗口尚未运行验证；这不能证明剩余原生源码没有兼容问题。
+当前目标是 Windows/Android，未为 Linux GUI 安装整套系统依赖。Windows 和 Android 仍须在阶段 1 用其实际工具链执行构建与真机验收。
+没有自动审批拒绝；阻塞来自实际缺少的系统/平台构建条件。
+
+## 未完成，不能宣称通过
+
+Windows 安装包、Android APK、系统密钥存储、真实 DeepSeek SSE、设备发现/配对/mTLS、真实 LAN 同步、Android 后台、角色素材授权确认、透明桌宠、AI 关系事件抽取、本地语义模型、生活/主动消息、真实视频/多模态/B站媒体访问、加密备份恢复及 NAS daemon 均未完成验收。
+本次不把 SQLite 合并实验称为“电脑手机已经同步”，不把覆盖算法称为“完整视频已理解”，不把前端生产构建称为原生应用已安装。
+
+## 本地与 GitHub
+
+交付目录限制：聊天预设导出路径 `/codex/browser/projectless/0003-deepseek-ai-companion-v3-0-windows-android-ai-na/output` 在本执行环境不存在，普通写入得到只读文件系统错误，经过工具授权后的写入仍因操作系统目录权限失败。这不是自动审批拒绝。
+源码包和完整项目副本改存可写工作区 `/workspace/output`；未上传任何外部服务，也不提供指向不存在导出文件的下载链接。
+
+已初始化一个本地 Git 仓库；没有创建提交、没有配置 remote、没有推送、远程 PR、tag、Release 或发布工作流。
+源码归档排除 `.git`、node_modules、target、dist、缓存、DB、密钥、备份和候选仓库快照；文档保留必要审查 hash 与公开来源链接。
+
+**GitHub 未更新，本次修改仅保留在本地。**

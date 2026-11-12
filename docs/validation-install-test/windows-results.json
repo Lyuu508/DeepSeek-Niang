@@ -1,0 +1,31 @@
+{
+  "local_version": "0.1.0-dev.1",
+  "host": "Linux cross compilation using Tauri official NSIS flow",
+  "tauri_build_exit_code": 0,
+  "artifacts": [
+    {
+      "file": "DeepSeek-Companion_0.1.0-dev.1_x64-setup.exe",
+      "bytes": 3749417,
+      "sha256": "018132936ab123e0c5557957470df4b00a6cce5915b80a7412f142f1155e81f1",
+      "pe_machine": "0x14c",
+      "windows_gui_subsystem": true,
+      "runtime_tested_on_windows": false,
+      "authenticode_signed": false
+    },
+    {
+      "file": "DeepSeek-Companion_0.1.0-dev.1_x64.exe",
+      "bytes": 13506048,
+      "sha256": "4aee37cae1485b93ea2c13158ffb504978a9ea84c42e7a25d3d44886a994764d",
+      "pe_machine": "0x8664",
+      "windows_gui_subsystem": true,
+      "runtime_tested_on_windows": false,
+      "authenticode_signed": false
+    }
+  ],
+  "real_deepseek_tested": false,
+  "credential_manager_runtime_tested": false,
+  "installer_payload_matches_compiled_app_except_tauri_bundle_type_marker": true,
+  "expected_tauri_marker_change": "TYPE_VAR_UNK -> TYPE_VAR_NSS (NSIS)",
+  "installer_payload_sha256": "58e94143dc31d2dd8d448a16a351e2226760c9cf0cea66e3e519f4cf44e84020",
+  "nsis_archive_integrity_check": "passed"
+}

@@ -1,0 +1,11 @@
+test_android_labels_resources_and_splash_are_applied_idempotently (test_branding.BrandingPolicy.test_android_labels_resources_and_splash_are_applied_idempotently) ... ok
+test_original_bytes_ico_sizes_and_adaptive_safe_area (test_branding.BrandingPolicy.test_original_bytes_ico_sizes_and_adaptive_safe_area) ... ok
+test_packaging_rejects_pending_source_and_modified_resources (test_branding.BrandingPolicy.test_packaging_rejects_pending_source_and_modified_resources) ... ok
+test_android_preparation_is_idempotent_and_disables_automatic_backup (test_build_policy.BuildPolicy.test_android_preparation_is_idempotent_and_disables_automatic_backup) ... ok
+test_export_excludes_databases_keys_dependencies_and_symlinks (test_build_policy.BuildPolicy.test_export_excludes_databases_keys_dependencies_and_symlinks) ... ok
+test_export_rejects_credential_shaped_content_even_in_env_example (test_build_policy.BuildPolicy.test_export_rejects_credential_shaped_content_even_in_env_example) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 2.115s
+
+OK

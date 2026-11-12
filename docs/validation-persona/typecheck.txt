@@ -1,0 +1,8 @@
+
+> deepseek-ai-companion@0.1.0-dev.2 typecheck
+> npm run typecheck --workspace @deepseek/companion
+
+
+> @deepseek/companion@0.1.0-dev.2 typecheck
+> tsc --noEmit
+

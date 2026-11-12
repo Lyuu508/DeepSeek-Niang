@@ -1,0 +1,5 @@
+    Checking companion-core v0.0.1 (/workspace/output/deepseek-ai-companion/crates/companion-core)
+    Checking companion-secrets v0.0.1 (/workspace/output/deepseek-ai-companion/crates/companion-secrets)
+    Checking companion-node v0.0.1 (/workspace/output/deepseek-ai-companion/crates/companion-node)
+    Checking companion-chat v0.0.1 (/workspace/output/deepseek-ai-companion/crates/companion-chat)
+    Finished `dev` profile [optimized] target(s) in 1.35s

@@ -1,0 +1,110 @@
+   Compiling companion-core v0.1.0-dev.2 (/workspace/output/deepseek-ai-companion/crates/companion-core)
+   Compiling companion-secrets v0.1.0-dev.2 (/workspace/output/deepseek-ai-companion/crates/companion-secrets)
+   Compiling companion-chat v0.1.0-dev.2 (/workspace/output/deepseek-ai-companion/crates/companion-chat)
+   Compiling companion-node v0.1.0-dev.2 (/workspace/output/deepseek-ai-companion/crates/companion-node)
+    Finished `test` profile [optimized] target(s) in 13.82s
+     Running unittests src/lib.rs (/workspace/work/install-build/android-target/debug/deps/companion_chat-80c2ba38e508c646)
+
+running 13 tests
+test tests::cancelled_stream_keeps_partial_content_and_never_waits_for_eof ... ok
+test tests::explicitly_rejected_429_retries_once_without_duplicate_output ... ok
+test tests::credential_delete_cancels_active_generation_and_removes_mock_key ... ok
+test tests::missing_key_has_explicit_failure_and_still_keeps_sent_user_text ... ok
+test tests::official_request_is_documented_and_has_no_key_in_json ... ok
+test tests::real_loopback_http_stream_assembles_chinese_and_measured_usage ... ok
+test tests::redirects_are_rejected_without_forwarding_credentials ... ok
+test tests::idle_timeout_and_truncated_stream_are_not_success ... ok
+test tests::service_persists_stream_and_reuses_user_on_regenerate_with_clean_context ... ok
+test tests::sse_parser_handles_every_utf8_split_and_multiline_events ... ok
+test tests::sse_rejects_oversized_or_invalid_utf8_frames ... ok
+test tests::untrusted_http_error_body_cannot_leak_key_or_get_retried ... ok
+test tests::service_stop_is_durable_and_cannot_duplicate_user_message ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+     Running unittests src/lib.rs (/workspace/work/install-build/android-target/debug/deps/companion_core-e8565d0b30be9fb4)
+
+running 20 tests
+test chat::tests::character_is_editable_with_optional_verified_state_and_no_fixed_affection ... ok
+test chat::tests::conversations_and_history_scope_are_isolated ... ok
+test chat::tests::empty_failure_is_durable_without_fake_assistant_message_event ... ok
+test chat::tests::escaped_output_limit_cannot_corrupt_the_recovery_checkpoint ... ok
+test chat::tests::invalid_usage_cannot_partially_commit_a_response ... ok
+test chat::tests::regeneration_keeps_one_user_and_both_reply_variants ... ok
+test chat::tests::restart_recovers_partial_reply_and_keeps_history_and_personality ... ok
+test chat::tests::second_instance_cannot_recover_a_live_generation ... ok
+test chat::tests::send_is_transactional_idempotent_and_preserves_sync_fields ... ok
+test chat::tests::stream_checkpoints_finalize_once_and_ignore_late_tokens ... ok
+test chat::tests::v1_migration_preserves_raw_events_sequence_and_creates_consistent_backup ... ok
+test persona::tests::history_memory_personality_states_and_tokens_are_isolated ... ok
+test persona::tests::failed_cross_profile_migration_rolls_back_the_whole_schema_upgrade ... ok
+test persona::tests::memory_owner_cannot_be_changed_or_deleted_from_another_persona ... ok
+test persona::tests::one_main_thread_and_last_persona_survive_reopen_without_changing_device_identity ... ok
+test persona::tests::renaming_keeps_main_thread_and_refuses_unknown_personas ... ok
+test persona::tests::sql_guards_block_cross_persona_relations_and_profile_reassignment ... ok
+test persona::tests::switching_mid_generation_does_not_move_the_reply_or_usage ... ok
+test persona::tests::migrated_last_turn_can_regenerate_in_the_permanent_space ... ok
+test persona::tests::v2_backup_merges_legacy_views_without_touching_ids_events_or_timestamps ... ok
+
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.91s
+
+     Running tests/invariants.rs (/workspace/work/install-build/android-target/debug/deps/invariants-0016eb34eeba8f8c)
+
+running 21 tests
+test authority_restart_invalidates_all_previous_boot_leases ... ok
+test checkpoint_never_skips_missing_sequence ... ok
+test concurrent_memory_edits_choose_same_logical_version ... ok
+test corrupted_batch_is_rejected_without_partial_commit ... ok
+test delete_wins_even_when_received_before_create ... ok
+test empty_incremental_vector_can_bootstrap_a_new_replica ... ok
+test expired_lease_requires_reconciliation_and_old_fence_cannot_commit ... ok
+test identity_equivocation_rolls_back_prior_valid_events_in_same_transaction ... ok
+test keyword_index_tracks_updates_and_deletion_and_short_chinese_queries ... ok
+test incremental_pagination_drains_more_than_one_batch ... ok
+test message_deletion_propagates_without_overwriting_other_messages ... ok
+test ordinary_chat_never_mechanically_adds_affection ... ok
+test pause_resume_cancel_and_bounded_retry_work ... ok
+test relationship_cooldown_decay_caps_and_evidence_validation_apply ... ok
+test relationship_events_deduplicate_and_replay_order_is_stable ... ok
+test one_authority_grants_one_lease_and_task_key_deduplicates ... ok
+test restart_preserves_identity_history_clock_and_integrity ... ok
+test simultaneous_offline_messages_converge_and_deduplicate ... ok
+test video_progress_uses_union_and_joint_modal_coverage ... ok
+test video_segmentation_covers_the_entire_timeline_including_tail ... ok
+test untrusted_and_wrong_profile_origins_are_rejected ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.19s
+
+     Running unittests src/main.rs (/workspace/work/install-build/android-target/debug/deps/companion_node-a7f7894d4c0f89e6)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (/workspace/work/install-build/android-target/debug/deps/companion_secrets-4f92ddc421b21ffa)
+
+running 3 tests
+test tests::rejects_header_injection_and_whitespace ... ok
+test tests::debug_and_errors_never_contain_secret ... ok
+test tests::unsupported_platform_fails_closed ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests companion_chat
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests companion_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests companion_secrets
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

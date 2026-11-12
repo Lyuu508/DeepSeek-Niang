@@ -1,0 +1,15 @@
+{
+  "browser": "Chromium (headless Linux)",
+  "nativeTested": false,
+  "checks": [
+    "honest disconnected banner",
+    "SQLite mutation controls disabled in browser",
+    "sync truthfulness",
+    "theme toggle",
+    "navigation",
+    "390px responsive layout",
+    "no page errors",
+    "no external requests"
+  ],
+  "passed": true
+}

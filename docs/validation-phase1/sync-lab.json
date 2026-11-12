@@ -1,0 +1,8 @@
+{
+  "a_integrity": "ok",
+  "b_integrity": "ok",
+  "converged": true,
+  "message_count_each": 2,
+  "network_tested": false,
+  "test": "two real SQLite files; in-process lab transport; synthetic fixtures"
+}

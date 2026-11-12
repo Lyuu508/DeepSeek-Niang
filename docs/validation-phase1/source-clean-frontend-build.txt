@@ -1,0 +1,18 @@
+
+> deepseek-ai-companion@0.1.0-dev.1 build
+> npm run build --workspace @deepseek/companion
+
+
+> @deepseek/companion@0.1.0-dev.1 build
+> tsc --noEmit && vite build
+
+vite v8.3.8 building client environment for production...
+transforming...
+✓ 20 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.43 kB │ gzip:  0.32 kB
+dist/assets/index-Bm57RdT8.css   18.66 kB │ gzip:  4.58 kB
+dist/assets/index-CfCgtSt0.js   246.40 kB │ gzip: 77.77 kB
+
+✓ built in 317ms

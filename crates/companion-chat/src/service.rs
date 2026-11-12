@@ -1,0 +1,315 @@
+use crate::{ChatFailure, deepseek::DeepSeekClient};
+use companion_core::{
+    chat::{ChatMessage, ChatSettings, ContextInjection, PreparedChat, StartChat, TokenUsage},
+    storage::Store,
+};
+use companion_secrets::{Secret, SecretStore};
+use serde::Serialize;
+use std::{
+    collections::BTreeMap,
+    sync::{Arc, Mutex},
+};
+use tokio::sync::watch;
+use tokio_util::sync::CancellationToken;
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum ChatEvent {
+    Started {
+        request: PreparedChat,
+        user: Box<ChatMessage>,
+        message: Box<ChatMessage>,
+    },
+    Delta {
+        request_id: String,
+        conversation_id: String,
+        message_id: String,
+        content: String,
+        revision: i64,
+    },
+    Finished {
+        request_id: String,
+        conversation_id: String,
+        message: Box<ChatMessage>,
+        usage: Option<TokenUsage>,
+        error: Option<ChatFailure>,
+    },
+    Failed {
+        request_id: String,
+        conversation_id: String,
+        error: ChatFailure,
+    },
+}
+pub type Observer = Arc<dyn Fn(ChatEvent) -> bool + Send + Sync>;
+struct Run {
+    conversation: String,
+    cancel: CancellationToken,
+    done: watch::Receiver<bool>,
+}
+#[derive(Default)]
+struct Active {
+    runs: BTreeMap<String, Run>,
+    changing_key: bool,
+}
+pub struct ChatService {
+    pub store: Arc<Mutex<Store>>,
+    pub vault: Arc<dyn SecretStore>,
+    provider: DeepSeekClient,
+    active: Mutex<Active>,
+}
+impl ChatService {
+    pub fn new(
+        store: Arc<Mutex<Store>>,
+        vault: Arc<dyn SecretStore>,
+        provider: DeepSeekClient,
+    ) -> Self {
+        Self {
+            store,
+            vault,
+            provider,
+            active: Mutex::new(Active::default()),
+        }
+    }
+    pub fn start(
+        self: &Arc<Self>,
+        input: StartChat,
+        observer: Observer,
+    ) -> Result<PreparedChat, ChatFailure> {
+        let mut active = self.active.lock().map_err(|_| ChatFailure::new("BUSY"))?;
+        if active.changing_key || !active.runs.is_empty() {
+            return Err(ChatFailure::new("BUSY"));
+        }
+        let (prepared, settings, prompt, message, user) = {
+            let mut store = self
+                .store
+                .lock()
+                .map_err(|_| ChatFailure::new("STORAGE_ERROR"))?;
+            let settings = store.settings_for_conversation(&input.conversation_id)?;
+            let prepared = store.begin_chat(&input, &settings)?;
+            let prompt = store.chat_context(
+                &prepared.conversation_id,
+                &settings,
+                &ContextInjection::default(),
+            )?;
+            let message = store.generation(&prepared.assistant_id)?;
+            let user = store
+                .chat_messages(&prepared.conversation_id)?
+                .into_iter()
+                .find(|m| m.id == prepared.user_message_id)
+                .ok_or_else(|| ChatFailure::new("STORAGE_ERROR"))?;
+            (prepared, settings, prompt, message, user)
+        };
+        if !prepared.is_new {
+            observer(ChatEvent::Finished {
+                request_id: prepared.request_id.clone(),
+                conversation_id: prepared.conversation_id.clone(),
+                message: Box::new(message),
+                usage: None,
+                error: None,
+            });
+            return Ok(prepared);
+        }
+        let cancel = CancellationToken::new();
+        let (done_tx, done_rx) = watch::channel(false);
+        active.runs.insert(
+            prepared.request_id.clone(),
+            Run {
+                conversation: prepared.conversation_id.clone(),
+                cancel: cancel.clone(),
+                done: done_rx,
+            },
+        );
+        drop(active);
+        if !observer(ChatEvent::Started {
+            request: prepared.clone(),
+            user: Box::new(user),
+            message: Box::new(message),
+        }) {
+            cancel.cancel();
+        }
+        let service = self.clone();
+        let task = prepared.clone();
+        tokio::spawn(async move {
+            service
+                .run(task.clone(), settings, prompt, cancel, observer)
+                .await;
+            // Remove before notifying waiters, so credential changes cannot race a new request.
+            if let Ok(mut state) = service.active.lock() {
+                state.runs.remove(&task.request_id);
+            }
+            let _ = done_tx.send(true);
+        });
+        Ok(prepared)
+    }
+    async fn run(
+        &self,
+        task: PreparedChat,
+        settings: ChatSettings,
+        prompt: Vec<companion_core::chat::PromptMessage>,
+        cancel: CancellationToken,
+        observer: Observer,
+    ) {
+        let mut revision = 0;
+        let mut storage_failed = false;
+        let result = match self.vault.get() {
+            Ok(key) => {
+                self.provider
+                    .stream(&key, &settings, &prompt, &cancel, |content| {
+                        let saved = self
+                            .store
+                            .lock()
+                            .ok()
+                            .and_then(|mut s| s.checkpoint_chat(&task.request_id, content).ok())
+                            .unwrap_or(false);
+                        if !saved {
+                            storage_failed = true;
+                            return false;
+                        }
+                        revision += 1;
+                        observer(ChatEvent::Delta {
+                            request_id: task.request_id.clone(),
+                            conversation_id: task.conversation_id.clone(),
+                            message_id: task.assistant_id.clone(),
+                            content: content.into(),
+                            revision,
+                        })
+                    })
+                    .await
+            }
+            Err(error) => crate::deepseek::StreamResult {
+                content: String::new(),
+                usage: None,
+                finish_reason: None,
+                error: Some(error.into()),
+            },
+        };
+        let mut error = result.error;
+        if storage_failed {
+            error = Some(ChatFailure::new("STORAGE_ERROR"));
+        }
+        if cancel.is_cancelled() && !storage_failed {
+            error = Some(ChatFailure::new("CANCELLED"));
+        }
+        let state = match error.as_ref().map(|e| e.code.as_str()) {
+            None => "complete",
+            Some("CANCELLED" | "OUTPUT_LIMIT" | "TIMEOUT" | "STREAM_INCOMPLETE") => "interrupted",
+            _ => "failed",
+        };
+        let final_message = (|| -> Result<ChatMessage, ChatFailure> {
+            let mut store = self
+                .store
+                .lock()
+                .map_err(|_| ChatFailure::new("STORAGE_ERROR"))?;
+            store.finish_chat(
+                &task.request_id,
+                &result.content,
+                state,
+                error.as_ref().map(|e| e.code.as_str()),
+                result.finish_reason.as_deref(),
+                result.usage.as_ref(),
+            )?;
+            Ok(store.generation(&task.assistant_id)?)
+        })();
+        match final_message {
+            Ok(message) => {
+                observer(ChatEvent::Finished {
+                    request_id: task.request_id,
+                    conversation_id: task.conversation_id,
+                    message: Box::new(message),
+                    usage: result.usage,
+                    error,
+                });
+            }
+            Err(error) => {
+                observer(ChatEvent::Failed {
+                    request_id: task.request_id,
+                    conversation_id: task.conversation_id,
+                    error,
+                });
+            }
+        }
+    }
+    pub fn stop(&self, request_id: &str) -> Result<bool, ChatFailure> {
+        let state = self.active.lock().map_err(|_| ChatFailure::new("BUSY"))?;
+        if let Some(run) = state.runs.get(request_id) {
+            run.cancel.cancel();
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+    pub fn active_request(&self) -> Option<String> {
+        self.active_generation().map(|(request, _)| request)
+    }
+    pub fn active_generation(&self) -> Option<(String, String)> {
+        self.active.lock().ok().and_then(|s| {
+            s.runs
+                .iter()
+                .next()
+                .map(|(id, run)| (id.clone(), run.conversation.clone()))
+        })
+    }
+    /// Return only after the interrupted draft is durable and a new request may start.
+    /// Also works after the WebView which owned the event channel was recreated.
+    pub async fn stop_and_wait(&self, request_id: &str) -> Result<bool, ChatFailure> {
+        let waiter = {
+            let state = self.active.lock().map_err(|_| ChatFailure::new("BUSY"))?;
+            state.runs.get(request_id).map(|run| {
+                run.cancel.cancel();
+                run.done.clone()
+            })
+        };
+        let Some(mut waiter) = waiter else {
+            return Ok(false);
+        };
+        if !*waiter.borrow() {
+            tokio::time::timeout(std::time::Duration::from_secs(3), waiter.changed())
+                .await
+                .map_err(|_| ChatFailure::new("BUSY"))?
+                .map_err(|_| ChatFailure::new("BUSY"))?;
+        }
+        Ok(true)
+    }
+    pub async fn replace_key(&self, key: Option<Secret>) -> Result<(), ChatFailure> {
+        let waiters = {
+            let mut state = self.active.lock().map_err(|_| ChatFailure::new("BUSY"))?;
+            if state.changing_key {
+                return Err(ChatFailure::new("BUSY"));
+            }
+            state.changing_key = true;
+            state
+                .runs
+                .values()
+                .map(|r| {
+                    r.cancel.cancel();
+                    r.done.clone()
+                })
+                .collect::<Vec<_>>()
+        };
+        let result = async {
+            for mut waiter in waiters {
+                if !*waiter.borrow() {
+                    tokio::time::timeout(std::time::Duration::from_secs(3), waiter.changed())
+                        .await
+                        .map_err(|_| ChatFailure::new("BUSY"))?
+                        .map_err(|_| ChatFailure::new("BUSY"))?;
+                }
+            }
+            if let Some(key) = key {
+                self.vault.set(&key)?;
+                // Verify actual native readback without exposing the key to JS or a log.
+                if self.vault.get()?.expose() != key.expose() {
+                    return Err(ChatFailure::new("SECURE_STORAGE_CORRUPT"));
+                }
+            } else {
+                self.vault.delete()?;
+            }
+            Ok(())
+        }
+        .await;
+        if let Ok(mut state) = self.active.lock() {
+            state.changing_key = false;
+        }
+        result
+    }
+}
