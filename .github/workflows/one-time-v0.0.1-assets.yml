@@ -1,0 +1,65 @@
+name: Upload fixed v0.0.1 draft assets
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fixed-v0.0.1-release-assets
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    if: github.repository == 'Lyuu508/DeepSeek-Niang'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Verify and upload only the authorized draft assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: python
+        run: |
+          import base64, hashlib, io, json, os, pathlib, subprocess, urllib.request, zipfile
+          repo = os.environ['GITHUB_REPOSITORY']
+          assert repo == 'Lyuu508/DeepSeek-Niang'
+          headers = {'Authorization': 'Bearer ' + os.environ['GH_TOKEN'],
+                     'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28'}
+          def api(path):
+              request = urllib.request.Request('https://api.github.com/' + path, headers=headers)
+              with urllib.request.urlopen(request, timeout=180) as response:
+                  return json.load(response)
+          release_id = 443264100
+          release = api(f'repos/{repo}/releases/{release_id}')
+          assert release['draft'] and release['prerelease']
+          assert release['tag_name'] == 'v0.0.1' and release['name'] == '0.0.1测试版'
+          assert release['body'] == '这是0.0.1测试版'
+          assert release['target_commitish'] == '8ae10e7c62602fde124989800c6e16d5a951dcb0'
+          EXPECTED = {'DeepSeek-Niang_0.0.1_windows-x64-setup.exe': {'bytes': 5826955, 'sha256': 'e31598271b91f840e1d68a4ce380f6f759a690aff7ff46bfa06d48395505c4ab'}, 'DeepSeek-Niang_0.0.1_android-arm64.apk': {'bytes': 35511972, 'sha256': '5100cdd29b6751e3ffd1d6536f5c125af6888f679dc524cdfbb6048afe3195d8'}, 'SHA256SUMS.txt': {'bytes': 214, 'sha256': '18ab1d58d6e01103b0bb194255927c773730e3cb573e6108f875cd7b10cfac74'}, 'BUILD-RESULTS.json': {'bytes': 3490, 'sha256': 'e18c0e37f48008cc3b44b137c987b4a81791d206b136164127bd6236e2579385'}}
+          assert all(a['name'] in EXPECTED for a in release['assets'])
+          blob = api(f'repos/{repo}/git/blobs/809aa0f079cdf554ad4370b989921e128ee5303c')
+          assert blob['sha'] == '809aa0f079cdf554ad4370b989921e128ee5303c' and blob['encoding'] == 'base64'
+          data = base64.b64decode(blob['content'])
+          assert len(data) == 41343181
+          assert hashlib.sha256(data).hexdigest() == 'a9a93d632895f4717276a7d87c62e969a31266c684f2ef52e5d52558d71322bf'
+          output = pathlib.Path(os.environ['RUNNER_TEMP']) / 'verified-v0.0.1-assets'
+          output.mkdir(exist_ok=True)
+          with zipfile.ZipFile(io.BytesIO(data)) as archive:
+              assert len(archive.infolist()) == len(EXPECTED)
+              assert set(archive.namelist()) == set(EXPECTED)
+              for name, expected in EXPECTED.items():
+                  assert archive.getinfo(name).file_size == expected['bytes']
+                  content = archive.read(name)
+                  assert hashlib.sha256(content).hexdigest() == expected['sha256']
+                  (output / name).write_bytes(content)
+          subprocess.run(['gh', 'release', 'upload', 'v0.0.1', '--repo', repo, '--clobber',
+                          *(str(output / name) for name in EXPECTED)], check=True)
+          result = api(f'repos/{repo}/releases/{release_id}')
+          assert result['draft'] and result['target_commitish'] == release['target_commitish']
+          assert set(a['name'] for a in result['assets']) == set(EXPECTED)
+          for asset in result['assets']:
+              expected = EXPECTED[asset['name']]
+              assert asset['state'] == 'uploaded' and asset['size'] == expected['bytes']
+              assert asset['digest'] == 'sha256:' + expected['sha256']
+          print('Uploaded and verified four fixed assets; release remains a draft.')
