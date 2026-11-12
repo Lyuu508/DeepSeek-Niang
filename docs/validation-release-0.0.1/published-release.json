@@ -1,0 +1,47 @@
+{
+  "id": 443264100,
+  "tag_name": "v0.0.1",
+  "name": "0.0.1测试版",
+  "body": "这是0.0.1测试版",
+  "draft": false,
+  "prerelease": true,
+  "published_at": "2026-11-12T17:11:17Z",
+  "html_url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.0.1",
+  "target_commitish": "8ae10e7c62602fde124989800c6e16d5a951dcb0",
+  "assets": [
+    {
+      "id": 740341556,
+      "name": "BUILD-RESULTS.json",
+      "size": 3490,
+      "state": "uploaded",
+      "digest": "sha256:e18c0e37f48008cc3b44b137c987b4a81791d206b136164127bd6236e2579385",
+      "browser_download_url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.1/BUILD-RESULTS.json"
+    },
+    {
+      "id": 740341557,
+      "name": "DeepSeek-Niang_0.0.1_android-arm64.apk",
+      "size": 35511972,
+      "state": "uploaded",
+      "digest": "sha256:5100cdd29b6751e3ffd1d6536f5c125af6888f679dc524cdfbb6048afe3195d8",
+      "browser_download_url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.1/DeepSeek-Niang_0.0.1_android-arm64.apk"
+    },
+    {
+      "id": 740341558,
+      "name": "DeepSeek-Niang_0.0.1_windows-x64-setup.exe",
+      "size": 5826955,
+      "state": "uploaded",
+      "digest": "sha256:e31598271b91f840e1d68a4ce380f6f759a690aff7ff46bfa06d48395505c4ab",
+      "browser_download_url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.1/DeepSeek-Niang_0.0.1_windows-x64-setup.exe"
+    },
+    {
+      "id": 740341559,
+      "name": "SHA256SUMS.txt",
+      "size": 214,
+      "state": "uploaded",
+      "digest": "sha256:18ab1d58d6e01103b0bb194255927c773730e3cb573e6108f875cd7b10cfac74",
+      "browser_download_url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.1/SHA256SUMS.txt"
+    }
+  ],
+  "tag_commit": "8ae10e7c62602fde124989800c6e16d5a951dcb0",
+  "manual_asset_transfer_run": "https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43266632511"
+}

@@ -1,7 +1,7 @@
 # 阶段 1 源码保存与取回
 
 源码目录：`/workspace/output/deepseek-ai-companion/`。
-阶段 0 原始 ZIP 保留，不覆盖。当前准备版本 `0.0.1`，旧dev.2 ZIP保留不覆盖。
+阶段 0 原始 ZIP 保留，不覆盖。当前已发布版本 `0.0.1`，旧dev.2 ZIP保留不覆盖。
 
 在项目根目录执行：
 
@@ -16,7 +16,7 @@ python3 scripts/export_source.py
 
 ## 如何从当前环境取回
 
-当前会话未提供可确认的附件上传通道，容器内路径不是可下载附件，也不是用户电脑上的路径。
+本次已获得明确的公开GitHub发布授权。优先到 [v0.0.1发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.0.1) 选择 Source code (zip) 或 (tar.gz)，取得两个安装包对应的8ae10e7源码及正式资源。最新main还包含发布后补充的测试说明。以下方法适用于工作区本地额外导出，内部路径仍不等于可下载附件。
 
 优先使用运行此工作区的客户端文件面板：定位 `/workspace/output/`，选择 ZIP 和 SHA-256 文件并使用 Download/下载。若平台只支持下载工作区文件，可将这两个文件复制到该平台指定的可下载文件区；不要上传到 GitHub 或其他公开网盘代替授权。
 
@@ -33,7 +33,7 @@ python3 scripts/serve_source.py ../DeepSeek-Companion-stage1-v0.0.1.zip --port 8
 
 Windows 校验：`Get-FileHash -Algorithm SHA256 <下载的ZIP>`；Linux/macOS 可用 `sha256sum <ZIP>`（macOS 可用 `shasum -a 256`）。解压后重新安装依赖；安全存储中的 Key 不在 ZIP 内，须在各设备设置。
 
-本次原始角色PNG缺失，ZIP不会虚构master/头像或替换图标；manifest明确pending_source。新版本安装包因此未生成，旧dev.1包不包含本次改造。源码ZIP不是安装器，解压后先补原图，再按Windows/Android说明构建。
+当前0.0.1源码包含用户提供的原始PNG及69项派生资源，manifest为ready；本版EXE/APK已生成并发布。源码ZIP不是安装器；需要自行构建时先校验资源，再按Windows/Android说明执行。
 
 ## dev.2私有交付历史
 
@@ -41,4 +41,4 @@ Windows 校验：`Get-FileHash -Algorithm SHA256 <下载的ZIP>`；Linux/macOS �
 
 ## 0.0.1 GitHub交付
 
-用户已明确指定新建公开仓库Lyuu508/DeepSeek-Niang、上传0.0.1测试版。仅上传源码白名单，数据库/密钥/备份/缓存/旧安装包不入库；本版实际EXE/APK生成核验后才能作为Release附件提供，不把源码上传称为安装包完成。实际仓库/Release链接以完成操作后的交付记录为准。
+[公开仓库](https://github.com/Lyuu508/DeepSeek-Niang) 与 [0.0.1测试版](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.0.1) 已更新。仅提交源码白名单，数据库/密钥/备份/缓存/旧安装包不入源码树；新EXE/APK作为Release附件发布，公开完整下载/哈希已验证。实际记录见RELEASE_0.0.1.md；后续远程更新仍需用户另行明确授权。

@@ -4,9 +4,15 @@
 
 实际已实现能力与后续计划以下文为准。
 
-Windows + Android 本地优先陪伴应用，当前准备 **0.0.1 测试版**，继承本地开发版0.1.0-dev.2。继承原阶段 0/1，改为“一人格一个永久聊天空间”：新增/切换/编辑人格，独立上下文、记忆、Token 统计，重启恢复上次选择。保留 DeepSeek 流式聊天、停止、重生成和双端系统密钥存储。
+Windows + Android 本地优先陪伴应用，当前已发布 **0.0.1 测试版**，继承本地开发版0.1.0-dev.2。继承原阶段 0/1，改为“一人格一个永久聊天空间”：新增/切换/编辑人格，独立上下文、记忆、Token 统计，重启恢复上次选择。保留 DeepSeek 流式聊天、停止、重生成和双端系统密钥存储。
 
 **0.0.1 测试版**使用用户提供的正式海滩PNG，原图按字节保留，Windows/Android图标和聊天头像已生成。安装文件通过 [GitHub Releases](https://github.com/Lyuu508/DeepSeek-Niang/releases) 交付，分别选择Windows EXE或Android ARM64 APK；实际构建及设备验证范围见附件说明与 [安装测试说明](docs/RELEASE_0.0.1.md)。
+
+- [Windows 10/11 x64 安装 EXE](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.1/DeepSeek-Niang_0.0.1_windows-x64-setup.exe)
+- [Android 10+ ARM64 APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.1/DeepSeek-Niang_0.0.1_android-arm64.apk)
+- [0.0.1测试版发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.0.1) · [SHA-256](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.1/SHA256SUMS.txt)
+
+两个安装包均已从公开链接完整下载并校验哈希。Windows 原生构建、58项测试、静默安装及窗口启动通过；Android 完整构建和签名/资源检查通过，尚未真机运行。Windows 安装器未做 Authenticode 签名，APK 使用原开发签名；真实 API 请在各设备设置中输入自己的 Key 验收。
 
 见 [本次报告](docs/PERSONA_BRANDING_REPORT.md)、[迁移与回滚](docs/PERSONA_MIGRATION.md)、[品牌素材状态](assets/branding/README.md)。阶段 2～9 本次仅交付[八份独立计划](DEVELOPMENT_PLAN.md)，没有启用后续功能。
 
@@ -42,7 +48,7 @@ node scripts/check-branding.mjs
 
 默认 DeepSeek娘，打开进入上次人格；每个人格唯一主聊天入口。旧会话原始行保留，通过归属映射按时间组成永久时间线；升级前一致备份，事务失败回滚。新人格有独立配置与关系/情绪/生活/兴趣容器；自动引擎尚未启用，界面显示未评估/尚未记录。
 
-原生应用「设置 → DeepSeek API」输入本机 Key，保存后清空输入。本设备人格共用该凭据，用量按人格统计。Windows Credential Manager、Android Keystore AES-GCM 加密私有文件，无明文业务表回退，不跨设备同步。不要把 Key 发到聊天或写入源码；两端系统自检仍待实机验证。
+原生应用「设置 → DeepSeek API」输入本机 Key，保存后清空输入。本设备人格共用该凭据，用量按人格统计。Windows Credential Manager、Android Keystore AES-GCM 加密私有文件，无明文业务表回退，不跨设备同步。Windows runner已通过真实 Credential Manager 写入/读回/删除测试，Android Keystore仍待真机验证。不要把 Key 发到聊天或写入源码。
 
 Rust 请求固定官方 `https://api.deepseek.com/chat/completions`，沿用 `deepseek-flash` / `deepseek-v4-pro` 文本配置。只发送当前人格设定、本次输入及可关闭的有限近期回合；其他人格、长期记忆、整个数据库不发送，没有云数据库。真实 API 由用户在设备本地配置 Key 测试。
 

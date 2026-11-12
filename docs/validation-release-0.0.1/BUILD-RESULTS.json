@@ -1,0 +1,83 @@
+{
+  "version": "0.0.1",
+  "release_title": "0.0.1测试版",
+  "source_commit": "8ae10e7c62602fde124989800c6e16d5a951dcb0",
+  "verified_at_utc": "2026-11-12T17:07:38.929024+00:00",
+  "repository": "https://github.com/Lyuu508/DeepSeek-Niang",
+  "original_icon_sha256": "070adedf4a8896745ea8fb7755b3cbe4b673bcb51d1edc88cc76e46ea937aff1",
+  "assets": [
+    {
+      "file": "DeepSeek-Niang_0.0.1_windows-x64-setup.exe",
+      "bytes": 5826955,
+      "sha256": "e31598271b91f840e1d68a4ce380f6f759a690aff7ff46bfa06d48395505c4ab"
+    },
+    {
+      "file": "DeepSeek-Niang_0.0.1_android-arm64.apk",
+      "bytes": 35511972,
+      "sha256": "5100cdd29b6751e3ffd1d6536f5c125af6888f679dc524cdfbb6048afe3195d8"
+    }
+  ],
+  "windows": {
+    "version": "0.0.1",
+    "build_commit": "8ae10e7c62602fde124989800c6e16d5a951dcb0",
+    "workflow_run": "43262321945",
+    "host": "GitHub-hosted Windows runner",
+    "embedded_product_version": "0.0.1",
+    "installer_exit_code": 0,
+    "installed_on_windows_runner": true,
+    "installed_process_started": true,
+    "window_title": "DeepSeek娘",
+    "window_screenshot": true,
+    "real_user_device_tested": false,
+    "real_deepseek_api_tested": false,
+    "authenticode_signed": false,
+    "api_key_embedded": false,
+    "installer_sha256": "e31598271b91f840e1d68a4ce380f6f759a690aff7ff46bfa06d48395505c4ab",
+    "application_sha256": "4be54b565e141e359db9a1b81a6925dd2db66386af0abf663465f4c412a04e49",
+    "target": "x86_64-pc-windows-msvc",
+    "installer": "NSIS EXE",
+    "build_result": "success",
+    "workflow_url": "https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43262321945",
+    "rust_tests_passed": 58,
+    "original_core_invariant_tests_passed": 21,
+    "credential_manager_roundtrip": "passed in Windows runner",
+    "native_window_screenshot_reviewed": true
+  },
+  "android": {
+    "bytes": 35511972,
+    "sha256": "5100cdd29b6751e3ffd1d6536f5c125af6888f679dc524cdfbb6048afe3195d8",
+    "version": "0.0.1",
+    "version_code": 1001,
+    "application_id": "io.local.deepseekcompanion",
+    "abi": "arm64-v8a",
+    "same_signing_certificate_as_dev1": true,
+    "signer_certificate_sha256": "9de96ea5fb1d0b3f91ea73d9a16c030428453b15838927a85f86773eaef208a1",
+    "zip_integrity": "passed",
+    "signature": "verified",
+    "libraries": [
+      "lib/arm64-v8a/libcompanion_app_lib.so"
+    ],
+    "installed_or_run_on_android": false,
+    "real_deepseek_api_tested": false,
+    "build_commit": "8ae10e7c62602fde124989800c6e16d5a951dcb0"
+  },
+  "checks": {
+    "branding_derived_files_verified": 69,
+    "sqlite_schema": 3,
+    "sqlite_schema_check": "passed",
+    "frontend_typecheck_and_production_build": "passed",
+    "source_export_policy_tests_passed": 6,
+    "browser_ui_tests": {
+      "passed": 16,
+      "scope": "Explicit Mock service; not real DeepSeek or native credentials"
+    }
+  },
+  "limitations": [
+    "Windows installer has no Authenticode signature.",
+    "Android APK is ARM64, Android 10+, debug build signed with the existing development certificate.",
+    "No physical Android installation/runtime or Android Keystore roundtrip was performed.",
+    "Windows smoke covers a clean hosted runner; user-device upgrades and real API interactions are not verified.",
+    "No real DeepSeek API key was supplied, embedded, or used. Configure it locally in the installed app.",
+    "The display version is 0.0.1; Android versionCode 1001 supports updating the previous dev.1 build signed with the same certificate."
+  ]
+}

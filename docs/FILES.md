@@ -1,5 +1,7 @@
 # dev.2 本次文件清单
 
+本页保留dev.2本地交付时的208文件清单与当时状态。当前0.0.1已收到原始PNG、生成正式资源并在GitHub发布EXE/APK；新增构建/验证文件及当前结果见 [RELEASE_0.0.1.md](RELEASE_0.0.1.md)。以下历史缺图/未发布描述不代表当前状态；完整当前清单以Git及SOURCE-MANIFEST为准。
+
 相对已交付 dev.1 安装测试源码包：修改 46、新增 45、删除 0，原样保留 117；当前源码文件 208 个（另附 ZIP 内 SOURCE-MANIFEST.json）。
 
 旧迁移0001/0002、原21项测试、关系/任务/视频源文件按字节保留。完整逐文件哈希以ZIP的SOURCE-MANIFEST为准；机器可读列表见 [CHANGED_FILES.json](CHANGED_FILES.json)。

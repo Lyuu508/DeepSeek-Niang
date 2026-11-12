@@ -1,6 +1,6 @@
 # 阶段 1 本机构建与设备验收
 
-版本 `0.0.1`。本轮完成共享核心和Android原生Rust编译检查，未生成新版EXE/APK。指定原始海滩PNG已于2026-11-13由用户ZIP导入，本次实际构建另见RELEASE_0.0.1；现有dev.1记录只是历史证据。双端真实运行和API仍待用户本机验收。
+版本 `0.0.1`。本轮已生成并发布Windows x64 EXE与Android ARM64 APK；[实际下载与验证范围](RELEASE_0.0.1.md)。Windows在原生runner通过58项测试、静默安装和窗口启动，Android通过完整构建与签名/资源检查、未真机运行。指定原始海滩PNG已由用户ZIP导入；旧dev.1记录只是历史证据。用户设备升级、Android Keystore与真实API仍待本机验收。
 
 先按 [品牌资源说明](../assets/branding/README.md) 导入同一原图、检查头像/ICO/adaptive安全区域，再执行本页脚本。脚本不会以旧DS图标替代。`npm run build`仅前端构建，不等于原生安装包。
 
@@ -67,7 +67,7 @@ Windows 的 Python 命令可改为 `py -3`。辅助脚本仅处理真实生成�
 
 这是开发签名 APK，通常位于 `apps/companion/src-tauri/gen/android/app/build/outputs/apk/` 下；按实际构建输出查找。使用 Android Studio 或已授权的 `adb install -r <实际APK>` 安装。模拟器若非 ARM64，应重新评估对应 target，不以此脚本的 ARM64 包承诺兼容。
 
-源码包不分发 gen 目录的缓存工程；初始化需要访问官方 Gradle/Android/Maven 依赖。prepare_android.py 将模板默认 API 固定到已验证的 36，与 Tauri Android 库和私有插件一致。旧dev.1的 Kotlin/Java、Rust ARM64、Gradle APK 已构建成功；本轮dev.2仅Rust检查通过，未重打APK/验资源。Keystore/键盘/生命周期仍待手机验证。旧包实际工具链为 Temurin JDK 21.0.13、NDK r28c、Gradle 9.6.1、AGP 9.3.1、Kotlin 2.2.10。
+源码包不分发 gen 目录的缓存工程；初始化需要访问官方 Gradle/Android/Maven 依赖。prepare_android.py 将模板默认 API 固定到已验证的 36，与 Tauri Android 库和私有插件一致。本轮0.0.1的 Kotlin/Java、Rust ARM64、Gradle APK 已完整构建，签名/版本/ABI和图标资源通过检查；versionCode=1001，沿用旧dev.1开发签名。Keystore/键盘/生命周期仍待手机验证。本次实际工具链为 Temurin JDK 21.0.13、SDK/Build-Tools 36、NDK r28c、Gradle 9.6.1、AGP 9.3.1、Kotlin 2.2.10。
 
 ## 双端逐项验收
 

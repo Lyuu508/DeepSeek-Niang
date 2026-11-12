@@ -1,6 +1,6 @@
 # Windows 首次安装与本机构建
 
-目标：Windows 10/11 x64，本地开发版本 0.0.1。正式海滩PNG已于2026-11-13导入并校验；本页为本次重新构建后的安装与本机构建说明。旧dev.1安装器只代表旧版，不能验证本次人格重构，不进入阶段2。安装包的实际构建/运行状态以随包 BUILD-RESULTS.json 为准；构建成功不代表已经在 Windows 实机运行。
+目标：Windows 10/11 x64，测试版本 0.0.1。正式海滩PNG已导入并校验，[下载本次安装器](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.1/DeepSeek-Niang_0.0.1_windows-x64-setup.exe)。Windows原生runner已通过58项测试、静默安装和安装后窗口启动，并目视确认正式图标/头像；用户设备安装、旧库升级和真实API仍待验收。详细范围见随包 BUILD-RESULTS.json；旧dev.1安装器只代表旧版，本次不进入阶段2。
 
 ## 已取得 EXE 安装器时
 
@@ -70,4 +70,4 @@ MSI 需在 Windows 安装相应 WiX/VBScript 前置条件后使用 `--bundles ms
 
 记录系统版本、包 SHA-256、能否打开窗口、本地历史能否保留、凭据自检结果以及脱敏错误码即可。提供真实 API 连通测试结果时，不附 Key、Authorization 头或私人数据库。
 
-改名后 NSIS 安装路径/卸载条目可能不同，覆盖升级需实际检查旧版识别和用户数据保留；目前未在Windows测试，不承诺安装器无缝覆盖。不要为解决问题先卸载/清空聊天。数据库升级及回滚见 PERSONA_MIGRATION.md。
+改名后 NSIS 安装路径/卸载条目可能不同，覆盖升级需实际检查旧版识别和用户数据保留；本次Windows runner仅测试全新安装，没有验证用户旧版覆盖。不承诺安装器无缝覆盖。不要为解决问题先卸载/清空聊天。数据库升级及回滚见 PERSONA_MIGRATION.md。

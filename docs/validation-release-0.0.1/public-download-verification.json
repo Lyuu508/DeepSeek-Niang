@@ -1,0 +1,30 @@
+[
+  {
+    "name": "BUILD-RESULTS.json",
+    "http_status": 200,
+    "bytes_downloaded": 3490,
+    "sha256": "e18c0e37f48008cc3b44b137c987b4a81791d206b136164127bd6236e2579385",
+    "full_download_verified": true
+  },
+  {
+    "name": "DeepSeek-Niang_0.0.1_android-arm64.apk",
+    "http_status": 200,
+    "bytes_downloaded": 35511972,
+    "sha256": "5100cdd29b6751e3ffd1d6536f5c125af6888f679dc524cdfbb6048afe3195d8",
+    "full_download_verified": true
+  },
+  {
+    "name": "DeepSeek-Niang_0.0.1_windows-x64-setup.exe",
+    "http_status": 200,
+    "bytes_downloaded": 5826955,
+    "sha256": "e31598271b91f840e1d68a4ce380f6f759a690aff7ff46bfa06d48395505c4ab",
+    "full_download_verified": true
+  },
+  {
+    "name": "SHA256SUMS.txt",
+    "http_status": 200,
+    "bytes_downloaded": 214,
+    "sha256": "18ab1d58d6e01103b0bb194255927c773730e3cb573e6108f875cd7b10cfac74",
+    "full_download_verified": true
+  }
+]

@@ -1,6 +1,6 @@
 # Android 安装与 Windows 本机构建 APK
 
-当前源码版本 0.0.1，正式原始PNG已于2026-11-13导入并生成图标；以下为本次构建/安装步骤，实际产物与测试范围见RELEASE_0.0.1。旧dev.1 APK不作为本版附件。目标Android 10/API 29+、ARM64。开发 APK 使用开发签名，不能视为已正式发布或已经真机测试；实际状态以随包 BUILD-RESULTS.json 为准。
+当前版本 0.0.1，[下载本次APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.1/DeepSeek-Niang_0.0.1_android-arm64.apk)。正式原始PNG已导入，已完成完整构建和签名/版本/ABI/图标资源核验，实际范围见RELEASE_0.0.1。旧dev.1 APK不作为本版附件。目标Android 10/API 29+、ARM64；versionCode=1001，高于旧包1000，签名证书一致。已作为GitHub预发布提供下载，仍是开发签名调试包，尚未真机安装运行；以随包 BUILD-RESULTS.json 为准。
 
 ## 安装实际 APK
 
