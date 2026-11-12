@@ -15,5 +15,12 @@
   "real_deepseek_api": "not_performed",
   "repository_target": "Lyuu508/DeepSeek-Niang",
   "visibility_requested": "public",
-  "release_publication": "waiting_for_actual_installers"
+  "release_publication": "waiting_for_actual_installers",
+  "repository_creation": "blocked_by_github_integration_permission",
+  "repository_creation_graphql": "Resource not accessible by integration (createRepository)",
+  "repository_creation_rest_http_status": 403,
+  "source_pushed": false,
+  "tag_created": false,
+  "release_created": false,
+  "existing_repositories_modified": false
 }

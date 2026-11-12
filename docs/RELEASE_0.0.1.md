@@ -4,6 +4,7 @@
 
 ## 当前准备状态
 
+- GitHub创建仓库实测受阻：已登录账号为Lyuu508，GraphQL createRepository与REST POST /user/repos均返回“Resource not accessible by integration”，REST状态403。尚未创建目标仓库、推送代码、创建Tag或发布Release；没有修改另两个不相关仓库。需要用户在GitHub新建公开DeepSeek-Niang，并确保连接可访问该仓库。
 - 版本：0.0.1；计划标签v0.0.1，GitHub Release标记为测试版/prerelease。尚未创建完整可下载安装的Release。
 - 继承原dev.2全部人格/永久时间线与阶段0/1代码，SQLite user_version仍为3；没有重建项目或重置数据。
 - Windows/Android显示名DeepSeek娘，identifier/applicationId仍为io.local.deepseekcompanion，凭据命名空间和签名身份不变。
@@ -37,3 +38,10 @@ Linux的Android入口为 `sh scripts/build-android.sh`。构建组件、签名/�
 修改范围为12处本项目版本/锁文件元数据、Android内部版本码、发布约束与说明和本次验证记录。没有升级外部依赖、删除旧迁移/模块或将私有签名加入源码。
 
 阶段2～9仍只有计划，未开始实现。
+
+## 必要的用户操作
+
+1. 在GitHub新建公开仓库DeepSeek-Niang，提供实际地址；如果GitHub连接仅授权选定仓库，将新仓库加入访问范围。无需发送Token、密码或其他明文凭据。
+2. 补传先前指定的同一张海滩原始PNG文件，才能生成正式图标和本次EXE/APK；当前不能以聊天中不可读取的图片、旧安装器或临时替代图冒充完成。
+
+完成后可继续推送本地已准备的0.0.1源码，并在真实构建/核验产物后发布测试Release和下载附件。授权仍限本次版本，不需重新确认同一发布范围。
