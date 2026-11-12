@@ -1,15 +1,15 @@
 # DeepSeek娘 0.0.1 测试版
 
-日期：2026-11-12。用户已明确授权新建独立公开仓库 `Lyuu508/DeepSeek-Niang`、上传当前修改代码并提供 Windows EXE 和 Android APK 下载。本次授权不扩展为以后自动更新或自动发布。
+更新：2026-11-13。用户已明确授权新建独立公开仓库 `Lyuu508/DeepSeek-Niang`、上传当前修改代码并提供 Windows EXE 和 Android APK 下载。本次授权不扩展为以后自动更新或自动发布。
 
 ## 当前准备状态
 
-- GitHub创建仓库实测受阻：已登录账号为Lyuu508，GraphQL createRepository与REST POST /user/repos均返回“Resource not accessible by integration”，REST状态403。尚未创建目标仓库、推送代码、创建Tag或发布Release；没有修改另两个不相关仓库。需要用户在GitHub新建公开DeepSeek-Niang，并确保连接可访问该仓库。
+- 公开目标仓库已由用户创建：[Lyuu508/DeepSeek-Niang](https://github.com/Lyuu508/DeepSeek-Niang)。本次上传完整0.0.1源码，并保留初始化README提交及项目愿景。此前创建仓库接口权限问题已由用户创建仓库解决。
 - 版本：0.0.1；计划标签v0.0.1，GitHub Release标记为测试版/prerelease。尚未创建完整可下载安装的Release。
 - 继承原dev.2全部人格/永久时间线与阶段0/1代码，SQLite user_version仍为3；没有重建项目或重置数据。
 - Windows/Android显示名DeepSeek娘，identifier/applicationId仍为io.local.deepseekcompanion，凭据命名空间和签名身份不变。
 - Android内部versionCode为1001，比旧dev.1实际APK的1000高；显示版本改为0.0.1不会以默认版本码1触发覆盖安装降级。实机升级仍未验证，必须使用同一签名，不卸载清数据。
-- 先前指定的海滩图在聊天可见，但执行环境只有指令文本，没有原始PNG文件。品牌校验继续有效，不能使用旧DS资源或临时测试图发布新包。
+- 先前指定的海滩图已于11月13日在聊天中再次确认，但消息接口仍只提供内嵌预览，没有可读取的原始PNG文件或下载ID。品牌校验继续有效，不能使用旧DS资源或临时测试图发布新包。
 
 ## 安装包出口
 
@@ -39,9 +39,10 @@ Linux的Android入口为 `sh scripts/build-android.sh`。构建组件、签名/�
 
 阶段2～9仍只有计划，未开始实现。
 
-## 必要的用户操作
+## 安装包待补的输入
 
-1. 在GitHub新建公开仓库DeepSeek-Niang，提供实际地址；如果GitHub连接仅授权选定仓库，将新仓库加入访问范围。无需发送Token、密码或其他明文凭据。
-2. 补传先前指定的同一张海滩原始PNG文件，才能生成正式图标和本次EXE/APK；当前不能以聊天中不可读取的图片、旧安装器或临时替代图冒充完成。
+源码上传已获明确授权。安装包仍需可读取的原始PNG字节：把同一张原PNG压成ZIP作为文件附件，或直接放入仓库 `assets/branding/deepseek-niang-master.png`。工具不能从聊天预览重建一个文件并称为原图。
 
-完成后可继续推送本地已准备的0.0.1源码，并在真实构建/核验产物后发布测试Release和下载附件。授权仍限本次版本，不需重新确认同一发布范围。
+原图可读取后，生成/目视检查正式图标，再从同一版本源码真实构建EXE/APK，核验产物后发布测试Release及下载附件。本次不将没有安装包的源码上传称为安装包发布完成，原有0.1.0-dev.1包也不作为本版附件。
+
+授权仍限本次0.0.1测试版，不需重复确认同一发布范围。双端实机与真实API仍由用户在设备本地配置密钥验收。

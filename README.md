@@ -1,8 +1,12 @@
 # DeepSeek娘
 
+> 项目愿景（保留仓库初始说明）：使用GPT制作的电脑跟手机数据互通的养一只有自己生活能刷b站主动聊天还有好感度系统的大肥鱼开源软件。
+
+实际已实现能力与后续计划以下文为准。
+
 Windows + Android 本地优先陪伴应用，当前准备 **0.0.1 测试版**，继承本地开发版0.1.0-dev.2。继承原阶段 0/1，改为“一人格一个永久聊天空间”：新增/切换/编辑人格，独立上下文、记忆、Token 统计，重启恢复上次选择。保留 DeepSeek 流式聊天、停止、重生成和双端系统密钥存储。
 
-**当前状态：源码发布准备，v0.0.1 的 EXE/APK 尚未生成。** 用户已授权新建公开仓库 DeepSeek-Niang 并发布本次测试版。此前海滩图未以可读取的原始PNG到达，品牌校验会阻止原生打包；不把旧dev.1安装器改名冒充本版。阶段0/1功能与人格改造继续保留。[本次发布状态与安装说明](docs/RELEASE_0.0.1.md)。
+**当前提供 0.0.1 测试版源码，EXE/APK 尚未生成。** [公开仓库](https://github.com/Lyuu508/DeepSeek-Niang)由用户创建，本次上传保留其初始化README历史。指定的海滩图目前只有聊天内嵌预览，工具未得到可读取的原始PNG；正式图标/安装包等待原图文件。可将原PNG作为ZIP文件附件，或放到 `assets/branding/deepseek-niang-master.png` 再运行资源脚本。[本次发布状态与安装说明](docs/RELEASE_0.0.1.md)。
 
 见 [本次报告](docs/PERSONA_BRANDING_REPORT.md)、[迁移与回滚](docs/PERSONA_MIGRATION.md)、[品牌素材状态](assets/branding/README.md)。阶段 2～9 本次仅交付[八份独立计划](DEVELOPMENT_PLAN.md)，没有启用后续功能。
 
