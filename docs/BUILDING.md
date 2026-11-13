@@ -1,3 +1,5 @@
+阶段 2 起通过 CI 与手动授权 Release 流程构建。Windows 复用 build-windows.ps1，Android 复用 build-android.sh；两端使用同一 source_sha。Android Release 强制已有签名 Secrets，CI 的 --unsigned-ci 产物只供编译检查，不能安装或冒充覆盖升级包。原签名调查见 [ANDROID_SIGNING_RECOVERY](ANDROID_SIGNING_RECOVERY.md)。以下保留本机构建的系统前置条件。
+
 # 阶段 1 本机构建与设备验收
 
 版本 `0.0.1`。本轮已生成并发布Windows x64 EXE与Android ARM64 APK；[实际下载与验证范围](RELEASE_0.0.1.md)。Windows在原生runner通过58项测试、静默安装和窗口启动，Android通过完整构建与签名/资源检查、未真机运行。指定原始海滩PNG已由用户ZIP导入；旧dev.1记录只是历史证据。用户设备升级、Android Keystore与真实API仍待本机验收。

@@ -1,0 +1,31 @@
+{
+  "date_client_timezone": "2026-11-14 Asia/Shanghai",
+  "baseline_commit": "22096939c20134708c6dc1a4476468a7bbe96827",
+  "target_version": "0.0.2",
+  "stage_completed": false,
+  "checks": {
+    "rust_passed": 72,
+    "rust_failed": 0,
+    "python_passed": 10,
+    "typescript_passed": 3,
+    "ui_mock_passed": 18,
+    "frontend_build": "passed",
+    "clippy": "passed",
+    "schema": "passed",
+    "branding_files_verified": 69,
+    "linux_tauri_clippy": "passed",
+    "android_plugin_rust": "passed",
+    "android_unsigned_full_build": "passed",
+    "workflows_actionlint": "passed"
+  },
+  "windows_hosted_build": "not_verified",
+  "android_signed_upgrade_apk": "blocked_original_keystore_unconfirmed",
+  "original_android_certificate_sha256": "9de96ea5fb1d0b3f91ea73d9a16c030428453b15838927a85f86773eaef208a1",
+  "physical_windows_tested": false,
+  "physical_android_tested": false,
+  "household_ethernet_wifi_sync_tested": false,
+  "release_published": false,
+  "github_api": "blocked_CONNECT_403_api.github.com",
+  "cloud_config_draft_saved": true,
+  "cloud_snapshot_publish_or_new_task_restore_verified": false
+}

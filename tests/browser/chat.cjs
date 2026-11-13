@@ -48,5 +48,26 @@ async function configure(page){await settings(page);await page.getByLabel('API K
   await delayed.locator('.message.assistant[data-state="complete"]').waitFor();assert.equal(await delayed.locator('.message.user').count(),1);
   assert.match(await delayed.locator('.message.assistant').innerText(),/不是真实 DeepSeek API。/);await delayed.close();
  });
+ await check('sync UI explicitly distinguishes fixtures, private endpoints, and failed pairing',async()=>{
+  await page.getByRole('button',{name:'局域网同步',exact:true}).click();
+  await page.getByText('本页为 UI 模拟夹具，未验证真实设备发现、配对或同步。',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'启用局域网同步',exact:true}).click();
+  await page.getByLabel('对端一次性配对码',{exact:true}).fill('{}');
+  await page.getByLabel('对端局域网 IP:端口',{exact:true}).fill('8.8.8.8:443');
+  assert(await page.getByRole('button',{name:'连接并核对设备身份',exact:true}).isDisabled());
+  await page.getByLabel('对端局域网 IP:端口',{exact:true}).fill('192.168.1.20:54321');
+  await page.getByRole('button',{name:'连接并核对设备身份',exact:true}).click();
+  await page.getByText('配对码已过期、错误或已取消，请重新生成。',{exact:true}).waitFor();
+  assert.equal(await page.getByText('同步成功',{exact:true}).count(),0);
+  await page.screenshot({path:path.join(artifact,'sync-desktop-mock.png'),fullPage:true});
+  await page.getByRole('button',{name:'关闭同步',exact:true}).click();
+  await switchTo(page,'DeepSeek娘');assert.equal(await page.locator('.message.user').count(),3);
+ });
+ await check('mobile sync management stays within the viewport and labels offline use',async()=>{
+  await menu(phone);await phone.getByRole('button',{name:'局域网同步',exact:true}).click();
+  await phone.getByRole('button',{name:'启用局域网同步',exact:true}).waitFor();
+  assert(await phone.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual(mobileErrors,[]);
+  await phone.screenshot({path:path.join(artifact,'sync-mobile-mock.png'),fullPage:true});
+ });
  fs.writeFileSync(path.join(artifact,'results.json'),JSON.stringify({scope:'Explicit UI Mock; no real API, SQLite, file migration or OS credentials',passed:checks.length,checks,browser:browser.version()},null,2)+'\n');console.log(JSON.stringify({scope:'explicit UI Mock',passed:checks.length,checks}));
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{await browser?.close();server?.kill('SIGTERM');});

@@ -4,6 +4,7 @@ pub mod event;
 pub mod persona;
 pub mod ports;
 pub mod relationship;
+pub mod replication;
 pub mod storage;
 pub mod task;
 pub mod video;

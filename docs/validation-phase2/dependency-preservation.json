@@ -1,0 +1,17 @@
+{
+  "Cargo.lock": {
+    "removed_or_changed_existing_versions": [],
+    "added_package_versions": 42
+  },
+  "apps/companion/src-tauri/Cargo.lock": {
+    "removed_or_changed_existing_versions": [],
+    "added_package_versions": 31
+  },
+  "plugins/companion-keystore/Cargo.lock": {
+    "removed_or_changed_existing_versions": [],
+    "added_package_versions": 61
+  },
+  "npm": {
+    "changed_external_versions": []
+  }
+}

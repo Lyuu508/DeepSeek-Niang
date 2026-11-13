@@ -5,6 +5,8 @@ import {failure,native,nativeAvailable,runtimeMode} from './native';
 import {previewSettings} from './defaults';
 import './style.css';
 import {Avatar} from './Avatar';
+import {SyncPanel} from './SyncPanel';
+import {syncAPI} from './sync-native';
 import {PersonaManager} from './PersonaManager';
 import {brandingReady} from './branding';
 
@@ -55,11 +57,11 @@ function StoragePanel({personaId,onError,onRefresh}:{personaId:string;onError:(e
  const refresh=useCallback(async()=>{if(!nativeAvailable)return;try{const [d,m]=await Promise.all([native.diagnostics(),native.memories(personaId)]);setDiag(d);setMemories(m);}catch(e){onError(failure(e));}},[onError,personaId]);
  useEffect(()=>{void refresh();},[refresh]);
  async function save(){try{await native.saveMemory(personaId,text);setText('');await refresh();await onRefresh();}catch(e){onError(failure(e));}}
- return <div className="settings-content"><div className="page-heading"><span className="eyebrow">LOCAL FIRST</span><h1>你的记录，留在本机</h1><p>同步服务尚未启用。两端当前分别保存各自的数据。</p></div><section className="settings-card"><div className="card-heading"><h2>数据库诊断</h2><button disabled={!nativeAvailable} onClick={()=>void refresh()}>刷新</button></div>{diag?<dl><dt>SQLite / 迁移版本</dt><dd>{diag.sqlite_version} / {diag.schema_version}</dd><dt>完整性</dt><dd>{diag.integrity}</dd><dt>整个本地档案：消息 / 记忆 / 事件</dt><dd>{diag.message_count} / {diag.memory_count} / {diag.event_count}</dd></dl>:<p>请通过原生客户端读取本地数据库。</p>}</section><section className="settings-card"><h2>当前人格的手动记忆</h2><p className="field-help">保留阶段 0 的本地记忆功能；当前聊天不会自动上传这些内容。</p><label htmlFor="memory">记忆内容</label><textarea id="memory" value={text} disabled={!nativeAvailable} onChange={e=>setText(e.target.value)} maxLength={8000}/><button className="primary" disabled={!nativeAvailable||!text.trim()} onClick={()=>void save()}>保存记忆</button>{memories.map(m=><article className="memory" key={m.id}><p>{m.text}</p><button onClick={()=>void native.deleteMemory(personaId,m.id).then(refresh).then(onRefresh).catch(e=>onError(failure(e)))}>删除</button></article>)}<p className="field-help">删除会传播墓碑；历史日志与备份的彻底清理属于后续隐私功能。</p></section></div>;
+ return <div className="settings-content"><div className="page-heading"><span className="eyebrow">LOCAL FIRST</span><h1>你的记录，留在本机</h1><p>每台设备保留自己的数据库。已配对设备可在局域网同步，连接状态请查看同步页面。</p></div><section className="settings-card"><div className="card-heading"><h2>数据库诊断</h2><button disabled={!nativeAvailable} onClick={()=>void refresh()}>刷新</button></div>{diag?<dl><dt>SQLite / 迁移版本</dt><dd>{diag.sqlite_version} / {diag.schema_version}</dd><dt>完整性</dt><dd>{diag.integrity}</dd><dt>整个本地档案：消息 / 记忆 / 事件</dt><dd>{diag.message_count} / {diag.memory_count} / {diag.event_count}</dd></dl>:<p>请通过原生客户端读取本地数据库。</p>}</section><section className="settings-card"><h2>当前人格的手动记忆</h2><p className="field-help">保留阶段 0 的本地记忆功能；当前聊天不会自动上传这些内容。</p><label htmlFor="memory">记忆内容</label><textarea id="memory" value={text} disabled={!nativeAvailable} onChange={e=>setText(e.target.value)} maxLength={8000}/><button className="primary" disabled={!nativeAvailable||!text.trim()} onClick={()=>void save()}>保存记忆</button>{memories.map(m=><article className="memory" key={m.id}><p>{m.text}</p><button onClick={()=>void native.deleteMemory(personaId,m.id).then(refresh).then(onRefresh).catch(e=>onError(failure(e)))}>删除</button></article>)}<p className="field-help">删除会传播墓碑；历史日志与备份的彻底清理属于后续隐私功能。</p></section></div>;
 }
 function App(){
  const [boot,setBoot]=useState<Bootstrap|null>(null);
- const [page,setPage]=useState<'chat'|'settings'|'storage'|'personas'>('chat');
+ const [page,setPage]=useState<'chat'|'settings'|'storage'|'personas'|'sync'>('chat');
  const [allMessages,setAllMessages]=useState<Record<string,ChatMessage[]>>({});
  const [drafts,setDrafts]=useState<Record<string,string>>({});
  const [error,setError]=useState<ChatFailure|null>(null);const [loading,setLoading]=useState(false);
@@ -76,6 +78,15 @@ function App(){
   if(!initialized.current){initialized.current=true;if(data.active_request&&data.active_conversation){const restored={request:data.active_request,conversation:data.active_conversation,started:true,detached:true};activeRef.current=restored;setActive(restored);}}
  },[]);
  useEffect(()=>{void refresh().catch(e=>setError(failure(e)));},[refresh]);
+ useEffect(()=>{
+  if(runtimeMode!=='native')return;let stopped=false;let last='';
+  const timer=setInterval(()=>{void syncAPI.status().then(async status=>{
+   const digest=JSON.stringify(status.peers.map(p=>[p.id,p.last_success_ms]));
+   if(!last){last=digest;return;}if(digest===last)return;last=digest;
+   const epoch=eventEpoch.current[conversation]??0;await refresh();
+   if(conversation&&!activeRef.current){const messages=await native.messages(conversation);if(!stopped&&epoch===(eventEpoch.current[conversation]??0))setAllMessages(old=>({...old,[conversation]:messages}));}
+  }).catch(()=>{});},3000);return()=>{stopped=true;clearInterval(timer);};
+ },[conversation,refresh]);
  useEffect(()=>{const viewport=window.visualViewport;const resize=()=>document.documentElement.style.setProperty('--viewport-height',`${viewport?.height??window.innerHeight}px`);resize();viewport?.addEventListener('resize',resize);return()=>viewport?.removeEventListener('resize',resize);},[]);
  useEffect(()=>{
   if(!conversation||!nativeAvailable)return;let stale=false;const epoch=eventEpoch.current[conversation]??0;setLoading(true);nearBottom.current=true;setShowHistory(false);
@@ -120,7 +131,7 @@ function App(){
  const lastUser=[...rows].reverse().find(m=>m.role==='user');const variants=rows.filter(m=>m.role==='assistant'&&!m.selected).length;
  const mobile=boot?.platform==='android'||matchMedia('(pointer:coarse)').matches;
  const connected=nativeAvailable&&!!boot;const canSend=connected&&!!conversation&&boot.key_status.configured&&!active&&!loading&&!switching;
- const title=page==='settings'?'设置':page==='storage'?'本地数据':page==='personas'?'人格管理':persona?.name??'DeepSeek娘';
+ const title=page==='sync'?'局域网同步':page==='settings'?'设置':page==='storage'?'本地数据':page==='personas'?'人格管理':persona?.name??'DeepSeek娘';
  const summary=boot?.persona_summary;
  return <div className="app" data-theme={dark?'dark':'light'}>
   {drawer&&<button className="drawer-backdrop" aria-label="关闭侧栏" onClick={()=>setDrawer(false)}/>}
@@ -130,14 +141,14 @@ function App(){
    <div className="sidebar-label">切换人格 <span>{boot?.personas.length??'—'}</span></div>
    <nav className="persona-list" aria-label="人格切换">{boot?.personas.map(p=><button key={p.id} data-persona-id={p.id} aria-current={boot.active_persona_id===p.id?'true':undefined} disabled={switching} className={boot.active_persona_id===p.id?'selected':''} onClick={()=>void switchPersona(p.id)}><Avatar persona={p} small/><span>{p.name}</span>{active?.conversation===p.main_conversation_id&&<i className="working-dot"/>}</button>)}</nav>
    <button className="add-persona" disabled={!connected} onClick={()=>{setPage('personas');setDrawer(false);}}>＋ 新增人格</button>
-   <div className="sidebar-bottom"><button aria-label="人格管理" className={page==='personas'?'selected':''} onClick={()=>{setPage('personas');setDrawer(false);}}>♧ 人格管理</button><button aria-label="本地数据" className={page==='storage'?'selected':''} onClick={()=>{setPage('storage');setDrawer(false);}}>▤ 本地数据</button><button aria-label="设置" className={page==='settings'?'selected':''} onClick={()=>{setPage('settings');setDrawer(false);}}>⚙ 设置</button><div className="sidebar-profile"><span className="user-dot">你</span><div>本地个人空间<small>{boot?.version??'本地开发版'}</small></div><span className="private-dot" title="未启用云数据库"/></div></div>
+   <div className="sidebar-bottom"><button aria-label="人格管理" className={page==='personas'?'selected':''} onClick={()=>{setPage('personas');setDrawer(false);}}>♧ 人格管理</button><button aria-label="局域网同步" className={page==='sync'?'selected':''} onClick={()=>{setPage('sync');setDrawer(false);}}>⇄ 局域网同步</button><button aria-label="本地数据" className={page==='storage'?'selected':''} onClick={()=>{setPage('storage');setDrawer(false);}}>▤ 本地数据</button><button aria-label="设置" className={page==='settings'?'selected':''} onClick={()=>{setPage('settings');setDrawer(false);}}>⚙ 设置</button><div className="sidebar-profile"><span className="user-dot">你</span><div>本地个人空间<small>{boot?.version??'本地开发版'}</small></div><span className="private-dot" title="未启用云数据库"/></div></div>
   </aside>
   <main><header><button className="menu-toggle" aria-label="打开侧栏" onClick={()=>setDrawer(true)}>☰</button>{page==='chat'&&<div className="mobile-persona-avatar"><Avatar persona={persona} small/></div>}<div className="header-title"><strong>{title}</strong><small>{page==='chat'?'一直延续的聊天时间线':'DeepSeek娘'}</small></div><div className="header-actions"><span className={`connection-badge ${boot?.key_status.configured?'ready':''}`}><i/>{boot?.key_status.configured?'密钥已配置':'待配置密钥'}</span><button className="icon-button" aria-label="切换深浅色" onClick={()=>setDark(!dark)}>{dark?'☀':'☾'}</button></div></header>
    {runtimeMode==='mock'&&<div className="mode-banner mock" role="status">模拟验收模式 · 无真实 DeepSeek API、SQLite 或系统密钥存储 · 请勿输入真实密钥</div>}
    {runtimeMode==='preview'&&<div className="mode-banner" role="status">浏览器外观预览 · 原生功能未连接，请通过 Windows 或 Android 应用聊天</div>}
    {!brandingReady&&<div className="branding-pending">已指定海滩角色图；原始 PNG 文件待导入，暂不使用替代人物图标。</div>}
    {error&&<div className="error-banner" role="alert"><span>{error.message}<small>{error.code}</small></span><button aria-label="关闭错误提示" onClick={()=>setError(null)}>×</button></div>}
-   {page==='settings'?<div className="page-scroll"><SettingsPanel key={boot?.active_persona_id??'loading'} boot={boot} onRefresh={refresh} onError={setError}/></div>:page==='storage'?<div className="page-scroll"><StoragePanel key={boot?.active_persona_id??'loading'} personaId={boot?.active_persona_id??''} onError={setError} onRefresh={refresh}/></div>:page==='personas'?<div className="page-scroll"><PersonaManager boot={boot} onSwitch={switchPersona} onRefresh={refresh} onError={setError} onSettings={()=>setPage('settings')}/></div>:<div className="chat-layout"><section className="chat-main">
+   {page==='sync'?<div className="page-scroll"><SyncPanel/></div>:page==='settings'?<div className="page-scroll"><SettingsPanel key={boot?.active_persona_id??'loading'} boot={boot} onRefresh={refresh} onError={setError}/></div>:page==='storage'?<div className="page-scroll"><StoragePanel key={boot?.active_persona_id??'loading'} personaId={boot?.active_persona_id??''} onError={setError} onRefresh={refresh}/></div>:page==='personas'?<div className="page-scroll"><PersonaManager boot={boot} onSwitch={switchPersona} onRefresh={refresh} onError={setError} onSettings={()=>setPage('settings')}/></div>:<div className="chat-layout"><section className="chat-main">
     <div className="message-scroll" ref={scroll} onScroll={()=>{const n=scroll.current;if(n)nearBottom.current=n.scrollHeight-n.scrollTop-n.clientHeight<100;}}>
      {!visible.length&&!loading&&<div className="welcome"><span className="welcome-label">ONE CHARACTER · ONE SHARED STORY</span><Avatar persona={persona}/><h1>和{persona?.name??'DeepSeek娘'}，接着聊</h1><p>每一次问候，都留在同一条时间线。<br/>下次回来，我们从这里继续。</p><div className="suggestions">{['聊聊今天的小事','一起想一个新点子','今天想学点什么？'].map(s=><button key={s} disabled={!connected} onClick={()=>{setDrafts(old=>({...old,[conversation]:s}));input.current?.focus();}}>{s}<span>↗</span></button>)}</div></div>}
      {loading&&<div className="loading-history" role="status">正在读取人格时间线…</div>}

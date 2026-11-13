@@ -12,6 +12,7 @@ use uuid::Uuid;
 const MIGRATION: &str = include_str!("../../../db/migrations/0001_initial.sql");
 
 const CHAT_MIGRATION: &str = include_str!("../../../db/migrations/0002_chat.sql");
+const LAN_MIGRATION: &str = include_str!("../../../db/migrations/0004_lan_sync.sql");
 const PERSONA_MIGRATION: &str = include_str!("../../../db/migrations/0003_personas.sql");
 
 pub struct Store {
@@ -85,10 +86,15 @@ impl Store {
         conn.pragma_update(None, "journal_mode", "WAL")?;
         conn.pragma_update(None, "synchronous", "FULL")?;
         let version: u32 = conn.pragma_query_value(None, "user_version", |r| r.get(0))?;
-        if version > 3 {
+        if version > 4 {
             return Err(Error::Schema);
         }
-        let migrations = [(1, MIGRATION), (2, CHAT_MIGRATION), (3, PERSONA_MIGRATION)];
+        let migrations = [
+            (1, MIGRATION),
+            (2, CHAT_MIGRATION),
+            (3, PERSONA_MIGRATION),
+            (4, LAN_MIGRATION),
+        ];
         for (number, sql) in migrations {
             let digest = sha256_hex(sql.as_bytes());
             if number <= version {
@@ -104,11 +110,11 @@ impl Store {
         }
         // A consistent SQLite backup, including committed WAL, before upgrading old data.
         let path = path.as_ref();
-        if (1..3).contains(&version) && path != Path::new(":memory:") {
-            let backup = path.with_extension(format!("pre-v3-{}.bak", Uuid::new_v4()));
+        if (1..4).contains(&version) && path != Path::new(":memory:") {
+            let backup = path.with_extension(format!("pre-v4-{}.bak", Uuid::new_v4()));
             conn.backup("main", backup, rusqlite::backup::NO_PROGRESS)?;
         }
-        if version < 3 {
+        if version < 4 {
             let preserved = if version > 0 {
                 [
                     "messages",
@@ -130,6 +136,10 @@ impl Store {
             } else {
                 Vec::new()
             };
+            // SQLite's documented table-rebuild procedure: this connection is private,
+            // guarded by the application file lock and has not been exposed to the app.
+            // Validate all FKs explicitly before commit, then restore enforcement.
+            conn.pragma_update(None, "foreign_keys", "OFF")?;
             let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
             for (number, sql) in migrations {
                 if number > version {
@@ -158,6 +168,10 @@ impl Store {
                 return Err(Error::Schema);
             }
             tx.commit()?;
+            conn.pragma_update(None, "foreign_keys", "ON")?;
+            if !conn.pragma_query_value(None, "foreign_keys", |r| r.get::<_, bool>(0))? {
+                return Err(Error::Schema);
+            }
         }
         Ok(conn)
     }
@@ -211,7 +225,12 @@ impl Store {
             boot_id: Uuid::new_v4().to_string(),
             _file_lock: guard,
         };
+        for persona in store.personas()? {
+            let settings = store.persona_settings(&persona.id)?;
+            store.conn.execute("INSERT OR IGNORE INTO persona_chat_preferences(persona_id,settings_json) VALUES(?1,?2)",params![persona.id,serde_json::to_string(&settings)?])?;
+        }
         store.recover_chat_requests()?;
+        crate::replication::install_capture(&store.conn)?;
         Ok(store)
     }
     /// Lab-only trust fixture, not a pairing implementation. Never expose via IPC/network.
@@ -258,10 +277,29 @@ impl Store {
         let tx = self
             .conn
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
+        let data_profile: String = match payload.get("persona_id").and_then(Value::as_str) {
+            Some(id) => tx.query_row("SELECT profile_id FROM personas WHERE id=?1", [id], |r| {
+                r.get(0)
+            })?,
+            None => {
+                let table = if entity == Entity::Message {
+                    "messages"
+                } else {
+                    "memories"
+                };
+                tx.query_row(
+                    &format!("SELECT profile_id FROM {table} WHERE id=?1"),
+                    [id],
+                    |r| r.get(0),
+                )
+                .optional()?
+                .unwrap_or_else(|| self.profile_id.clone())
+            }
+        };
         let event = Self::append_in(
             &tx,
             &self.device_id,
-            &self.profile_id,
+            &data_profile,
             entity,
             id,
             operation,

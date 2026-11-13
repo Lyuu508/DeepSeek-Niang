@@ -1,0 +1,44 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Install locked tooling and dependencies
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal --component clippy
+          rustup default 1.99.0
+          npm ci --ignore-scripts
+      - name: Core, schema, policies, versions and frontend
+        run: |
+          python3 scripts/version.py
+          cargo test --workspace --locked
+          cargo clippy --workspace --all-targets --locked -- -D warnings
+          python3 scripts/check_schema.py
+          python3 -m unittest discover -s tests -p 'test_*.py'
+          node --test tests/sync-model.test.mjs
+          npm run build
+          node scripts/check-branding.mjs
+      - name: Browser regression tests (explicit fixture)
+        run: |
+          npm exec --workspace @deepseek/companion -- playwright install --with-deps chromium
+          npm run test:ui
+  packages:
+    uses: ./.github/workflows/native-packages.yml
+    with:
+      source_sha: ${{ github.sha }}
+      signed_android: false

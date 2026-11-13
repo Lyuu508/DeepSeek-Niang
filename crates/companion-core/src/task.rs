@@ -53,15 +53,21 @@ impl Store {
         {
             return Err(Error::Invalid("task input"));
         }
+        let persona = self.active_persona_id()?;
+        let profile: String = self.conn.query_row(
+            "SELECT profile_id FROM personas WHERE id=?1",
+            [&persona],
+            |r| r.get(0),
+        )?;
         let id = Uuid::new_v4().to_string();
         let body = serde_json::to_string(payload)?;
         let tx = self
             .conn
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
-        tx.execute("INSERT INTO task_queue(id,profile_id,kind,dedupe_key,authority_device_id,payload_json) VALUES(?1,?2,?3,?4,?5,?6) ON CONFLICT(profile_id,dedupe_key) DO NOTHING",params![id,self.profile_id,kind,key,self.device_id,body])?;
+        tx.execute("INSERT INTO task_queue(id,profile_id,kind,dedupe_key,authority_device_id,payload_json,persona_id) VALUES(?1,?2,?3,?4,?5,?6,?7) ON CONFLICT(profile_id,persona_id,dedupe_key) DO NOTHING",params![id,profile,kind,key,self.device_id,body,persona])?;
         let (saved_id, saved_kind, saved_body): (String, String, String) = tx.query_row(
-            "SELECT id,kind,payload_json FROM task_queue WHERE profile_id=?1 AND dedupe_key=?2",
-            params![self.profile_id, key],
+            "SELECT id,kind,payload_json FROM task_queue WHERE profile_id=?1 AND dedupe_key=?2 AND persona_id=?3",
+            params![profile, key,persona],
             |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
         )?;
         if saved_kind != kind || saved_body != body {

@@ -49,12 +49,12 @@ pub(crate) fn owner_of_thread(
     conversation: &str,
     profile: &str,
 ) -> Result<String> {
-    db.query_row("SELECT p.id FROM conversation_personas c JOIN personas p ON p.id=c.persona_id WHERE c.conversation_id=?1 AND p.profile_id=?2",params![conversation,profile],|r|r.get(0)).optional()?.ok_or(Error::Untrusted)
+    db.query_row("SELECT p.id FROM conversation_personas c JOIN personas p ON p.id=c.persona_id WHERE c.conversation_id=?1 AND (p.profile_id=?2 OR p.profile_id IN (SELECT profile_id FROM lan_profiles))",params![conversation,profile],|r|r.get(0)).optional()?.ok_or(Error::Untrusted)
 }
 pub(crate) fn owner_exists(db: &Connection, persona: &str, profile: &str) -> Result<()> {
     Uuid::parse_str(persona).map_err(|_| Error::Invalid("persona UUID"))?;
     if !db.query_row(
-        "SELECT EXISTS(SELECT 1 FROM personas WHERE id=?1 AND profile_id=?2)",
+        "SELECT EXISTS(SELECT 1 FROM personas WHERE id=?1 AND (profile_id=?2 OR profile_id IN (SELECT profile_id FROM lan_profiles)))",
         params![persona, profile],
         |r| r.get::<_, bool>(0),
     )? {
@@ -64,7 +64,7 @@ pub(crate) fn owner_exists(db: &Connection, persona: &str, profile: &str) -> Res
 }
 impl Store {
     pub fn personas(&self) -> Result<Vec<Persona>> {
-        let mut s=self.conn.prepare("SELECT id,name,main_conversation_id,is_builtin,created_at_ms,revision FROM personas WHERE profile_id=?1 ORDER BY is_builtin DESC,created_at_ms,id")?;
+        let mut s=self.conn.prepare("SELECT id,name,main_conversation_id,is_builtin,created_at_ms,revision FROM personas WHERE (profile_id=?1 OR profile_id IN (SELECT profile_id FROM lan_profiles)) ORDER BY is_builtin DESC,created_at_ms,id")?;
         Ok(s.query_map([&self.profile_id], |r| {
             Ok(Persona {
                 id: r.get(0)?,
@@ -90,7 +90,7 @@ impl Store {
             .ok_or(Error::Untrusted)
     }
     pub fn active_persona_id(&self) -> Result<String> {
-        Ok(self.conn.query_row("SELECT s.persona_id FROM persona_selection s JOIN personas p ON p.id=s.persona_id WHERE s.device_id=?1 AND p.profile_id=?2",params![self.device_id,self.profile_id],|r|r.get(0))?)
+        Ok(self.conn.query_row("SELECT s.persona_id FROM persona_selection s JOIN personas p ON p.id=s.persona_id WHERE s.device_id=?1 AND (p.profile_id=?2 OR p.profile_id IN (SELECT profile_id FROM lan_profiles))",params![self.device_id,self.profile_id],|r|r.get(0))?)
     }
     pub fn select_persona(&mut self, id: &str) -> Result<()> {
         owner_exists(&self.conn, id, &self.profile_id)?;
@@ -167,7 +167,7 @@ impl Store {
         let main: Option<String> = self
             .conn
             .query_row(
-                "SELECT id FROM personas WHERE main_conversation_id=?1 AND profile_id=?2",
+                "SELECT id FROM personas WHERE main_conversation_id=?1 AND (profile_id=?2 OR profile_id IN (SELECT profile_id FROM lan_profiles))",
                 params![id, self.profile_id],
                 |r| r.get(0),
             )
@@ -180,7 +180,7 @@ impl Store {
         }
         // Legacy API is kept for existing tests/import adapters, not exposed in UI.
         let owned: bool = self.conn.query_row(
-            "SELECT EXISTS(SELECT 1 FROM conversations WHERE id=?1 AND profile_id=?2)",
+            "SELECT EXISTS(SELECT 1 FROM conversations WHERE id=?1 AND (profile_id=?2 OR profile_id IN (SELECT profile_id FROM lan_profiles)))",
             params![id, self.profile_id],
             |r| r.get(0),
         )?;
@@ -191,7 +191,7 @@ impl Store {
     }
     pub fn usage_for_persona(&self, id: &str) -> Result<UsageSummary> {
         owner_exists(&self.conn, id, &self.profile_id)?;
-        Ok(self.conn.query_row("SELECT count(*),coalesce(sum(usage_state='measured'),0),coalesce(sum(input_tokens),0),coalesce(sum(output_tokens),0) FROM api_usage_records WHERE profile_id=?1 AND persona_id=?2 AND provider='deepseek'",params![self.profile_id,id],|r|Ok(UsageSummary{requests:r.get(0)?,measured_requests:r.get(1)?,prompt_tokens:r.get(2)?,completion_tokens:r.get(3)?}))?)
+        Ok(self.conn.query_row("SELECT count(*),coalesce(sum(usage_state='measured'),0),coalesce(sum(input_tokens),0),coalesce(sum(output_tokens),0) FROM api_usage_records WHERE (profile_id=?1 OR profile_id IN (SELECT profile_id FROM lan_profiles)) AND persona_id=?2 AND provider='deepseek'",params![self.profile_id,id],|r|Ok(UsageSummary{requests:r.get(0)?,measured_requests:r.get(1)?,prompt_tokens:r.get(2)?,completion_tokens:r.get(3)?}))?)
     }
     pub fn persona_summary(&self, id: &str) -> Result<PersonaSummary> {
         owner_exists(&self.conn, id, &self.profile_id)?;
@@ -202,13 +202,13 @@ impl Store {
         )?;
         let count = |table: &str| -> Result<i64> {
             Ok(self.conn.query_row(
-                &format!("SELECT count(*) FROM {table} WHERE profile_id=?1 AND persona_id=?2"),
+                &format!("SELECT count(*) FROM {table} WHERE (profile_id=?1 OR profile_id IN (SELECT profile_id FROM lan_profiles)) AND persona_id=?2"),
                 params![self.profile_id, id],
                 |r| r.get(0),
             )?)
         };
         Ok(PersonaSummary {
-            memory_count: self.conn.query_row("SELECT count(*) FROM memories WHERE profile_id=?1 AND persona_id=?2 AND is_deleted=0",params![self.profile_id,id],|r|r.get(0))?,
+            memory_count: self.conn.query_row("SELECT count(*) FROM memories WHERE (profile_id=?1 OR profile_id IN (SELECT profile_id FROM lan_profiles)) AND persona_id=?2 AND is_deleted=0",params![self.profile_id,id],|r|r.get(0))?,
             activity_count: count("daily_activities")?,
             interest_count: count("character_interests")?,
             relationship: serde_json::from_str(&r)?,
@@ -218,7 +218,7 @@ impl Store {
     }
     pub fn memories_for_persona(&self, id: &str) -> Result<Vec<MemoryRecord>> {
         owner_exists(&self.conn, id, &self.profile_id)?;
-        let mut s=self.conn.prepare("SELECT id,text,version_lamport FROM memories WHERE profile_id=?1 AND persona_id=?2 AND is_deleted=0 ORDER BY version_lamport DESC,id LIMIT 100")?;
+        let mut s=self.conn.prepare("SELECT id,text,version_lamport FROM memories WHERE (profile_id=?1 OR profile_id IN (SELECT profile_id FROM lan_profiles)) AND persona_id=?2 AND is_deleted=0 ORDER BY version_lamport DESC,id LIMIT 100")?;
         Ok(s.query_map(params![self.profile_id, id], |r| {
             Ok(MemoryRecord {
                 id: r.get(0)?,
@@ -242,7 +242,7 @@ impl Store {
         let owner: Option<String> = self
             .conn
             .query_row(
-                "SELECT persona_id FROM memories WHERE id=?1 AND profile_id=?2",
+                "SELECT persona_id FROM memories WHERE id=?1 AND (profile_id=?2 OR profile_id IN (SELECT profile_id FROM lan_profiles))",
                 params![id, self.profile_id],
                 |r| r.get(0),
             )

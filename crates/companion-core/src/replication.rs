@@ -1,0 +1,1262 @@
+//! Production replication: durable transaction outbox and per-field logical registers.
+//! The network crate authenticates both the TLS peer and every origin signature.
+//! Legacy laboratory import is never called by this adapter.
+use crate::{Error, Result, storage::Store};
+use rusqlite::{Connection, OptionalExtension, params, types::Value as SqlValue};
+use serde::{Deserialize, Serialize};
+use serde_json::{Value, json};
+use std::collections::BTreeMap;
+use uuid::Uuid;
+
+pub const PAGE: usize = 64;
+pub const MAX_WIRE: usize = 4 * 1024 * 1024;
+// Dependency order for initial bootstrap. Device rows carry public metadata only.
+const TABLES: &[(&str, &str)] = &[
+    ("local_profiles", "id"),
+    ("devices", "id"),
+    ("conversations", "id"),
+    ("personas", "id"),
+    ("conversation_personas", "conversation_id"),
+    ("persona_chat_preferences", "persona_id"),
+    ("persona_states", "persona_id"),
+    ("sync_events", "event_id"),
+    ("messages", "id"),
+    ("memories", "id"),
+    ("data_tombstones", "profile_id,entity_type,entity_id"),
+    ("memory_relations", "from_memory_id,to_memory_id,relation"),
+    ("chat_requests", "id"),
+    ("chat_generations", "id"),
+    ("chat_turn_choices", "user_message_id"),
+    ("relationship_events", "id"),
+    ("character_moods", "id"),
+    ("character_interests", "id"),
+    ("task_queue", "id"),
+    ("task_checkpoints", "task_id,step_key"),
+    ("life_plans", "id"),
+    ("daily_activities", "id"),
+    ("life_events", "id"),
+    ("activity_states", "id"),
+    ("proactive_messages", "id"),
+    ("api_usage_records", "id"),
+    ("application_settings", "profile_id,key,device_id"),
+];
+fn key_fields(table: &str) -> Result<Vec<&str>> {
+    Ok(TABLES
+        .iter()
+        .find(|(t, _)| *t == table)
+        .ok_or(Error::Invalid("sync entity type"))?
+        .1
+        .split(',')
+        .collect())
+}
+fn columns(db: &Connection, table: &str) -> Result<Vec<String>> {
+    key_fields(table)?;
+    let mut s = db.prepare(&format!("PRAGMA table_info({table})"))?;
+    let all = s
+        .query_map([], |r| r.get::<_, String>(1))?
+        .collect::<std::result::Result<Vec<_>, _>>()?;
+    Ok(all
+        .into_iter()
+        .filter(|c| match table {
+            "devices" => ["id", "profile_id", "name", "platform"].contains(&c.as_str()),
+            "task_queue" => ![
+                "owner_device_id",
+                "lease_boot_id",
+                "lease_until_tick",
+                "fence",
+                "attempt",
+            ]
+            .contains(&c.as_str()),
+            _ => c != "origin_signature",
+        })
+        .collect())
+}
+fn row_key(table: &str, row: &Value) -> Result<String> {
+    let keys = key_fields(table)?
+        .iter()
+        .map(|k| {
+            row.get(*k)
+                .filter(|v| v.is_string())
+                .cloned()
+                .ok_or(Error::Invalid("sync key"))
+        })
+        .collect::<Result<Vec<_>>>()?;
+    Ok(serde_json::to_string(&keys)?)
+}
+fn object_expr(cols: &[String], prefix: &str) -> String {
+    format!(
+        "json_object({})",
+        cols.iter()
+            .map(|c| format!("'{c}',{prefix}.{c}"))
+            .collect::<Vec<_>>()
+            .join(",")
+    )
+}
+pub(crate) fn install_capture(db: &Connection) -> Result<()> {
+    for (table, _) in TABLES {
+        let cols = columns(db, table)?;
+        let new = object_expr(&cols, "new");
+        let old = object_expr(&cols, "old");
+        // Streaming drafts are local. Only completed/interrupted/failed generations leave the device.
+        let ready = match *table {
+            "application_settings" => {
+                " AND new.scope='profile' AND new.device_id='' AND new.key IN ('theme','language')"
+            }
+            "chat_requests" | "chat_generations" => {
+                " AND new.state NOT IN ('sending','generating')"
+            }
+            "chat_turn_choices" => {
+                " AND EXISTS(SELECT 1 FROM chat_generations WHERE id=new.selected_generation_id AND state NOT IN ('sending','generating'))"
+            }
+            _ => "",
+        };
+        for (op, before, after) in [
+            ("INSERT", "NULL", new.as_str()),
+            ("UPDATE", old.as_str(), new.as_str()),
+            ("DELETE", old.as_str(), "NULL"),
+        ] {
+            let guard = if op == "DELETE" {
+                if *table == "application_settings" {
+                    " AND old.scope='profile' AND old.device_id='' AND old.key IN ('theme','language')"
+                } else {
+                    ""
+                }
+            } else {
+                ready
+            };
+            db.execute_batch(&format!("CREATE TRIGGER IF NOT EXISTS lan_{table}_{op} AFTER {op} ON {table} WHEN (SELECT suppress=0 FROM lan_control WHERE id=1){guard} BEGIN INSERT INTO lan_outbox(table_name,before_json,after_json) VALUES('{table}',{before},{after}); END;"))?;
+        }
+    }
+    Ok(())
+}
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct Change {
+    pub version: u32,
+    pub id: String,
+    pub origin: String,
+    pub seq: i64,
+    pub clock: i64,
+    pub table: String,
+    pub key: String,
+    pub row: Value,
+    pub fields: BTreeMap<String, Value>,
+    pub deleted: bool,
+    pub signature: String,
+}
+impl Change {
+    pub fn signing_bytes(&self) -> Result<Vec<u8>> {
+        // Fixed, versioned tuple. All dynamic maps use JCS in the signing adapter.
+        Ok(serde_jcs::to_vec(&json!([
+            "DeepSeek-Niang/LAN/event/v2",
+            self.version,
+            self.id,
+            self.origin,
+            self.seq,
+            self.clock,
+            self.table,
+            self.key,
+            self.row,
+            self.fields,
+            self.deleted
+        ]))?)
+    }
+    pub fn validate(&self) -> Result<()> {
+        if self.version != 2
+            || !(1..=(1_i64 << 52)).contains(&self.seq)
+            || !(1..=(1_i64 << 52)).contains(&self.clock)
+        {
+            return Err(Error::Invalid("sync version/clock"));
+        }
+        for id in [&self.id, &self.origin] {
+            Uuid::parse_str(id).map_err(|_| Error::Invalid("sync UUID"))?;
+        }
+        if self.key != row_key(&self.table, &self.row)?
+            || self.fields.len() > 100
+            || serde_json::to_vec(self)?.len() > 256 * 1024
+        {
+            return Err(Error::Invalid("sync shape/size"));
+        }
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Peer {
+    pub id: String,
+    pub name: String,
+    pub certificate: String,
+    pub signing_key: String,
+    pub revoked: bool,
+    pub address: Option<String>,
+    pub last_success_ms: Option<i64>,
+    pub acknowledged_seq: i64,
+}
+impl Store {
+    pub fn lan_outbox_count(&self) -> Result<i64> {
+        Ok(self
+            .conn
+            .query_row("SELECT count(*) FROM lan_outbox", [], |r| r.get(0))?)
+    }
+    pub fn lan_enabled(&self) -> Result<bool> {
+        Ok(self
+            .conn
+            .query_row("SELECT enabled FROM lan_control WHERE id=1", [], |r| {
+                r.get(0)
+            })?)
+    }
+    pub fn lan_set_enabled(&mut self, enabled: bool) -> Result<()> {
+        self.conn
+            .execute("UPDATE lan_control SET enabled=?1 WHERE id=1", [enabled])?;
+        Ok(())
+    }
+    pub fn conversation_profile(&self, id: &str) -> Result<String> {
+        crate::persona::owner_of_thread(&self.conn, id, &self.profile_id)?;
+        Ok(self.conn.query_row(
+            "SELECT profile_id FROM conversations WHERE id=?1",
+            [id],
+            |r| r.get(0),
+        )?)
+    }
+    pub fn lan_peers(&self) -> Result<Vec<Peer>> {
+        let mut s=self.conn.prepare("SELECT id,name,certificate,signing_key,revoked,address,last_success_ms,acknowledged_seq FROM lan_peers ORDER BY name,id")?;
+        Ok(s.query_map([], |r| {
+            Ok(Peer {
+                id: r.get(0)?,
+                name: r.get(1)?,
+                certificate: r.get(2)?,
+                signing_key: r.get(3)?,
+                revoked: r.get(4)?,
+                address: r.get(5)?,
+                last_success_ms: r.get(6)?,
+                acknowledged_seq: r.get(7)?,
+            })
+        })?
+        .collect::<std::result::Result<_, _>>()?)
+    }
+    pub fn lan_trust(&mut self, peer: &Peer) -> Result<()> {
+        Uuid::parse_str(&peer.id).map_err(|_| Error::Invalid("peer UUID"))?;
+        if peer.id == self.device_id || peer.name.is_empty() || peer.name.len() > 100 {
+            return Err(Error::Untrusted);
+        }
+        // Explicit re-pairing may replace a revoked identity; ordinary connections cannot.
+        self.conn.execute("INSERT INTO lan_peers(id,name,certificate,signing_key,address) VALUES(?1,?2,?3,?4,?5) ON CONFLICT(id) DO UPDATE SET name=excluded.name,certificate=excluded.certificate,signing_key=excluded.signing_key,address=excluded.address,revoked=0",params![peer.id,peer.name,peer.certificate,peer.signing_key,peer.address])?;
+        Ok(())
+    }
+    pub fn lan_revoke(&mut self, id: &str) -> Result<()> {
+        self.conn.execute(
+            "UPDATE lan_peers SET revoked=1,address=NULL WHERE id=?1",
+            [id],
+        )?;
+        Ok(())
+    }
+    pub fn lan_ack(&mut self, id: &str, ack: i64) -> Result<()> {
+        self.conn.execute("UPDATE lan_peers SET acknowledged_seq=max(acknowledged_seq,?1) WHERE id=?2 AND revoked=0",params![ack,id])?;
+        Ok(())
+    }
+    pub fn lan_success(&mut self, id: &str, ack: i64) -> Result<()> {
+        self.conn.execute(
+            "UPDATE lan_peers SET last_success_ms=?1,acknowledged_seq=max(acknowledged_seq,?2) WHERE id=?3 AND revoked=0",
+            params![crate::chat::now_ms(), ack, id],
+        )?;
+        Ok(())
+    }
+    pub fn lan_address(&mut self, id: &str, address: &str) -> Result<()> {
+        self.conn.execute(
+            "UPDATE lan_peers SET address=?1 WHERE id=?2 AND revoked=0",
+            params![address, id],
+        )?;
+        Ok(())
+    }
+    pub fn lan_pending(&self, peer: &Peer) -> Result<i64> {
+        Ok(self.conn.query_row("SELECT (SELECT count(*) FROM lan_events WHERE origin=?1 AND seq>?2)+(SELECT count(*) FROM lan_outbox)",params![self.device_id,peer.acknowledged_seq],|r|r.get(0))?)
+    }
+    /// Sign only durable local changes. Both sequence assignment and outbox removal are atomic.
+    pub fn lan_capture(&mut self, sign: impl Fn(&[u8]) -> Result<String>) -> Result<()> {
+        let tx = self.conn.transaction()?;
+        if !tx.query_row("SELECT initialized FROM lan_control WHERE id=1", [], |r| {
+            r.get::<_, bool>(0)
+        })? {
+            tx.execute("DELETE FROM lan_outbox", [])?;
+            for (table, _) in TABLES {
+                let cols = columns(&tx, table)?;
+                let expr = object_expr(&cols, "t");
+                let filter = match *table {
+                    "application_settings" => {
+                        " WHERE t.scope='profile' AND t.device_id='' AND t.key IN ('theme','language')"
+                    }
+                    "chat_requests" | "chat_generations" => {
+                        " WHERE t.state NOT IN ('sending','generating')"
+                    }
+                    "chat_turn_choices" => {
+                        " WHERE EXISTS(SELECT 1 FROM chat_generations WHERE id=t.selected_generation_id AND state NOT IN ('sending','generating'))"
+                    }
+                    _ => "",
+                };
+                let mut query = tx.prepare(&format!(
+                    "SELECT {expr} FROM {table} t{filter} ORDER BY {}",
+                    key_fields(table)?
+                        .iter()
+                        .map(|k| format!("t.{k}"))
+                        .collect::<Vec<_>>()
+                        .join(",")
+                ))?;
+                let mut rows = query
+                    .query_map([], |r| r.get::<_, String>(0))?
+                    .map(|r| Ok(serde_json::from_str::<Value>(&r?)?))
+                    .collect::<Result<std::collections::VecDeque<_>>>()?;
+                let mut remaining = rows
+                    .iter()
+                    .filter_map(|r| r["id"].as_str().map(str::to_owned))
+                    .collect::<std::collections::BTreeSet<_>>();
+                let references: &[&str] = match *table {
+                    "messages" => &["reply_to_id", "supersedes_id"],
+                    "chat_generations" => &["supersedes_generation_id"],
+                    _ => &[],
+                };
+                let mut deferred = 0;
+                while let Some(row) = rows.pop_front() {
+                    if references
+                        .iter()
+                        .any(|k| row[*k].as_str().is_some_and(|id| remaining.contains(id)))
+                    {
+                        rows.push_back(row);
+                        deferred += 1;
+                        if deferred > rows.len() {
+                            return Err(Error::Invalid("cyclic bootstrap dependency"));
+                        }
+                        continue;
+                    }
+                    deferred = 0;
+                    if let Some(id) = row["id"].as_str() {
+                        remaining.remove(id);
+                    }
+                    tx.execute(
+                        "INSERT INTO lan_outbox(table_name,after_json) VALUES(?1,?2)",
+                        params![table, serde_json::to_string(&row)?],
+                    )?;
+                }
+            }
+            tx.execute("UPDATE lan_control SET initialized=1 WHERE id=1", [])?;
+        }
+        let pending = {
+            let mut s = tx.prepare(
+                "SELECT id,table_name,before_json,after_json FROM lan_outbox ORDER BY id LIMIT 512",
+            )?;
+            s.query_map([], |r| {
+                Ok((
+                    r.get::<_, i64>(0)?,
+                    r.get::<_, String>(1)?,
+                    r.get::<_, Option<String>>(2)?,
+                    r.get::<_, Option<String>>(3)?,
+                ))
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?
+        };
+        for (outbox, table, old, new) in pending {
+            let before = old
+                .map(|s| serde_json::from_str::<Value>(&s))
+                .transpose()?
+                .unwrap_or(Value::Null);
+            let after = new.map(|s| serde_json::from_str::<Value>(&s)).transpose()?;
+            let mut row = after.as_ref().unwrap_or(&before).clone();
+            if after.is_none() && table == "application_settings" {
+                row["value_json"] = json!("null");
+            }
+            let deleted = (after.is_none() && table != "application_settings")
+                || row.get("is_deleted") == Some(&json!(1));
+            let previous = flatten(&before)?;
+            let current = flatten(&row)?;
+            let fields = current
+                .into_iter()
+                .filter(|(k, v)| previous.get(k) != Some(v))
+                .collect::<BTreeMap<_, _>>();
+            if !fields.is_empty() || deleted {
+                let (seq, clock): (i64, i64) = tx.query_row(
+                    "SELECT seq+1,clock+1 FROM lan_control WHERE id=1",
+                    [],
+                    |r| Ok((r.get(0)?, r.get(1)?)),
+                )?;
+                let mut event = Change {
+                    version: 2,
+                    id: Uuid::new_v4().to_string(),
+                    origin: self.device_id.clone(),
+                    seq,
+                    clock,
+                    table: table.clone(),
+                    key: row_key(&table, &row)?,
+                    row,
+                    fields,
+                    deleted,
+                    signature: String::new(),
+                };
+                event.validate()?;
+                event.signature = sign(&event.signing_bytes()?)?;
+                save_event(&tx, &event)?;
+                merge_cells(&tx, &event)?;
+                if event.table == "relationship_events" {
+                    tx.execute("UPDATE lan_control SET suppress=1 WHERE id=1", [])?;
+                    recompute_relationship(
+                        &tx,
+                        event.row["persona_id"]
+                            .as_str()
+                            .ok_or(Error::Invalid("relationship persona"))?,
+                    )?;
+                    tx.execute("UPDATE lan_control SET suppress=0 WHERE id=1", [])?;
+                }
+
+                tx.execute(
+                    "UPDATE lan_control SET seq=?1,clock=?2 WHERE id=1",
+                    params![seq, clock],
+                )?;
+            }
+            tx.execute("DELETE FROM lan_outbox WHERE id=?1", [outbox])?;
+        }
+        tx.commit()?;
+        Ok(())
+    }
+    pub fn lan_cursor(&self, origin: &str) -> Result<i64> {
+        let mut n = 0;
+        let mut s = self
+            .conn
+            .prepare("SELECT seq FROM lan_events WHERE origin=?1 ORDER BY seq")?;
+        for v in s.query_map([origin], |r| r.get::<_, i64>(0))? {
+            let v = v?;
+            if v == n + 1 {
+                n = v;
+            } else if v > n + 1 {
+                break;
+            }
+        }
+        Ok(n)
+    }
+    pub fn lan_export(&self, after: i64) -> Result<Vec<Change>> {
+        let mut s = self.conn.prepare(
+            "SELECT wire FROM lan_events WHERE origin=?1 AND seq>?2 ORDER BY seq LIMIT ?3",
+        )?;
+        let rows = s
+            .query_map(params![self.device_id, after, PAGE as i64], |r| {
+                r.get::<_, String>(0)
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+        let mut total = 0;
+        let mut page = Vec::new();
+        for wire in rows {
+            if total + wire.len() > MAX_WIRE / 2 {
+                break;
+            }
+            total += wire.len();
+            page.push(serde_json::from_str(&wire)?);
+        }
+        Ok(page)
+    }
+    /// The caller supplies the authenticated direct origin, after verifying every signature.
+    /// Forwarded events from unpaired origins are deliberately not accepted.
+    pub fn lan_import(&mut self, peer: &str, events: &[Change]) -> Result<usize> {
+        if events.len() > PAGE || serde_json::to_vec(events)?.len() > MAX_WIRE {
+            return Err(Error::Invalid("sync batch limit"));
+        }
+        if !self.lan_peers()?.iter().any(|p| p.id == peer && !p.revoked) {
+            return Err(Error::Untrusted);
+        }
+        let tx = self.conn.transaction()?;
+        tx.execute("UPDATE lan_control SET suppress=1 WHERE id=1", [])?;
+        let mut count = 0;
+        for e in events {
+            e.validate()?;
+            if e.origin != peer || e.origin == self.device_id {
+                return Err(Error::Untrusted);
+            }
+            let old: Option<String> = tx
+                .query_row(
+                    "SELECT wire FROM lan_events WHERE id=?1 OR (origin=?2 AND seq=?3)",
+                    params![e.id, e.origin, e.seq],
+                    |r| r.get(0),
+                )
+                .optional()?;
+            if let Some(old) = old {
+                if serde_json::from_str::<Change>(&old)? != *e {
+                    return Err(Error::Conflict);
+                }
+                continue;
+            }
+            let next: i64 = tx.query_row(
+                "SELECT coalesce(max(seq),0)+1 FROM lan_events WHERE origin=?1",
+                [peer],
+                |r| r.get(0),
+            )?;
+            if e.seq != next {
+                return Err(Error::Invalid("CHECKPOINT_GAP"));
+            }
+            validate_row(&tx, e, &self.device_id)?;
+            merge_cells(&tx, e)?;
+            project(&tx, e)?;
+            save_event(&tx, e)?;
+            let observed = e
+                .clock
+                .max(
+                    e.row
+                        .get("created_lamport")
+                        .and_then(Value::as_i64)
+                        .unwrap_or(0),
+                )
+                .max(e.row.get("lamport").and_then(Value::as_i64).unwrap_or(0));
+            tx.execute(
+                "UPDATE local_clock SET lamport=max(lamport,?1) WHERE device_id=?2",
+                params![observed, self.device_id],
+            )?;
+            tx.execute(
+                "UPDATE lan_control SET clock=max(clock,?1) WHERE id=1",
+                [e.clock],
+            )?;
+            count += 1;
+        }
+        tx.execute("UPDATE lan_control SET suppress=0 WHERE id=1", [])?;
+        if tx.query_row("SELECT count(*) FROM pragma_foreign_key_check", [], |r| {
+            r.get::<_, i64>(0)
+        })? != 0
+        {
+            return Err(Error::Schema);
+        }
+        tx.commit()?;
+        Ok(count)
+    }
+    pub fn lan_conflicts(&self) -> Result<Vec<Value>> {
+        let mut s=self.conn.prepare("SELECT table_name,row_key,field,event_id,value_json FROM lan_conflicts ORDER BY table_name,row_key LIMIT 100")?;
+        Ok(s.query_map([],|r|Ok(json!({"entity":r.get::<_,String>(0)?,"key":r.get::<_,String>(1)?,"field":r.get::<_,String>(2)?,"event":r.get::<_,String>(3)?,"value":r.get::<_,String>(4)?})))?.collect::<std::result::Result<_,_>>()?)
+    }
+}
+fn flatten(row: &Value) -> Result<BTreeMap<String, Value>> {
+    let mut fields = BTreeMap::new();
+    if let Some(obj) = row.as_object() {
+        for (k, v) in obj {
+            if k == "settings_json" {
+                let value: Value =
+                    serde_json::from_str(v.as_str().ok_or(Error::Invalid("settings JSON"))?)?;
+                let allowed = [
+                    "model",
+                    "temperature",
+                    "max_tokens",
+                    "history_turns",
+                    "timeout_seconds",
+                    "include_history",
+                    "character_name",
+                    "user_title",
+                    "personality",
+                ];
+                if value
+                    .as_object()
+                    .ok_or(Error::Invalid("settings object"))?
+                    .keys()
+                    .any(|k| !allowed.contains(&k.as_str()))
+                {
+                    return Err(Error::Invalid("unknown synchronized preference"));
+                }
+                for (name, val) in value.as_object().ok_or(Error::Invalid("settings object"))? {
+                    fields.insert(format!("settings_json/{name}"), val.clone());
+                }
+            } else {
+                fields.insert(k.clone(), v.clone());
+            }
+        }
+    }
+    Ok(fields)
+}
+fn save_event(db: &Connection, e: &Change) -> Result<()> {
+    db.execute(
+        "INSERT INTO lan_events(id,origin,seq,clock,wire) VALUES(?1,?2,?3,?4,?5)",
+        params![e.id, e.origin, e.seq, e.clock, serde_json::to_string(e)?],
+    )?;
+    Ok(())
+}
+fn merge_cells(db: &Connection, e: &Change) -> Result<()> {
+    if e.deleted {
+        db.execute(
+            "INSERT OR IGNORE INTO lan_deleted VALUES(?1,?2)",
+            params![e.table, e.key],
+        )?;
+    }
+    for (field, value) in &e.fields {
+        let old:Option<(i64,String,String,String)>=db.query_row("SELECT clock,origin,event_id,value_json FROM lan_cells WHERE table_name=?1 AND row_key=?2 AND field=?3",params![e.table,e.key,field],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?))).optional()?;
+        let encoded = serde_json::to_string(value)?;
+        if let Some((clock, origin, id, prior)) = &old {
+            if prior != &encoded && origin != &e.origin {
+                // Keep both candidate values, including the losing register, for explicit review.
+                for (eid, val) in [
+                    (id.as_str(), prior.as_str()),
+                    (e.id.as_str(), encoded.as_str()),
+                ] {
+                    db.execute(
+                        "INSERT OR IGNORE INTO lan_conflicts VALUES(?1,?2,?3,?4,?5)",
+                        params![e.table, e.key, field, eid, val],
+                    )?;
+                }
+            }
+            if (*clock, origin, id) >= (e.clock, &e.origin, &e.id) {
+                continue;
+            }
+        }
+        db.execute("INSERT INTO lan_cells VALUES(?1,?2,?3,?4,?5,?6,?7) ON CONFLICT(table_name,row_key,field) DO UPDATE SET value_json=excluded.value_json,clock=excluded.clock,origin=excluded.origin,event_id=excluded.event_id",params![e.table,e.key,field,encoded,e.clock,e.origin,e.id])?;
+    }
+    Ok(())
+}
+fn validate_row(db: &Connection, e: &Change, local: &str) -> Result<()> {
+    let cols = columns(db, &e.table)?;
+    let obj = e.row.as_object().ok_or(Error::Invalid("row object"))?;
+    if obj.len() != cols.len() || obj.keys().any(|k| !cols.contains(k)) {
+        return Err(Error::Invalid("unknown sync field"));
+    }
+    for (name, value) in obj {
+        let uuid_column = (name == "id" || name.ends_with("_id") || name == "version_origin")
+            && name != "model_id";
+        if uuid_column
+            && !value.is_null()
+            && !(e.table == "application_settings" && name == "device_id")
+        {
+            Uuid::parse_str(value.as_str().ok_or(Error::Invalid("entity UUID"))?)
+                .map_err(|_| Error::Invalid("entity UUID"))?;
+        }
+    }
+    let flat = flatten(&e.row)?;
+    if e.fields.iter().any(|(k, v)| flat.get(k) != Some(v)) {
+        return Err(Error::Invalid("invalid change fields"));
+    }
+    if e.table == "devices" && e.row["id"] == local {
+        return Err(Error::Untrusted);
+    }
+    if e.table == "sync_events" {
+        let event: crate::event::Event = serde_json::from_str(
+            e.row["envelope_json"]
+                .as_str()
+                .ok_or(Error::Invalid("legacy envelope"))?,
+        )?;
+        event.validate()?;
+        let operation = if event.operation == crate::event::Operation::Put {
+            "put"
+        } else {
+            "delete"
+        };
+        if e.row["event_id"] != event.event_id
+            || e.row["origin_device_id"] != event.origin_device_id
+            || e.row["profile_id"] != event.profile_id
+            || e.row["origin_seq"] != event.origin_seq
+            || e.row["lamport"] != event.lamport
+            || e.row["checksum"] != event.checksum
+            || e.row["entity_id"] != event.entity_id
+            || e.row["entity_type"] != event.entity.as_str()
+            || e.row["operation"] != operation
+        {
+            return Err(Error::Conflict);
+        }
+        if event.origin_device_id == local {
+            return Err(Error::Untrusted);
+        }
+    }
+    if e.table == "persona_chat_preferences" {
+        let settings: crate::chat::ChatSettings = serde_json::from_str(
+            e.row["settings_json"]
+                .as_str()
+                .ok_or(Error::Invalid("preferences"))?,
+        )?;
+        settings.validate()?;
+    }
+    if e.table == "application_settings"
+        && (e.row["scope"] != "profile"
+            || e.row["device_id"] != ""
+            || !matches!(e.row["key"].as_str(), Some("theme" | "language")))
+    {
+        return Err(Error::Untrusted);
+    }
+    if e.table == "task_checkpoints" {
+        let authority: String = db.query_row(
+            "SELECT authority_device_id FROM task_queue WHERE id=?1",
+            [e.row["task_id"]
+                .as_str()
+                .ok_or(Error::Invalid("task UUID"))?],
+            |r| r.get(0),
+        )?;
+        if authority != e.origin {
+            return Err(Error::Untrusted);
+        }
+    }
+    if e.table == "task_queue" && e.row["authority_device_id"] != e.origin {
+        return Err(Error::Untrusted);
+    }
+    if obj.values().any(|v| {
+        v.as_i64()
+            .is_some_and(|n| !(-crate::event::MAX_CLOCK..=crate::event::MAX_CLOCK).contains(&n))
+    }) {
+        return Err(Error::Invalid("sync scalar bounds"));
+    }
+    if obj
+        .values()
+        .any(|v| !(v.is_null() || v.is_string() || v.is_i64()))
+    {
+        return Err(Error::Invalid("non-scalar sync column"));
+    }
+    // Identity and ownership can never be changed by field conflict resolution.
+    let keys = key_fields(&e.table)?;
+    let predicate = keys
+        .iter()
+        .enumerate()
+        .map(|(i, k)| format!("{k}=?{}", i + 1))
+        .collect::<Vec<_>>()
+        .join(" AND ");
+    for field in cols.iter().filter(|f| {
+        keys.contains(&f.as_str())
+            || [
+                "profile_id",
+                "persona_id",
+                "main_conversation_id",
+                "is_builtin",
+                "conversation_id",
+                "user_message_id",
+                "origin_device_id",
+                "source_event_id",
+                "authority_device_id",
+            ]
+            .contains(&f.as_str())
+    }) {
+        let existing: Option<SqlValue> = db
+            .query_row(
+                &format!("SELECT {field} FROM {} WHERE {predicate}", e.table),
+                rusqlite::params_from_iter(keys.iter().map(|k| to_sql(&e.row[*k]))),
+                |r| r.get(0),
+            )
+            .optional()?;
+        if let Some(existing) = existing
+            && existing != to_sql(&e.row[field])
+        {
+            return Err(Error::Conflict);
+        }
+    }
+    Ok(())
+}
+fn to_sql(v: &Value) -> SqlValue {
+    match v {
+        Value::Null => SqlValue::Null,
+        Value::String(s) => SqlValue::Text(s.clone()),
+        _ => SqlValue::Integer(v.as_i64().unwrap_or(0)),
+    }
+}
+fn project(db: &Connection, e: &Change) -> Result<()> {
+    let cols = columns(db, &e.table)?;
+    let keys = key_fields(&e.table)?;
+    let predicate = keys
+        .iter()
+        .enumerate()
+        .map(|(i, k)| format!("{k}=?{}", i + 1))
+        .collect::<Vec<_>>()
+        .join(" AND ");
+    let exists: bool = db.query_row(
+        &format!("SELECT EXISTS(SELECT 1 FROM {} WHERE {predicate})", e.table),
+        rusqlite::params_from_iter(keys.iter().map(|k| to_sql(&e.row[*k]))),
+        |r| r.get(0),
+    )?;
+    let mut row = e.row.clone();
+    let mut settings = serde_json::Map::new();
+    let mut s =
+        db.prepare("SELECT field,value_json FROM lan_cells WHERE table_name=?1 AND row_key=?2")?;
+    for v in s.query_map(params![e.table, e.key], |r| {
+        Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?))
+    })? {
+        let (field, value) = v?;
+        let value: Value = serde_json::from_str(&value)?;
+        if let Some(name) = field.strip_prefix("settings_json/") {
+            settings.insert(name.into(), value);
+        } else {
+            row[field] = value;
+        }
+    }
+    if !settings.is_empty() {
+        let prefs = Value::Object(settings);
+        let parsed: crate::chat::ChatSettings = serde_json::from_value(prefs.clone())?;
+        parsed.validate()?;
+        row["settings_json"] = json!(serde_json::to_string(&prefs)?);
+    }
+    let deleted: bool = db.query_row(
+        "SELECT EXISTS(SELECT 1 FROM lan_deleted WHERE table_name=?1 AND row_key=?2)",
+        params![e.table, e.key],
+        |r| r.get(0),
+    )?;
+    if deleted {
+        if e.table == "messages" || e.table == "memories" {
+            row["is_deleted"] = json!(1);
+            row[if e.table == "messages" {
+                "content"
+            } else {
+                "text"
+            }] = json!("");
+        } else {
+            return Err(Error::Invalid("unsupported physical delete"));
+        }
+    }
+    // Append-only message/evidence identity cannot be replaced with different content.
+    if exists
+        && [
+            "messages",
+            "relationship_events",
+            "life_events",
+            "sync_events",
+            "local_profiles",
+            "devices",
+            "conversation_personas",
+            "api_usage_records",
+        ]
+        .contains(&e.table.as_str())
+    {
+        for c in &cols {
+            if ["is_deleted", "content", "text", "name", "platform"].contains(&c.as_str()) {
+                continue;
+            }
+            let value: SqlValue = db.query_row(
+                &format!("SELECT {c} FROM {} WHERE {predicate}", e.table),
+                rusqlite::params_from_iter(keys.iter().map(|k| to_sql(&row[*k]))),
+                |r| r.get(0),
+            )?;
+            if value != to_sql(&row[c]) {
+                return Err(Error::Conflict);
+            }
+        }
+        if e.table == "messages" && !deleted {
+            let content: String = db.query_row(
+                &format!("SELECT content FROM messages WHERE {predicate}"),
+                rusqlite::params_from_iter(keys.iter().map(|k| to_sql(&row[*k]))),
+                |r| r.get(0),
+            )?;
+            if content != row["content"].as_str().unwrap_or("") {
+                return Err(Error::Conflict);
+            }
+        }
+        if e.table == "conversation_personas" {
+            return Ok(());
+        }
+    }
+    if e.table == "relationship_events" {
+        let existing:Option<(i64,String,String)>=db.query_row("SELECT lamport,origin_device_id,id FROM relationship_events WHERE profile_id=?1 AND persona_id=?2 AND evidence_hash=?3 AND rule_version=?4",params![to_sql(&row["profile_id"]),to_sql(&row["persona_id"]),to_sql(&row["evidence_hash"]),to_sql(&row["rule_version"])],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?))).optional()?;
+        if let Some(old) = existing {
+            let incoming = (
+                row["lamport"]
+                    .as_i64()
+                    .ok_or(Error::Invalid("relationship clock"))?,
+                row["origin_device_id"]
+                    .as_str()
+                    .ok_or(Error::Invalid("relationship origin"))?
+                    .to_owned(),
+                row["id"]
+                    .as_str()
+                    .ok_or(Error::Invalid("relationship id"))?
+                    .to_owned(),
+            );
+            if old.2 != incoming.2 {
+                if old <= incoming {
+                    return Ok(());
+                }
+                db.execute("DELETE FROM relationship_events WHERE id=?1", [old.2])?;
+            }
+        }
+    }
+    if e.table == "activity_states" {
+        row["state"] = json!("remote_snapshot");
+        row["error_code"] = json!("REMOTE_SNAPSHOT_REQUIRES_LIVE_HEARTBEAT");
+    }
+    let mut insert_cols = cols.clone();
+    let mut values: Vec<SqlValue> = cols.iter().map(|c| to_sql(&row[c])).collect();
+    if e.table == "devices" {
+        insert_cols.push("trust_state".into());
+        values.push(SqlValue::Text("revoked".into()));
+    }
+    let update = cols
+        .iter()
+        .filter(|c| {
+            !keys.contains(&c.as_str())
+                && ![
+                    "profile_id",
+                    "persona_id",
+                    "main_conversation_id",
+                    "is_builtin",
+                ]
+                .contains(&c.as_str())
+        })
+        .map(|c| format!("{c}=excluded.{c}"))
+        .collect::<Vec<_>>()
+        .join(",");
+    let action = if update.is_empty() {
+        "DO NOTHING".into()
+    } else {
+        format!("DO UPDATE SET {update}")
+    };
+    db.execute(
+        &format!(
+            "INSERT INTO {}({}) VALUES({}) ON CONFLICT({}) {action}",
+            e.table,
+            insert_cols.join(","),
+            (1..=values.len())
+                .map(|i| format!("?{i}"))
+                .collect::<Vec<_>>()
+                .join(","),
+            keys.join(",")
+        ),
+        rusqlite::params_from_iter(values),
+    )?;
+    if e.table == "personas" {
+        db.execute(
+            "INSERT OR IGNORE INTO persona_states(persona_id) VALUES(?1)",
+            [row["id"].as_str().ok_or(Error::Invalid("persona id"))?],
+        )?;
+    }
+    if e.table == "data_tombstones" {
+        let entity = row["entity_type"]
+            .as_str()
+            .ok_or(Error::Invalid("tombstone type"))?;
+        let table = match entity {
+            "message" => "messages",
+            "memory" => "memories",
+            _ => return Err(Error::Invalid("tombstone type")),
+        };
+        let id = row["entity_id"]
+            .as_str()
+            .ok_or(Error::Invalid("tombstone UUID"))?;
+        let actual: Option<String> = db
+            .query_row(
+                &format!("SELECT profile_id FROM {table} WHERE id=?1"),
+                [id],
+                |r| r.get(0),
+            )
+            .optional()?;
+        if actual
+            .as_deref()
+            .is_some_and(|p| Some(p) != row["profile_id"].as_str())
+        {
+            return Err(Error::Untrusted);
+        }
+        db.execute(
+            "INSERT OR IGNORE INTO lan_deleted VALUES(?1,?2)",
+            params![table, serde_json::to_string(&json!([id]))?],
+        )?;
+        let field = if table == "messages" {
+            "content"
+        } else {
+            "text"
+        };
+        db.execute(
+            &format!("UPDATE {table} SET is_deleted=1,{field}='' WHERE id=?1"),
+            [id],
+        )?;
+        if table == "memories" {
+            db.execute("DELETE FROM memory_embeddings WHERE memory_id=?1", [id])?;
+        }
+    }
+    if e.table == "relationship_events" {
+        recompute_relationship(
+            db,
+            row["persona_id"]
+                .as_str()
+                .ok_or(Error::Invalid("relationship persona"))?,
+        )?;
+    }
+    if e.table == "local_profiles" {
+        db.execute(
+            "INSERT OR IGNORE INTO lan_profiles VALUES(?1)",
+            [row["id"].as_str().ok_or(Error::Invalid("profile id"))?],
+        )?;
+    }
+    Ok(())
+}
+
+fn recompute_relationship(db: &Connection, persona: &str) -> Result<()> {
+    let raw = {
+        let mut s=db.prepare("SELECT evidence_json FROM relationship_events WHERE persona_id=?1 ORDER BY lamport,origin_device_id,id")?;
+        s.query_map([persona], |r| r.get::<_, String>(0))?
+            .collect::<std::result::Result<Vec<_>, _>>()?
+    };
+    let parsed = raw
+        .iter()
+        .map(|s| serde_json::from_str::<crate::relationship::RelationshipEvent>(s))
+        .collect::<std::result::Result<Vec<_>, _>>();
+    if let Ok(events) = parsed {
+        let state = crate::relationship::recompute(&events)?;
+        db.execute(
+            "UPDATE persona_states SET relationship_json=?1 WHERE persona_id=?2",
+            params![serde_json::to_string(&state)?, persona],
+        )?;
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod migration_tests {
+    use super::*;
+    use crate::event::sha256_hex;
+    fn v3(path: &std::path::Path) -> Connection {
+        let db = Connection::open(path).unwrap();
+        for (number, sql) in [
+            (1, include_str!("../../../db/migrations/0001_initial.sql")),
+            (2, include_str!("../../../db/migrations/0002_chat.sql")),
+            (3, include_str!("../../../db/migrations/0003_personas.sql")),
+        ] {
+            db.execute_batch(sql).unwrap();
+            db.execute(
+                "INSERT INTO schema_migrations VALUES(?1,?2)",
+                params![number, sha256_hex(sql.as_bytes())],
+            )
+            .unwrap();
+            db.pragma_update(None, "user_version", number).unwrap();
+        }
+        db
+    }
+    fn paired(a: &mut Store, b: &Store) {
+        a.lan_trust(&Peer {
+            id: b.device_id.clone(),
+            name: "fixture".into(),
+            certificate: "00".into(),
+            signing_key: "00".into(),
+            revoked: false,
+            address: None,
+            last_success_ms: None,
+            acknowledged_seq: 0,
+        })
+        .unwrap();
+    }
+    fn capture(store: &mut Store) {
+        loop {
+            store.lan_capture(|b| Ok(sha256_hex(b))).unwrap();
+            if store.lan_outbox_count().unwrap() == 0 {
+                break;
+            }
+        }
+    }
+    fn replicate(a: &mut Store, b: &mut Store) {
+        capture(a);
+        loop {
+            let page = a.lan_export(b.lan_cursor(&a.device_id).unwrap()).unwrap();
+            if page.is_empty() {
+                break;
+            }
+            b.lan_import(&a.device_id, &page).unwrap();
+        }
+    }
+    #[test]
+    fn evidence_life_tasks_and_public_preferences_sync_without_credentials_or_live_leases() {
+        let mut a = Store::open(":memory:").unwrap();
+        let mut b = Store::open(":memory:").unwrap();
+        paired(&mut a, &b);
+        paired(&mut b, &a);
+        capture(&mut a);
+        capture(&mut b);
+        let task = a
+            .queue_task("virtual", "one-occurrence", &json!({"virtual":true}))
+            .unwrap();
+        let plan = Uuid::new_v4().to_string();
+        let activity = Uuid::new_v4().to_string();
+        let occurrence = Uuid::new_v4().to_string();
+        a.conn.execute("INSERT INTO life_plans(id,profile_id,name,plan_json,persona_id) VALUES(?1,?2,'fixture','{}',?2)",params![plan,a.profile_id]).unwrap();
+        a.conn.execute("INSERT INTO daily_activities(id,profile_id,plan_id,task_id,kind,execution_kind,started_at_ms,ended_at_ms,persona_id) VALUES(?1,?2,?3,?4,'fixture','virtual',0,1,?2)",params![activity,a.profile_id,plan,task]).unwrap();
+        a.conn.execute("INSERT INTO life_events(id,profile_id,activity_id,occurrence_key,event_json,persona_id) VALUES(?1,?2,?3,'occurrence','{}',?2)",params![occurrence,a.profile_id,activity]).unwrap();
+        a.conn.execute("UPDATE persona_states SET life_json='{\"status\":\"virtual\"}' WHERE persona_id=?1",[&a.profile_id]).unwrap();
+        for (key, scope, device, value) in [
+            ("theme", "profile", "", "\"dark\""),
+            ("api_key", "profile", "", "\"fixture-private-not-synced\""),
+            (
+                "theme",
+                "device",
+                "device-local",
+                "\"fixture-device-not-synced\"",
+            ),
+        ] {
+            a.conn.execute("INSERT INTO application_settings(profile_id,key,value_json,scope,device_id) VALUES(?1,?2,?3,?4,?5)",params![a.profile_id,key,value,scope,device]).unwrap();
+        }
+        a.conn
+            .execute("DELETE FROM application_settings WHERE scope='device'", [])
+            .unwrap();
+        let evidence = crate::relationship::RelationshipEvent {
+            id: Uuid::new_v4().to_string(),
+            origin: a.device_id.clone(),
+            lamport: 1,
+            evidence_hash: "ab".repeat(32),
+            topic: "care".into(),
+            kind: crate::relationship::Kind::ThoughtfulCare,
+            confidence_milli: 900,
+            source_verified: true,
+            occurred_at_ms: 0,
+            rule_version: 1,
+        };
+        a.conn.execute("INSERT INTO relationship_events(id,profile_id,evidence_hash,rule_version,kind,evidence_json,occurred_at_ms,lamport,origin_device_id,persona_id) VALUES(?1,?2,?3,1,'ThoughtfulCare',?4,0,1,?5,?2)",params![evidence.id,a.profile_id,evidence.evidence_hash,serde_json::to_string(&evidence).unwrap(),a.device_id]).unwrap();
+        replicate(&mut a, &mut b);
+        replicate(&mut a, &mut b);
+        assert_eq!(
+            b.conn
+                .query_row("SELECT count(*) FROM life_events", [], |r| r
+                    .get::<_, i64>(0))
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            b.conn
+                .query_row("SELECT count(*) FROM task_queue", [], |r| r
+                    .get::<_, i64>(0))
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            b.conn
+                .query_row("SELECT count(*) FROM application_settings", [], |r| r
+                    .get::<_, i64>(0))
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            a.persona_summary(&a.profile_id).unwrap().relationship,
+            b.persona_summary(&a.profile_id).unwrap().relationship
+        );
+        assert_eq!(
+            b.persona_summary(&a.profile_id).unwrap().life,
+            json!({"status":"virtual"})
+        );
+        let wire = serde_json::to_string(&a.lan_export(0).unwrap()).unwrap();
+        assert!(!wire.contains("fixture-private-not-synced"));
+        assert!(!wire.contains("fixture-device-not-synced"));
+    }
+    #[test]
+    fn logical_message_order_survives_device_wall_clock_skew() {
+        let mut a = Store::open(":memory:").unwrap();
+        let mut b = Store::open(":memory:").unwrap();
+        paired(&mut a, &b);
+        paired(&mut b, &a);
+        capture(&mut a);
+        capture(&mut b);
+        let persona = a.profile_id.clone();
+        let first = Uuid::new_v4().to_string();
+        let second = Uuid::new_v4().to_string();
+        a.put(
+            crate::event::Entity::Message,
+            &first,
+            json!({"role":"user","content":"先发生","created_at_ms":9999999999999_i64}),
+        )
+        .unwrap();
+        replicate(&mut a, &mut b);
+        b.select_persona(&persona).unwrap();
+        b.put(
+            crate::event::Entity::Message,
+            &second,
+            json!({"role":"user","content":"后发生但时钟慢","created_at_ms":1}),
+        )
+        .unwrap();
+        replicate(&mut b, &mut a);
+        for s in [&a, &b] {
+            assert_eq!(
+                s.chat_messages(&persona)
+                    .unwrap()
+                    .iter()
+                    .map(|m| m.id.clone())
+                    .collect::<Vec<_>>(),
+                vec![first.clone(), second.clone()]
+            );
+        }
+    }
+    #[test]
+    fn v3_migration_backup_and_restart_preserve_identity_and_existing_content() {
+        let folder = std::env::temp_dir().join(format!("deepseek-v4-{}", Uuid::new_v4()));
+        std::fs::create_dir(&folder).unwrap();
+        let file = folder.join("fixture.sqlite3");
+        let db = v3(&file);
+        let profile = Uuid::new_v4().to_string();
+        let device = Uuid::new_v4().to_string();
+        db.execute(
+            "INSERT INTO local_profiles(id,display_name) VALUES(?1,'fixture')",
+            [&profile],
+        )
+        .unwrap();
+        db.execute(
+            "INSERT INTO devices(id,profile_id,name,trust_state) VALUES(?1,?2,'fixture','local')",
+            params![device, profile],
+        )
+        .unwrap();
+        db.execute(
+            "INSERT INTO conversations(id,profile_id,title) VALUES(?1,?1,'fixture')",
+            [&profile],
+        )
+        .unwrap();
+        crate::persona::ensure_default(&db, &profile, &device).unwrap();
+        let task = Uuid::new_v4().to_string();
+        db.execute("INSERT INTO task_queue(id,profile_id,kind,dedupe_key,authority_device_id) VALUES(?1,?2,'fixture','legacy-child',?3)",params![task,profile,device]).unwrap();
+        db.execute("INSERT INTO task_checkpoints(task_id,step_key,fence,checkpoint_json,checksum) VALUES(?1,'preserved',1,'{}','fixture')",[&task]).unwrap();
+        drop(db);
+        {
+            let s = Store::open(&file).unwrap();
+            assert_eq!(s.device_id, device);
+            assert_eq!(s.profile_id, profile);
+            assert_eq!(s.personas().unwrap()[0].id, profile);
+            assert_eq!(s.diagnostics().unwrap().schema_version, 4);
+            assert_eq!(
+                s.conn
+                    .query_row(
+                        "SELECT count(*) FROM task_checkpoints WHERE task_id=?1",
+                        [&task],
+                        |r| r.get::<_, i64>(0)
+                    )
+                    .unwrap(),
+                1
+            );
+        }
+        let backups = std::fs::read_dir(&folder)
+            .unwrap()
+            .map(|e| e.unwrap().path())
+            .filter(|p| p.extension().is_some_and(|e| e == "bak"))
+            .collect::<Vec<_>>();
+        assert_eq!(backups.len(), 1);
+        let backup = Connection::open(&backups[0]).unwrap();
+        assert_eq!(
+            backup
+                .pragma_query_value(None, "user_version", |r| r.get::<_, i64>(0))
+                .unwrap(),
+            3
+        );
+        drop(backup);
+        {
+            let s = Store::open(&file).unwrap();
+            assert_eq!(s.personas().unwrap().len(), 1);
+            assert_eq!(s.diagnostics().unwrap().integrity, "ok");
+        }
+        assert_eq!(
+            std::fs::read_dir(&folder)
+                .unwrap()
+                .filter(|e| e
+                    .as_ref()
+                    .unwrap()
+                    .path()
+                    .extension()
+                    .is_some_and(|e| e == "bak"))
+                .count(),
+            1
+        );
+        std::fs::remove_dir_all(folder).unwrap();
+    }
+    #[test]
+    fn failed_v4_ddl_rolls_back_and_retains_the_usable_v3_backup() {
+        let folder = std::env::temp_dir().join(format!("deepseek-rollback-{}", Uuid::new_v4()));
+        std::fs::create_dir(&folder).unwrap();
+        let file = folder.join("fixture.sqlite3");
+        let db = v3(&file);
+        db.execute_batch("CREATE TABLE lan_control(deliberate_schema_collision TEXT)")
+            .unwrap();
+        drop(db);
+        assert!(Store::open(&file).is_err());
+        let db = Connection::open(&file).unwrap();
+        assert_eq!(
+            db.pragma_query_value(None, "user_version", |r| r.get::<_, i64>(0))
+                .unwrap(),
+            3
+        );
+        assert_eq!(
+            db.query_row(
+                "SELECT count(*) FROM schema_migrations WHERE version=4",
+                [],
+                |r| r.get::<_, i64>(0)
+            )
+            .unwrap(),
+            0
+        );
+        drop(db);
+        std::fs::remove_dir_all(folder).unwrap();
+    }
+}

@@ -1,6 +1,6 @@
 [package]
 name = "tauri-plugin-companion-keystore"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2024"
 rust-version = "1.99"
 publish = false
@@ -11,6 +11,8 @@ tauri = { version = "=2.12.5", default-features = false }
 serde = { version = "=1.0.229", features = ["derive"] }
 serde_json = "=1.0.154"
 companion-secrets = { path = "../../crates/companion-secrets" }
+
+companion-sync = { path = "../../crates/companion-sync" }
 
 [build-dependencies]
 tauri-plugin = { version = "=2.7.2", features = ["build"] }

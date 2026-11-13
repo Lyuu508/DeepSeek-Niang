@@ -77,3 +77,47 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         })
         .build()
 }
+
+#[cfg(target_os = "android")]
+pub struct AndroidDiscovery<R: Runtime>(pub KeystoreHandle<R>);
+#[cfg(target_os = "android")]
+impl<R: Runtime> companion_sync::discovery::Discovery for AndroidDiscovery<R> {
+    fn start(&self, port: u16, instance: &str) -> companion_sync::Result<()> {
+        self.0
+            .0
+            .run_mobile_plugin::<serde_json::Value>(
+                "startLan",
+                serde_json::json!({"port":port,"instance":instance}),
+            )
+            .map(|_| ())
+            .map_err(|_| companion_sync::Error::Discovery)
+    }
+    fn candidates(&self) -> Vec<companion_sync::discovery::Candidate> {
+        #[derive(serde::Deserialize)]
+        struct Reply {
+            candidates: Vec<companion_sync::discovery::Candidate>,
+        }
+        self.0
+            .0
+            .run_mobile_plugin::<Reply>("pollLan", serde_json::json!({}))
+            .map(|r| r.candidates)
+            .unwrap_or_default()
+    }
+    fn error(&self) -> Option<String> {
+        #[derive(serde::Deserialize)]
+        struct Reply {
+            error: Option<String>,
+        }
+        self.0
+            .0
+            .run_mobile_plugin::<Reply>("pollLan", serde_json::json!({}))
+            .ok()
+            .and_then(|r| r.error)
+    }
+    fn stop(&self) {
+        let _ = self
+            .0
+            .0
+            .run_mobile_plugin::<serde_json::Value>("stopLan", serde_json::json!({}));
+    }
+}

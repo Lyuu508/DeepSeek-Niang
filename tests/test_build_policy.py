@@ -29,7 +29,7 @@ class BuildPolicy(unittest.TestCase):
             prepare.prepare(project)
             root = ET.parse(manifest).getroot()
             android = "{http://schemas.android.com/apk/res/android}"
-            self.assertEqual(len(root.findall("uses-permission")), 1)
+            self.assertEqual(len(root.findall("uses-permission")), 3)
             self.assertEqual(root.find("application").get(android + "allowBackup"), "false")
             self.assertEqual(root.find("application").get(android + "usesCleartextTraffic"), "false")
             self.assertEqual(root.find("application/activity").get(android + "windowSoftInputMode"), "adjustResize")

@@ -7,13 +7,20 @@ test -n "${ANDROID_HOME:-}" && test -d "$ANDROID_HOME" || { printf '%s\n' 'Andro
 test -n "${NDK_HOME:-}" && test -d "$NDK_HOME/toolchains/llvm" || { printf '%s\n' 'Android NDK missing: install an official side-by-side NDK and set NDK_HOME to its exact directory.' >&2; exit 1; }
 if test "${1:-}" = '--check-only'; then printf '%s\n' 'Prerequisite paths exist; APK/device validation still required.'; exit 0; fi
 cd "$project_root"
+if test "${1:-}" != '--unsigned-ci'; then python3 scripts/android_signing.py; fi
 node scripts/check-branding.mjs
 rustup target add aarch64-linux-android
 npm ci --ignore-scripts
 cargo test --workspace --locked
 npm run tauri -- android init --ci
 python3 scripts/prepare_android.py
-npm run tauri -- android build --apk --debug --target aarch64
+if test "${1:-}" = '--unsigned-ci'; then
+    npm run tauri -- android build --apk --target aarch64
+else
+    python3 scripts/android_signing.py --configure
+    npm run tauri -- android build --apk --target aarch64
+    python3 scripts/verify_android.py
+fi
 python3 - <<'PY'
 from pathlib import Path
 import hashlib

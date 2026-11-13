@@ -1,3 +1,11 @@
+# 当前进度
+
+阶段 2 正在开发，目标 v0.0.2，尚未发布。用户已授权本阶段开发、GitHub 更新、双端构建与测试发布；停止在阶段 2，不开始阶段 3。
+生产同步实现及验证见 [PHASE2_REPORT](docs/PHASE2_REPORT.md)，家庭网线 PC + Wi-Fi 手机实机验收见 [PHASE2_ACCEPTANCE](docs/PHASE2_ACCEPTANCE.md)。
+Android 原签名是否可恢复尚待 GitHub Secrets 与旧环境核实，不替换 applicationId、不清除旧数据。每阶段双端包都必须来自同一 SHA；长期规则见 [VERSIONING](docs/VERSIONING.md)。
+
+以下保留 0.0.1 发布时的阶段历史，不能据此将阶段 2 或后续阶段勾选为完成。
+
 # 分阶段开发计划
 
 当前版本 **0.0.1 测试版已发布**（继承0.1.0-dev.2）。本次仅在既有工程完成永久聊天/人格迁移、应用改名、品牌资源接线和阶段文档。正式海滩PNG已从2026-11-13用户ZIP导入并生成资源；本次重建实际Windows/Android安装包，实际构建/实机范围见RELEASE_0.0.1。阶段0/1原代码、DDL及历史验证保留。

@@ -1,0 +1,102 @@
+name: Authorized stage prerelease
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: 'Exact tested 40-character main commit for BOTH installers'
+        required: true
+        type: string
+      authorized_version:
+        description: 'Explicit stage release authorization; enter 0.0.2 for this stage'
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: stage-release
+  cancel-in-progress: false
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.check.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - id: check
+        env:
+          REQUESTED_SHA: ${{ inputs.source_sha }}
+          AUTHORIZED_VERSION: ${{ inputs.authorized_version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          import os,re,subprocess,sys
+          sys.path.insert(0,'scripts')
+          from version import check
+          sha=os.environ['REQUESTED_SHA'];version=check()['version']
+          assert re.fullmatch('[0-9a-f]{40}',sha)
+          assert subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()==sha
+          subprocess.run(['git','merge-base','--is-ancestor',sha,'origin/main'],check=True)
+          assert os.environ['AUTHORIZED_VERSION']==version
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:f.write('sha='+sha+'\n')
+          PY
+          python3 scripts/check_schema.py
+          python3 -m unittest discover -s tests -p 'test_*.py'
+  tests:
+    needs: preflight
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.preflight.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: |
+          rustup toolchain install 1.99.0 --profile minimal --component clippy
+          rustup default 1.99.0
+          npm ci --ignore-scripts
+          cargo test --workspace --locked
+          cargo clippy --workspace --all-targets --locked -- -D warnings
+          node --test tests/sync-model.test.mjs
+          npm run build
+          npm exec --workspace @deepseek/companion -- playwright install --with-deps chromium
+          npm run test:ui
+  packages:
+    needs: preflight
+    uses: ./.github/workflows/native-packages.yml
+    with:
+      source_sha: ${{ needs.preflight.outputs.sha }}
+      signed_android: true
+    secrets:
+      ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+  publish:
+    needs: [preflight, tests, packages]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.preflight.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          pattern: '*-package-*'
+          path: artifacts
+      - name: Verify both packages come from this commit
+        run: python3 .github/scripts/collect-packages.py artifacts release-files
+      - name: Publish only after both validated native builds and tests succeed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          python3 .github/scripts/publish-release.py

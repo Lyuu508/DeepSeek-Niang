@@ -19,8 +19,9 @@ def prepare(project: Path, branding: Path | None = None) -> None:
     tree = ET.parse(manifest)
     root = tree.getroot()
     name = f"{{{ANDROID}}}name"
-    if not any(p.get(name) == "android.permission.INTERNET" for p in root.findall("uses-permission")):
-        ET.SubElement(root, "uses-permission", {name: "android.permission.INTERNET"})
+    for permission in ["android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE", "android.permission.ACCESS_LOCAL_NETWORK"]:
+        if not any(p.get(name) == permission for p in root.findall("uses-permission")):
+            ET.SubElement(root, "uses-permission", {name: permission})
     application = root.find("application")
     if application is None:
         raise SystemExit("Application element missing; refusing to rewrite an unknown manifest.")
@@ -82,6 +83,13 @@ def prepare(project: Path, branding: Path | None = None) -> None:
             if count != 1:
                 raise SystemExit(f"Unknown generated Gradle {setting}; refusing to guess SDK policy.")
         gradle.write_text(text, encoding="utf-8")
+    wrapper = project / "gradle/wrapper/gradle-wrapper.properties"
+    if wrapper.is_file():
+        props = wrapper.read_text()
+        if 'gradle-9.6.1-bin.zip' not in props:
+            raise SystemExit('Unreviewed Gradle distribution; audit checksum before building.')
+        props = re.sub(r'(?m)^distributionSha256Sum=.*\n?', '', props)
+        wrapper.write_text(props.rstrip() + '\ndistributionSha256Sum=9c0f7faeeb306cb14e4279a3e084ca6b596894089a0638e68a07c945a32c9e14\n')
     resources = project / "app/src/main/res/xml"
     resources.mkdir(parents=True, exist_ok=True)
     domains = ["root", "file", "database", "sharedpref", "external"]

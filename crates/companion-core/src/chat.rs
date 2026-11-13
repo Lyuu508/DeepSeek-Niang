@@ -182,7 +182,7 @@ impl Store {
         })
     }
     pub fn conversations(&self) -> Result<Vec<Conversation>> {
-        let mut stmt=self.conn.prepare("SELECT c.id,c.title,c.created_at_ms,c.updated_at_ms,(SELECT count(*) FROM messages m WHERE m.conversation_id=c.id AND m.is_deleted=0) FROM conversations c WHERE c.profile_id=?1 ORDER BY coalesce(c.updated_at_ms,0) DESC,c.id LIMIT 200")?;
+        let mut stmt=self.conn.prepare("SELECT c.id,c.title,c.created_at_ms,c.updated_at_ms,(SELECT count(*) FROM messages m WHERE m.conversation_id=c.id AND m.is_deleted=0) FROM conversations c WHERE (c.profile_id=?1 OR c.profile_id IN (SELECT profile_id FROM lan_profiles)) ORDER BY coalesce(c.updated_at_ms,0) DESC,c.id LIMIT 200")?;
         Ok(stmt
             .query_map([&self.profile_id], |r| {
                 Ok(Conversation {
@@ -202,7 +202,7 @@ impl Store {
             return Err(Error::Invalid("conversation title"));
         }
         if self.conn.execute(
-            "UPDATE conversations SET title=?1,revision=revision+1 WHERE id=?2 AND profile_id=?3",
+            "UPDATE conversations SET title=?1,revision=revision+1 WHERE id=?2 AND (profile_id=?3 OR profile_id IN (SELECT profile_id FROM lan_profiles))",
             params![title, id, self.profile_id],
         )? != 1
         {
@@ -229,6 +229,7 @@ impl Store {
         if let Some(id) = &input.regenerate_user_id {
             uuid(id)?;
         }
+        let data_profile = self.conversation_profile(&input.conversation_id)?;
         let input_hash = sha256_hex(&serde_json::to_vec(input)?);
         let latest_user = if input.regenerate_user_id.is_some() {
             self.chat_messages(&input.conversation_id)?
@@ -257,7 +258,7 @@ impl Store {
         }
         let title: Option<String> = tx
             .query_row(
-                "SELECT title FROM conversations WHERE id=?1 AND profile_id=?2",
+                "SELECT title FROM conversations WHERE id=?1 AND (profile_id=?2 OR profile_id IN (SELECT profile_id FROM lan_profiles))",
                 params![input.conversation_id, self.profile_id],
                 |r| r.get(0),
             )
@@ -285,7 +286,7 @@ impl Store {
             Self::append_in(
                 &tx,
                 &self.device_id,
-                &self.profile_id,
+                &data_profile,
                 Entity::Message,
                 &user_id,
                 Operation::Put,
@@ -381,16 +382,21 @@ impl Store {
             Self::append_in(
                 &tx,
                 &self.device_id,
-                &self.profile_id,
+                &tx.query_row(
+                    "SELECT profile_id FROM conversations WHERE id=?1",
+                    [&conversation],
+                    |r| r.get::<_, String>(0),
+                )?,
                 Entity::Message,
                 &assistant,
                 Operation::Put,
                 json!({"role":"assistant","content":content,"conversation_id":conversation,"created_at_ms":created,"model_id":model,"request_id":request,"reply_to_id":user_id,"generation_id":assistant,"status":state}),
             )?;
         }
-        tx.execute("UPDATE chat_generations SET content=?1,state=?2,revision=revision+1,finished_at_ms=?3,error_code=?4,finish_reason=?5 WHERE request_id=?6",params![content,state,now,error_code,finish_reason,request])?;
         tx.execute("UPDATE chat_requests SET state=?1,finished_at_ms=?2,error_code=?3,finish_reason=?4 WHERE id=?5",params![state,now,error_code,finish_reason,request])?;
-        tx.execute("INSERT OR IGNORE INTO api_usage_records(id,profile_id,request_key,provider,model_id,input_tokens,output_tokens,currency,usage_state,created_at_ms,price_snapshot_json,persona_id) VALUES(?1,?2,?3,'deepseek',?4,?5,?6,'USD',?7,?8,'{}',?9)",params![Uuid::new_v4().to_string(),self.profile_id,request,model,usage.map(|u|u.prompt_tokens),usage.map(|u|u.completion_tokens),if usage.is_some(){"measured"}else{"unknown"},now,crate::persona::owner_of_thread(&tx,&conversation,&self.profile_id)?])?;
+        tx.execute("UPDATE chat_generations SET content=?1,state=?2,revision=revision+1,finished_at_ms=?3,error_code=?4,finish_reason=?5 WHERE request_id=?6",params![content,state,now,error_code,finish_reason,request])?;
+        tx.execute("INSERT INTO lan_outbox(table_name,after_json) SELECT 'chat_turn_choices',json_object('user_message_id',user_message_id,'selected_generation_id',selected_generation_id) FROM chat_turn_choices WHERE user_message_id=?1",[&user_id])?;
+        tx.execute("INSERT OR IGNORE INTO api_usage_records(id,profile_id,request_key,provider,model_id,input_tokens,output_tokens,currency,usage_state,created_at_ms,price_snapshot_json,persona_id) VALUES(?1,?2,?3,'deepseek',?4,?5,?6,'USD',?7,?8,'{}',?9)",params![Uuid::new_v4().to_string(),tx.query_row("SELECT profile_id FROM conversations WHERE id=?1",[&conversation],|r|r.get::<_,String>(0))?,request,model,usage.map(|u|u.prompt_tokens),usage.map(|u|u.completion_tokens),if usage.is_some(){"measured"}else{"unknown"},now,crate::persona::owner_of_thread(&tx,&conversation,&self.profile_id)?])?;
         tx.execute(
             "UPDATE conversations SET updated_at_ms=?1 WHERE id=?2",
             params![now, conversation],
@@ -423,18 +429,29 @@ impl Store {
         }
         let mut meta = self
             .conn
-            .prepare("SELECT id,created_lamport FROM messages WHERE profile_id=?1")?;
-        let clocks: std::collections::BTreeMap<String, i64> = meta
-            .query_map([&self.profile_id], |r| Ok((r.get(0)?, r.get(1)?)))?
+            .prepare("SELECT id,created_lamport,origin_device_id FROM messages WHERE (profile_id=?1 OR profile_id IN (SELECT profile_id FROM lan_profiles))")?;
+        let clocks: std::collections::BTreeMap<String, (i64, String)> = meta
+            .query_map([&self.profile_id], |r| {
+                Ok((r.get(0)?, (r.get(1)?, r.get(2)?)))
+            })?
             .collect::<std::result::Result<_, _>>()?;
         rows.sort_by_key(|m| {
+            let root = m.user_message_id.as_deref().unwrap_or(&m.id);
+            let (clock, origin) = clocks
+                .get(root)
+                .cloned()
+                .unwrap_or((i64::MAX, String::new()));
+            let (reply_clock, reply_origin) = clocks
+                .get(&m.id)
+                .cloned()
+                .unwrap_or((i64::MAX, String::new()));
             (
-                m.created_at_ms.unwrap_or(0),
-                clocks
-                    .get(m.user_message_id.as_deref().unwrap_or(&m.id))
-                    .copied()
-                    .unwrap_or(i64::MAX),
+                clock,
+                origin,
+                root.to_owned(),
                 m.role != "user",
+                reply_clock,
+                reply_origin,
                 m.id.clone(),
             )
         });
@@ -445,7 +462,7 @@ impl Store {
     }
     fn chat_messages_in_conversation(&self, conversation: &str) -> Result<Vec<ChatMessage>> {
         uuid(conversation)?;
-        let mut stmt=self.conn.prepare("SELECT m.id,m.conversation_id,m.role,m.content,m.status,m.created_at_ms,m.model_id,m.request_id,m.reply_to_id,coalesce(g.revision,0),CASE WHEN g.id IS NULL THEN 1 ELSE c.selected_generation_id=g.id END,g.error_code,g.finish_reason FROM messages m LEFT JOIN chat_generations g ON g.id=m.id LEFT JOIN chat_turn_choices c ON c.user_message_id=g.user_message_id WHERE m.conversation_id=?1 AND m.profile_id=?2 AND m.is_deleted=0 ORDER BY m.created_lamport,m.origin_device_id,m.id")?;
+        let mut stmt=self.conn.prepare("SELECT m.id,m.conversation_id,m.role,m.content,m.status,m.created_at_ms,m.model_id,m.request_id,m.reply_to_id,coalesce(g.revision,0),CASE WHEN g.id IS NULL THEN 1 ELSE c.selected_generation_id=g.id END,g.error_code,g.finish_reason FROM messages m LEFT JOIN chat_generations g ON g.id=m.id LEFT JOIN chat_turn_choices c ON c.user_message_id=g.user_message_id WHERE m.conversation_id=?1 AND (m.profile_id=?2 OR m.profile_id IN (SELECT profile_id FROM lan_profiles)) AND m.is_deleted=0 ORDER BY m.created_lamport,m.origin_device_id,m.id")?;
         let mut rows = stmt
             .query_map(params![conversation, self.profile_id], |r| {
                 Ok(ChatMessage {
@@ -465,7 +482,7 @@ impl Store {
                 })
             })?
             .collect::<std::result::Result<Vec<_>, _>>()?;
-        let mut drafts=self.conn.prepare("SELECT g.id,r.conversation_id,g.content,g.state,g.created_at_ms,g.model_id,g.request_id,g.user_message_id,g.revision,c.selected_generation_id=g.id,g.error_code,g.finish_reason FROM chat_generations g JOIN chat_requests r ON r.id=g.request_id JOIN conversations cv ON cv.id=r.conversation_id JOIN chat_turn_choices c ON c.user_message_id=g.user_message_id WHERE r.conversation_id=?1 AND cv.profile_id=?2 AND NOT EXISTS(SELECT 1 FROM messages m WHERE m.id=g.id)")?;
+        let mut drafts=self.conn.prepare("SELECT g.id,r.conversation_id,g.content,g.state,g.created_at_ms,g.model_id,g.request_id,g.user_message_id,g.revision,c.selected_generation_id=g.id,g.error_code,g.finish_reason FROM chat_generations g JOIN chat_requests r ON r.id=g.request_id JOIN conversations cv ON cv.id=r.conversation_id JOIN chat_turn_choices c ON c.user_message_id=g.user_message_id WHERE r.conversation_id=?1 AND (cv.profile_id=?2 OR cv.profile_id IN (SELECT profile_id FROM lan_profiles)) AND NOT EXISTS(SELECT 1 FROM messages m WHERE m.id=g.id)")?;
         rows.extend(
             drafts
                 .query_map(params![conversation, self.profile_id], |r| {

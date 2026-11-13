@@ -1,3 +1,5 @@
+生产 v2 已由 `companion-sync` 与 `companion-core::replication` 实现。固定协议域、schema=2，事件元组用 RFC 8785 JCS 规范化后 Ed25519 签名；64 条/页并按字节限额分页，接收方验证直接配对来源与连续序号再事务提交。v1 实验导入不进入网络；数据类型采用独立合并规则。签名密钥不在 SQLite，原始 v1 行不重写。实际范围及待验收见 [PHASE2_REPORT](PHASE2_REPORT.md)。以下是原阶段 0/1 协议设计背景。
+
 # 局域网协议与任务所有权设计
 
 ## 实现边界

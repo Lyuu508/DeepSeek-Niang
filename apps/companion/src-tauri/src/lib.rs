@@ -1,3 +1,4 @@
+mod sync;
 use companion_chat::{
     ChatFailure,
     deepseek::DeepSeekClient,
@@ -264,10 +265,27 @@ pub fn run() {
                 credentials,
                 DeepSeekClient::official()?,
             ));
+            // Separate secure-storage slot from the local DeepSeek API key.
+            let mut slot =
+                *Uuid::parse_str(&service.store.lock().map_err(|_| "storage lock")?.device_id)?
+                    .as_bytes();
+            slot[0] ^= 0xA7;
+            slot[15] ^= 0x62;
+            let sync_vault = vault(app.handle(), &Uuid::from_bytes(slot).to_string())?;
+            let host = Arc::new(sync::SyncHost {
+                suspended: std::sync::atomic::AtomicBool::new(false),
+                store: service.store.clone(),
+                credentials: sync_vault,
+                discovery: sync::discovery(app.handle()),
+                service: Mutex::new(None),
+            });
+            app.manage(host);
             app.manage(AppState(service));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            sync::sync_status,
+            sync::sync_command,
             bootstrap,
             list_messages,
             create_persona,

@@ -1,0 +1,152 @@
+name: Build native packages
+on:
+  workflow_call:
+    inputs:
+      source_sha:
+        type: string
+        required: true
+      signed_android:
+        type: boolean
+        default: false
+    secrets:
+      ANDROID_KEYSTORE_B64:
+        required: false
+      ANDROID_KEYSTORE_PASSWORD:
+        required: false
+      ANDROID_KEY_ALIAS:
+        required: false
+      ANDROID_KEY_PASSWORD:
+        required: false
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      CARGO_BUILD_JOBS: '4'
+      CARGO_INCREMENTAL: '0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.source_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Verify hosted MSVC prerequisites and select Rust
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal
+          if ($LASTEXITCODE) { throw 'Rust install failed' }
+          rustup default 1.99.0
+          if ($LASTEXITCODE) { throw 'Rust selection failed' }
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          if (-not (& $vswhere -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath)) { throw 'MSVC missing' }
+          ('CARGO_TARGET_DIR=' + (Join-Path $env:RUNNER_TEMP 'deepseek-windows-target')) | Out-File $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Build locked Windows source and validate installer
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'deepseek-windows-artifacts'
+          New-Item -ItemType Directory -Force $root | Out-Null
+          Start-Transcript -Path (Join-Path $root 'windows-build.log')
+          try {
+            python scripts/version.py
+            if ($LASTEXITCODE) { throw 'Version mismatch' }
+            .\scripts\build-windows.ps1
+            .\.github\scripts\windows-package-smoke.ps1
+          } finally { Stop-Transcript }
+      - name: Record source SHA and package hash
+        run: |
+          $root = Join-Path $env:RUNNER_TEMP 'deepseek-windows-artifacts'
+          $exe = @(Get-ChildItem $root -Filter '*setup.exe')
+          if ($exe.Count -ne 1) { throw 'Expected one Windows installer' }
+          $version = (Get-Content VERSION.json | ConvertFrom-Json).version
+          @{ platform='windows'; source_commit=(git rev-parse HEAD); version=$version; file=$exe[0].Name; sha256=(Get-FileHash $exe[0].FullName -Algorithm SHA256).Hash.ToLower(); bytes=$exe[0].Length; working_tree_clean=([string]::IsNullOrWhiteSpace((git status --porcelain | Out-String))); hosted_runner_install_smoke=$true; physical_device_tested=$false } | ConvertTo-Json | Set-Content (Join-Path $root 'windows-build.json') -Encoding utf8
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: windows-package-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/deepseek-windows-artifacts/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      CARGO_BUILD_JOBS: '4'
+      CARGO_INCREMENTAL: '0'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.source_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install official Android components and Rust
+        run: |
+          rustup toolchain install 1.99.0 --profile minimal
+          rustup default 1.99.0
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools' 'ndk;28.2.13676358'
+          echo "ANDROID_HOME=${ANDROID_HOME:-$ANDROID_SDK_ROOT}" >> "$GITHUB_ENV"
+          echo "NDK_HOME=${ANDROID_HOME:-$ANDROID_SDK_ROOT}/ndk/28.2.13676358" >> "$GITHUB_ENV"
+      - name: Restore existing protected signing identity
+        if: inputs.signed_android
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          COMPANION_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          COMPANION_ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          COMPANION_ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          python3 - <<'PY'
+          import base64, os
+          from pathlib import Path
+          names=['KEYSTORE_B64','COMPANION_ANDROID_KEYSTORE_PASSWORD','COMPANION_ANDROID_KEY_ALIAS','COMPANION_ANDROID_KEY_PASSWORD']
+          missing=[n for n in names if not os.environ.get(n)]
+          if missing: raise SystemExit('Original v0.0.1 Android signing secrets missing: '+', '.join(missing))
+          path=Path(os.environ['RUNNER_TEMP'])/'deepseek-signing.jks'
+          path.write_bytes(base64.b64decode(os.environ['KEYSTORE_B64'],validate=True));path.chmod(0o600)
+          os.environ['COMPANION_ANDROID_KEYSTORE_FILE']=str(path)
+          import sys
+          sys.path.insert(0,'scripts')
+          import android_signing
+          android_signing.preflight()
+          PY
+      - name: Build ARM64 APK
+        env:
+          SIGNED: ${{ inputs.signed_android }}
+          COMPANION_ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/deepseek-signing.jks
+          COMPANION_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          COMPANION_ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          COMPANION_ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          python3 scripts/version.py
+          mkdir -p "$RUNNER_TEMP/deepseek-android-artifacts"
+          if [ "$SIGNED" = 'true' ]; then
+            python3 scripts/run_logged.py "$RUNNER_TEMP/deepseek-android-artifacts/android-build.log" sh scripts/build-android.sh
+            python3 scripts/verify_android.py --output "$RUNNER_TEMP/deepseek-android-artifacts/android-build.json"
+          else
+            python3 scripts/run_logged.py "$RUNNER_TEMP/deepseek-android-artifacts/android-build.log" sh scripts/build-android.sh --unsigned-ci
+            python3 scripts/verify_android.py --unsigned-ci --output "$RUNNER_TEMP/deepseek-android-artifacts/android-build.json"
+          fi
+          find apps/companion/src-tauri/gen/android/app/build/outputs/apk -name '*.apk' -exec cp '{}' "$RUNNER_TEMP/deepseek-android-artifacts/" \;
+      - name: Remove private signing file
+        if: always()
+        run: rm -f "$RUNNER_TEMP/deepseek-signing.jks"
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: android-package-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/deepseek-android-artifacts/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0

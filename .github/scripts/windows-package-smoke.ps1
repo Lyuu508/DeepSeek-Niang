@@ -2,18 +2,18 @@
 $ErrorActionPreference = 'Stop'
 if ($env:GITHUB_ACTIONS -ne 'true') { throw 'This installation smoke test is restricted to GitHub Actions.' }
 $Config = Get-Content -Raw 'apps/companion/src-tauri/tauri.conf.json' | ConvertFrom-Json
-if ($Config.version -ne '0.0.1') { throw 'Unexpected test version' }
+if ($Config.version -ne ((Get-Content VERSION.json | ConvertFrom-Json).version)) { throw 'Unexpected test version' }
 $Target = Join-Path $env:CARGO_TARGET_DIR 'x86_64-pc-windows-msvc/release'
 $Packages = @(Get-ChildItem (Join-Path $Target 'bundle/nsis') -Filter '*.exe')
 if ($Packages.Count -ne 1) { throw 'Expected exactly one fresh NSIS package' }
 $Application = Join-Path $Target 'companion-app.exe'
 if (-not (Test-Path -LiteralPath $Application)) { throw 'Compiled application missing' }
 $ProductVersion = (Get-Item -LiteralPath $Application).VersionInfo.ProductVersion
-if ($ProductVersion -notmatch '^0\.0\.1(?:\.0)?$') { throw "Unexpected embedded version: $ProductVersion" }
+if ($ProductVersion -notmatch ('^' + [regex]::Escape($Config.version) + '(?:\.0)?$')) { throw "Unexpected embedded version: $ProductVersion" }
 $Output = Join-Path $env:RUNNER_TEMP 'deepseek-windows-artifacts'
 New-Item -ItemType Directory -Force -Path $Output | Out-Null
-$Installer = Join-Path $Output 'DeepSeek-Niang_0.0.1_windows-x64-setup.exe'
-$AppCopy = Join-Path $Output 'DeepSeek-Niang_0.0.1_windows-x64.exe'
+$Installer = Join-Path $Output "DeepSeek-Niang_$($Config.version)_windows-x64-setup.exe"
+$AppCopy = Join-Path $Output "DeepSeek-Niang_$($Config.version)_windows-x64.exe"
 Copy-Item -LiteralPath $Packages[0].FullName -Destination $Installer
 Copy-Item -LiteralPath $Application -Destination $AppCopy
 
@@ -34,6 +34,7 @@ try {
         if ($Process.HasExited) { throw "Installed application exited early: $($Process.ExitCode)" }
         if ($Process.MainWindowHandle -ne 0) { break }
     }
+    if ($Process.MainWindowHandle -eq 0) { throw 'Installed app never opened a native window' }
     $WindowTitle = $Process.MainWindowTitle
     try {
       if ($Process.MainWindowHandle -ne 0) {
@@ -63,7 +64,7 @@ public static class CompanionWindowCapture {
     } catch { Write-Warning "Window screenshot unavailable: $($_.Exception.GetType().Name)"; $Screenshot = $false }
     $Report = [ordered]@{
         version = $Config.version
-        build_commit = $env:GITHUB_SHA
+        build_commit = (git rev-parse HEAD)
         workflow_run = $env:GITHUB_RUN_ID
         host = 'GitHub-hosted Windows runner'
         embedded_product_version = $ProductVersion

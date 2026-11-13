@@ -1,6 +1,15 @@
 package io.local.companion.keystore
 
 import android.app.Activity
+import android.content.Context
+import android.content.pm.PackageManager
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.nsd.NsdManager
+import android.net.nsd.NsdServiceInfo
+import android.os.Build
+import org.json.JSONArray
+import java.util.concurrent.ConcurrentHashMap
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.AtomicFile
@@ -25,10 +34,104 @@ class SecretArgs {
     var key: String? = null
 }
 
+@InvokeArg
+class LanArgs { var port: Int = 0; var instance: String = "" }
+
 /** Private native bridge. No frontend permission or JS invoke handler grants readSecret. */
 @TauriPlugin
 class CompanionKeystorePlugin(private val activity: Activity) : Plugin(activity) {
     private val executor = Executors.newSingleThreadExecutor()
+    private val nsd by lazy { activity.getSystemService(Context.NSD_SERVICE) as NsdManager }
+    private val candidates = ConcurrentHashMap<String, Pair<String, Long>>()
+    private var discovery: NsdManager.DiscoveryListener? = null
+    private var registration: NsdManager.RegistrationListener? = null
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
+    private var lanArgs: LanArgs? = null
+    @Volatile private var lanError: String? = null
+
+    private fun stopNsd() {
+        discovery?.let { try { nsd.stopServiceDiscovery(it) } catch (_: Exception) {} }
+        registration?.let { try { nsd.unregisterService(it) } catch (_: Exception) {} }
+        discovery = null; registration = null; candidates.clear()
+    }
+    private fun startNsd(args: LanArgs) {
+        stopNsd()
+        val listener = object : NsdManager.DiscoveryListener {
+            override fun onDiscoveryStarted(type: String) { lanError = null }
+            override fun onDiscoveryStopped(type: String) {}
+            override fun onStartDiscoveryFailed(type: String, error: Int) { candidates.clear(); lanError = "NSD_DISCOVERY_FAILED" }
+            override fun onStopDiscoveryFailed(type: String, error: Int) {}
+            override fun onServiceLost(info: NsdServiceInfo) { candidates.remove(info.serviceName) }
+            override fun onServiceFound(info: NsdServiceInfo) {
+                if (info.serviceName == args.instance) return
+                if (candidates.size >= 64) return
+                try {
+                @Suppress("DEPRECATION")
+                nsd.resolveService(info, object : NsdManager.ResolveListener {
+                    override fun onResolveFailed(service: NsdServiceInfo, code: Int) {}
+                    override fun onServiceResolved(service: NsdServiceInfo) {
+                        @Suppress("DEPRECATION")
+                        val host = service.host?.hostAddress ?: return
+                        candidates[service.serviceName] = Pair("$host:${service.port}", android.os.SystemClock.elapsedRealtime())
+                    }
+                })
+                } catch (_: Exception) { lanError = "NSD_RESOLVE_FAILED" }
+            }
+        }
+        discovery = listener
+        nsd.discoverServices("_dscompanion._tcp.", NsdManager.PROTOCOL_DNS_SD, listener)
+        val registered = object : NsdManager.RegistrationListener {
+            override fun onServiceRegistered(info: NsdServiceInfo) {}
+            override fun onRegistrationFailed(info: NsdServiceInfo, code: Int) { lanError = "NSD_REGISTRATION_FAILED" }
+            override fun onServiceUnregistered(info: NsdServiceInfo) {}
+            override fun onUnregistrationFailed(info: NsdServiceInfo, code: Int) {}
+        }
+        registration = registered
+        nsd.registerService(NsdServiceInfo().apply {
+            serviceName = args.instance; serviceType = "_dscompanion._tcp."; port = args.port
+            setAttribute("v", "2")
+        }, NsdManager.PROTOCOL_DNS_SD, registered)
+    }
+    @Command
+    fun startLan(invoke: Invoke) {
+        try {
+            val args = invoke.parseArgs(LanArgs::class.java)
+            require(args.port in 1..65535 && args.instance.length in 1..64)
+            if (Build.VERSION.SDK_INT >= 37 && activity.applicationInfo.targetSdkVersion >= 37 &&
+                activity.checkSelfPermission("android.permission.ACCESS_LOCAL_NETWORK") != PackageManager.PERMISSION_GRANTED) {
+                activity.runOnUiThread { activity.requestPermissions(arrayOf("android.permission.ACCESS_LOCAL_NETWORK"), 2702) }
+                invoke.reject("LOCAL_NETWORK_PERMISSION"); return
+            }
+            lanArgs = args
+            startNsd(args)
+            if (networkCallback == null) {
+                val callback = object : ConnectivityManager.NetworkCallback() {
+                    override fun onAvailable(network: Network) { activity.runOnUiThread { try { lanArgs?.let { startNsd(it) } } catch (_: Exception) { lanError = "LOCAL_NETWORK_PERMISSION_OR_DISCOVERY" } } }
+                    override fun onLost(network: Network) { candidates.clear() }
+                }
+                (activity.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager).registerDefaultNetworkCallback(callback)
+                networkCallback = callback
+            }
+            invoke.resolve(JSObject().apply { put("ok", true) })
+        } catch (_: Exception) { invoke.reject("LOCAL_NETWORK_PERMISSION_OR_DISCOVERY") }
+    }
+    @Command
+    fun pollLan(invoke: Invoke) {
+        val list = JSONArray()
+        val now = android.os.SystemClock.elapsedRealtime()
+        candidates.forEach { (name, value) -> if (now - value.second < 120000) {
+            list.put(JSObject().apply { put("instance", name); put("address", value.first) })
+        } }
+        invoke.resolve(JSObject().apply { put("candidates", list); put("error", lanError) })
+    }
+    @Command
+    fun stopLan(invoke: Invoke) {
+        lanArgs = null; stopNsd()
+        networkCallback?.let { (activity.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager).unregisterNetworkCallback(it) }
+        networkCallback = null
+        invoke.resolve(JSObject().apply { put("ok", true) })
+    }
+
 
     private fun profile(args: SecretArgs): String {
         require(UUID.fromString(args.profileId).toString() == args.profileId.lowercase())

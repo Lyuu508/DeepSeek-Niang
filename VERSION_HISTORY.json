@@ -1,0 +1,10 @@
+{
+  "releases": [
+    {
+      "version": "0.0.1",
+      "androidVersionCode": 1001,
+      "commit": "8ae10e7c62602fde124989800c6e16d5a951dcb0",
+      "tag": "v0.0.1"
+    }
+  ]
+}

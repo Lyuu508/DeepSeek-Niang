@@ -1,0 +1,17 @@
+    Finished `release` profile [optimized] target(s) in 1m 59s
+        Info symlinking lib "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so" in jniLibs dir "/workspace/DeepSeek-Niang/apps/companion/src-tauri/gen/android/app/src/main/jniLibs/arm64-v8a"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so" requires shared lib "libandroid.so"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so" requires shared lib "libdl.so"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so" requires shared lib "liblog.so"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so" requires shared lib "libm.so"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so" requires shared lib "libc.so"
+        Info symlink at "/workspace/DeepSeek-Niang/apps/companion/src-tauri/gen/android/app/src/main/jniLibs/arm64-v8a/libcompanion_app_lib.so" points to "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so"
+    Finished `release` profile [optimized] target(s) in 0.26s
+        Info symlinking lib "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so" in jniLibs dir "/workspace/DeepSeek-Niang/apps/companion/src-tauri/gen/android/app/src/main/jniLibs/arm64-v8a"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so" requires shared lib "libandroid.so"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so" requires shared lib "libdl.so"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so" requires shared lib "liblog.so"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so" requires shared lib "libm.so"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so" requires shared lib "libc.so"
+    Finished 1 APK at:
+Unsigned build only; not installable and not released.

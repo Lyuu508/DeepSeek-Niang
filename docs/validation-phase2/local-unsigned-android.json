@@ -1,0 +1,18 @@
+{
+  "platform": "android",
+  "working_tree_clean": false,
+  "version": "0.0.2",
+  "version_code": 1002,
+  "application_id": "io.local.deepseekcompanion",
+  "abi": "arm64-v8a",
+  "file": "app-universal-release-unsigned.apk",
+  "bytes": 23539141,
+  "sha256": "841829445f458dc27147cb182429c68cc0bc3ce937a52a3a1cea13eb6c4c9171",
+  "signature_verified": false,
+  "signer_certificate_sha256": null,
+  "physical_device_tested": false,
+  "base_commit": "22096939c20134708c6dc1a4476468a7bbe96827",
+  "source_state": "uncommitted phase-2 working tree",
+  "installable": false,
+  "delivery_eligible": false
+}
