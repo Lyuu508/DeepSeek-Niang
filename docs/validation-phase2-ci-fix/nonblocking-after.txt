@@ -1,0 +1,9 @@
+   Compiling companion-sync v0.0.2 (/workspace/DeepSeek-Niang/crates/companion-sync)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.17s
+     Running unittests src/lib.rs (target/debug/deps/companion_sync-268ba2293a15b849)
+
+running 1 test
+test tests::accepted_nonblocking_socket_waits_for_real_tls_client ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 0.32s
+

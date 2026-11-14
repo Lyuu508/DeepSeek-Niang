@@ -13,3 +13,5 @@
 CI 仅测试、构建和保存 Artifacts。`release.yml` 只接受手动阶段发布授权及完整 main commit SHA，等待测试和双端构建全部成功，校验包与 SHA 后上传草稿，最后公开 Pre-release 并创建 Tag。历史 Tag/Release 存在则拒绝覆盖。构建任务仅有 contents:read；公开阶段仅有 contents:write。
 
 用户明确说“开始阶段 N”时，授权该阶段开发、测试、提交、推送、Actions 双端构建及对应测试版发布，不授权下一阶段。每次发布后更新开发计划、变更记录、版本历史、阶段验收与构建报告。普通讨论和局部咨询不构成发布授权。
+
+2026-11-14 CI 修复仍使用未发布目标 0.0.2 / 1002。本地检查通过不分配新版本；须验证同 SHA 的 Windows EXE 与原签名 Android APK 后才创建 v0.0.2 Pre-release。

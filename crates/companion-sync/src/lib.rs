@@ -527,6 +527,10 @@ impl SyncService {
         Ok(store.lan_import(id, events)?)
     }
     fn incoming(&self, stream: TcpStream) -> Result<()> {
+        // Windows accepted sockets inherit the nonblocking listener's mode.
+        // This worker uses blocking rustls I/O with bounded read/write timeouts;
+        // leaving that mode inherited makes a delayed ClientHello fail Offline.
+        stream.set_nonblocking(false).map_err(|_| Error::Offline)?;
         stream
             .set_read_timeout(Some(Duration::from_secs(8)))
             .map_err(|_| Error::Offline)?;

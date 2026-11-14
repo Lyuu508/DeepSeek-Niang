@@ -45,3 +45,7 @@ Android 原签名是否可恢复尚待 GitHub Secrets 与旧环境核实，不�
 未发现用户业务库，本次迁移仅在真实SQLite合成旧库验证，不能声称已升级用户设备。实机验收后由用户逐阶段决定后续实现。新DDL使用增量迁移，不删库掩盖问题；不自动安装未经确认的新程序/模型或调用新付费服务。
 
 用户已明确授权本次上传公开仓库Lyuu508/DeepSeek-Niang及0.0.1测试发布；实际状态见docs/RELEASE_0.0.1.md，后续阶段仍不自动发布。
+
+## 阶段 2 CI 修复（2026-11-14）
+
+从 b7330d9 修复 Windows accepted socket 模式与 Android SDK 命令路径，保留全部原有测试，新增真实 TLS 非阻塞回归；本地 73 项 Rust 与其余常规检查通过。原 APK 已重新实际验签。双端 Hosted 构建、签名 Secrets 元数据和发布仍须取得远程执行证据；不开始阶段 3。见 [CI 修复报告](docs/PHASE2_CI_FIX_REPORT.md)。

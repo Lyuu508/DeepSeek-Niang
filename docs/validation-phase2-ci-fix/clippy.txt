@@ -1,0 +1,2 @@
+    Checking companion-sync v0.0.2 (/workspace/DeepSeek-Niang/crates/companion-sync)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.37s

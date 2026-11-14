@@ -340,6 +340,78 @@ fn pair_requires_both_confirmations_token_expiry_and_private_addresses() {
     b.stop();
 }
 #[test]
+fn accepted_nonblocking_socket_waits_for_real_tls_client() {
+    // Windows accept inherits the listener's nonblocking mode. Force that mode
+    // on every OS and delay ClientHello so a premature WouldBlock is observable.
+    let server = service();
+    let client = service();
+    trust(&server, &client);
+    let listener = TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let endpoint = listener.local_addr().unwrap();
+    let (ready, accepted) = std::sync::mpsc::channel();
+    let incoming = server.clone();
+    let worker = std::thread::spawn(move || {
+        let (stream, _) = listener.accept().unwrap();
+        stream.set_nonblocking(true).unwrap();
+        ready.send(()).unwrap();
+        incoming.incoming(stream)
+    });
+    let socket = TcpStream::connect(endpoint).unwrap();
+    socket
+        .set_read_timeout(Some(Duration::from_secs(8)))
+        .unwrap();
+    socket
+        .set_write_timeout(Some(Duration::from_secs(8)))
+        .unwrap();
+    accepted.recv_timeout(Duration::from_secs(8)).unwrap();
+    std::thread::sleep(Duration::from_millis(150));
+    use rustls::pki_types::{CertificateDer, PrivatePkcs8KeyDer, ServerName};
+    let mut roots = rustls::RootCertStore::empty();
+    roots
+        .add(CertificateDer::from(
+            unhex(&server.identity.public.certificate).unwrap(),
+        ))
+        .unwrap();
+    let config = rustls::ClientConfig::builder_with_provider(Arc::new(
+        rustls::crypto::ring::default_provider(),
+    ))
+    .with_protocol_versions(&[&rustls::version::TLS13])
+    .unwrap()
+    .with_root_certificates(roots)
+    .with_client_auth_cert(
+        vec![CertificateDer::from(
+            unhex(&client.identity.public.certificate).unwrap(),
+        )],
+        PrivatePkcs8KeyDer::from(client.identity.key.clone()).into(),
+    )
+    .unwrap();
+    let connection = rustls::ClientConnection::new(
+        Arc::new(config),
+        ServerName::try_from("deepseek.local").unwrap(),
+    )
+    .unwrap();
+    let mut tls = rustls::StreamOwned::new(connection, socket);
+    transport::write(
+        &mut tls,
+        &Request::Exchange {
+            id: client.identity.public.id.clone(),
+            cursor: 0,
+            events: vec![],
+        },
+    )
+    .unwrap();
+    let reply: Reply = transport::read(&mut tls).unwrap();
+    assert!(matches!(reply, Reply::Batch { .. }));
+    assert_eq!(
+        tls.conn.protocol_version(),
+        Some(rustls::ProtocolVersion::TLSv1_3)
+    );
+    worker.join().unwrap().unwrap();
+    server.stop();
+    client.stop();
+}
+
+#[test]
 fn real_tls13_mutual_auth_pinning_and_reconnect() {
     let a = service();
     let b = service();

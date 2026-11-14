@@ -1,0 +1,41 @@
+   Compiling syn v3.0.10
+   Compiling futures-sink v0.3.34
+   Compiling futures-core v0.3.34
+   Compiling smallvec v1.16.5
+   Compiling mio v1.2.4
+   Compiling flume v0.12.0
+   Compiling rusqlite v0.42.0
+   Compiling once_cell v1.21.4
+   Compiling mdns-sd v0.21.7
+   Compiling rustls v0.23.46
+   Compiling thiserror-impl v2.0.21
+   Compiling displaydoc v0.2.7
+   Compiling serde_derive v1.0.229
+   Compiling thiserror v2.0.21
+   Compiling asn1-rs v0.7.2
+   Compiling der-parser v10.0.0
+   Compiling oid-registry v0.8.1
+   Compiling x509-parser v0.18.1
+   Compiling companion-secrets v0.0.2 (/workspace/DeepSeek-Niang/crates/companion-secrets)
+   Compiling serde v1.0.229
+   Compiling serde_jcs v0.2.0
+   Compiling companion-core v0.0.2 (/workspace/DeepSeek-Niang/crates/companion-core)
+   Compiling companion-sync v0.0.2 (/workspace/DeepSeek-Niang/crates/companion-sync)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 8.65s
+     Running unittests src/lib.rs (target/debug/deps/companion_sync-268ba2293a15b849)
+
+running 1 test
+
+thread 'tests::accepted_nonblocking_socket_waits_for_real_tls_client' (6366) panicked at crates/companion-sync/src/tests.rs:378:8:
+called `Result::unwrap()` on an `Err` value: Offline
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test tests::accepted_nonblocking_socket_waits_for_real_tls_client ... FAILED
+
+failures:
+
+failures:
+    tests::accepted_nonblocking_socket_waits_for_real_tls_client
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 11 filtered out; finished in 0.38s
+
+error: test failed, to rerun pass `-p companion-sync --lib`

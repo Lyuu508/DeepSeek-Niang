@@ -92,13 +92,49 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      - name: Configure Android Command-line Tools and SDK paths
+        uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+        with:
+          cmdline-tools-version: '12266719'
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
       - name: Install official Android components and Rust
         run: |
-          rustup toolchain install 1.99.0 --profile minimal
-          rustup default 1.99.0
-          sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools' 'ndk;28.2.13676358'
-          echo "ANDROID_HOME=${ANDROID_HOME:-$ANDROID_SDK_ROOT}" >> "$GITHUB_ENV"
-          echo "NDK_HOME=${ANDROID_HOME:-$ANDROID_SDK_ROOT}/ndk/28.2.13676358" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/deepseek-android-artifacts"
+          # pipefail keeps an SDK/toolchain failure fatal while retaining its log.
+          {
+            rustup toolchain install 1.99.0 --profile minimal
+            rustup default 1.99.0
+            test -x "$JAVA_HOME/bin/javac"
+            "$JAVA_HOME/bin/java" -version
+            "$JAVA_HOME/bin/javac" -version 2>&1 | grep -E '^javac 21\.'
+            export ANDROID_HOME="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+            export ANDROID_SDK_ROOT="$ANDROID_HOME"
+            SDKMANAGER="$(command -v sdkmanager)"
+            test -x "$SDKMANAGER"
+            echo "SDK manager: $(realpath "$SDKMANAGER")"
+            echo "SDK root: $(realpath "$ANDROID_HOME")"
+            sdkmanager --version
+            sdkmanager --sdk_root="$ANDROID_HOME" 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools' 'ndk;28.2.13676358'
+            export NDK_HOME="$ANDROID_HOME/ndk/28.2.13676358"
+            test -f "$ANDROID_HOME/platforms/android-36/android.jar"
+            test -x "$ANDROID_HOME/build-tools/36.0.0/apksigner"
+            test -x "$ANDROID_HOME/build-tools/36.0.0/aapt2"
+            test -x "$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android29-clang"
+            grep -E '^Pkg.Revision *= *28\.2\.13676358$' "$NDK_HOME/source.properties"
+            echo "NDK root: $(realpath "$NDK_HOME")"
+            sdkmanager --sdk_root="$ANDROID_HOME" --list_installed
+            echo "ANDROID_HOME=$ANDROID_HOME" >> "$GITHUB_ENV"
+            echo "ANDROID_SDK_ROOT=$ANDROID_HOME" >> "$GITHUB_ENV"
+            echo "NDK_HOME=$NDK_HOME" >> "$GITHUB_ENV"
+            dirname "$SDKMANAGER" >> "$GITHUB_PATH"
+            echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+          } 2>&1 | tee "$RUNNER_TEMP/deepseek-android-artifacts/android-toolchain.log"
+      - name: Verify original certificate from the actual v0.0.1 APK
+        if: inputs.signed_android
+        run: |
+          curl --fail --location --retry 3 'https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.1/DeepSeek-Niang_0.0.1_android-arm64.apk' -o "$RUNNER_TEMP/deepseek-v0.0.1.apk"
+          python3 scripts/verify_android.py --reference-apk "$RUNNER_TEMP/deepseek-v0.0.1.apk" --output "$RUNNER_TEMP/deepseek-android-artifacts/android-reference-signature.json"
       - name: Restore existing protected signing identity
         if: inputs.signed_android
         env:
