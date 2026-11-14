@@ -1,5 +1,7 @@
 # DeepSeek娘
 
+内部英文名称：DeepSeek-Niang AI Companion。最新接管与功能/构建状态见 [项目状态报告](docs/TAKEOVER_2026-11-14.md)。
+
 > 项目愿景（保留仓库初始说明）：使用GPT制作的电脑跟手机数据互通的养一只有自己生活能刷b站主动聊天还有好感度系统的大肥鱼开源软件。
 
 实际已实现能力与后续计划以下文为准。
@@ -14,13 +16,13 @@ Windows + Android 本地优先陪伴应用，当前已发布 **0.0.1 测试版**
 
 两个安装包均已从公开链接完整下载并校验哈希。Windows 原生构建、58项测试、静默安装及窗口启动通过；Android 完整构建和签名/资源检查通过，尚未真机运行。Windows 安装器未做 Authenticode 签名，APK 使用原开发签名；真实 API 请在各设备设置中输入自己的 Key 验收。
 
-见 [本次报告](docs/PERSONA_BRANDING_REPORT.md)、[迁移与回滚](docs/PERSONA_MIGRATION.md)、[品牌素材状态](assets/branding/README.md)。阶段 2～9 本次仅交付[八份独立计划](DEVELOPMENT_PLAN.md)，没有启用后续功能。
+0.0.1 的历史记录见 [人格/品牌报告](docs/PERSONA_BRANDING_REPORT.md)、[迁移与回滚](docs/PERSONA_MIGRATION.md)、[品牌素材状态](assets/branding/README.md)。当时阶段 2～9 仅有[独立计划](DEVELOPMENT_PLAN.md)；当前阶段 2 实现与限制以下文为准。
 
 ## 阶段 2 开发状态（目标 0.0.2）
 
 以 main `22096939c20134708c6dc1a4476468a7bbe96827` 为基线重新实现局域网同步，没有使用旧云端未提交代码。
 当前新增生产同步协议、Windows mDNS/Android NSD、一次性二维码与双方确认、TLS 1.3 与系统安全存储、来源签名、事务队列与同步页面。
-阶段仍待原签名恢复、GitHub Actions 双端成功构建及发布；**0.0.2 尚未发布**，上方 0.0.1 链接是历史包。
+阶段 2 的 LAN 同步实现和双端 CI 已完成：最新已核验 main `9cc9a16` 的 [CI 43555778492](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43555778492) 中 Linux 测试、Windows EXE 构建/安装启动检查、Android ARM64 未签名 APK 构建全部成功。原签名升级 APK、附件独立复核、家庭局域网实机验收与发布仍未完成；**0.0.2 尚未发布**，上方 0.0.1 链接是历史包。未签名 APK 不可安装，不是独立签名测试 APK，也不能覆盖升级。
 见 [阶段报告](docs/PHASE2_REPORT.md)、[实机验收](docs/PHASE2_ACCEPTANCE.md)、[迁移恢复](docs/PHASE2_MIGRATION.md)、[签名调查](docs/ANDROID_SIGNING_RECOVERY.md)、[版本规则](docs/VERSIONING.md)。
 
 ## 本地开发
@@ -65,6 +67,6 @@ Windows Enter 发送、Shift+Enter 换行；手机 Enter 换行、按钮发送�
 
 `python3 scripts/export_source.py` 生成源码 ZIP/SHA-256，包含 assets、八份计划、逐文件哈希，排除数据、密钥、备份、缓存和安装包。见 [文件清单](docs/FILES.md)、[取回方式](docs/SOURCE_EXPORT.md)。容器内部路径不等于下载附件。
 
-历史 [阶段1报告](docs/PHASE1_REPORT.md)、[dev.1安装构建](docs/INSTALL_TEST_REPORT.md)、阶段0文档保留，以各自版本为准。[数据库设计](docs/DATABASE.md)、[安全边界](SECURITY.md)、[变更记录](CHANGELOG.md) 记录限制。没有启用 LAN、桌宠、自动关系/生活、视频或语音，未来 NAS 为可选节点。
+历史 [阶段1报告](docs/PHASE1_REPORT.md)、[dev.1安装构建](docs/INSTALL_TEST_REPORT.md)、阶段0文档保留，以各自版本为准。[数据库设计](docs/DATABASE.md)、[安全边界](SECURITY.md)、[变更记录](CHANGELOG.md) 记录限制。当前阶段 2 已实现需显式启用的 LAN 同步；多维关系和长期记忆自动引擎、虚拟生活调度、动态桌宠、Bilibili 视频理解及语音仍未实现，不能把原型或模拟状态当作已交付功能。NAS 为后续可选节点。
 
-GitHub发布仅限本次明确授权的0.0.1测试版；后续更新仍需用户明确指令。实际上传与安装包状态见本次发布记录。
+当前已获用户授权继续阶段 2 的 v0.0.2 收尾与双端测试发布；仅在原签名、同源码双端包与必要检查全部满足后发布。不得自动开始下一阶段或下一个版本。已发布历史仍仅为 v0.0.1。

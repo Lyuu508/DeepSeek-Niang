@@ -1,0 +1,22 @@
+{
+  "run": 43555778492,
+  "source_sha": "9cc9a162ad51742fcd23ac3c72e57b2cea602ae1",
+  "conclusion": "success",
+  "jobs": [
+    {
+      "name": "test",
+      "result": "success",
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43555778492/job/132328171676"
+    },
+    {
+      "name": "packages / android",
+      "result": "success",
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43555778492/job/132328172031"
+    },
+    {
+      "name": "packages / windows",
+      "result": "success",
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43555778492/job/132328172129"
+    }
+  ]
+}

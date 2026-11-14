@@ -1,0 +1,18 @@
+[
+  {
+    "artifact": "windows-package-1",
+    "run": 43555778492,
+    "download_exit_status": 1,
+    "blocked_hosts": [
+      "productionresultssa30.blob.core.windows.net"
+    ]
+  },
+  {
+    "artifact": "android-package-1",
+    "run": 43555778492,
+    "download_exit_status": 1,
+    "blocked_hosts": [
+      "productionresultssa30.blob.core.windows.net"
+    ]
+  }
+]

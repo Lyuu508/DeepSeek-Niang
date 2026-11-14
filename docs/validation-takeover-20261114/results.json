@@ -1,0 +1,54 @@
+{
+  "baseline_main": "9cc9a162ad51742fcd23ac3c72e57b2cea602ae1",
+  "branch": "work",
+  "initial_worktree_clean": true,
+  "development_version": "0.0.2",
+  "android_version_code": 1002,
+  "published_version": "0.0.1",
+  "rust_passed": 73,
+  "python_passed": 10,
+  "sync_model_passed": 3,
+  "explicit_ui_mock_passed": 18,
+  "local_checks_failed": 0,
+  "clippy": "passed",
+  "frontend_typecheck_build": "passed",
+  "schema": "passed",
+  "branding_verified_files": 69,
+  "native_ci": {
+    "run": 43555778492,
+    "source_sha": "9cc9a162ad51742fcd23ac3c72e57b2cea602ae1",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "test",
+        "result": "success",
+        "url": "https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43555778492/job/132328171676"
+      },
+      {
+        "name": "packages / android",
+        "result": "success",
+        "url": "https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43555778492/job/132328172031"
+      },
+      {
+        "name": "packages / windows",
+        "result": "success",
+        "url": "https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43555778492/job/132328172129"
+      }
+    ]
+  },
+  "keystore_files_found_in_accessible_locations": 0,
+  "unreadable_platform_directories_count": 1,
+  "github_account": "x1770203628-prog",
+  "github_repo_push": true,
+  "github_repo_admin": false,
+  "secrets_public_key_http_status": 403,
+  "secrets_state": "unknown; integration is not authorized",
+  "secrets_written": false,
+  "new_keystore_generated": false,
+  "original_apk_certificate_verified": true,
+  "business_code_modified": false,
+  "migrations_modified": false,
+  "stage3_started": false,
+  "new_version_started": false,
+  "release_created": false
+}

@@ -1,12 +1,14 @@
 # 0.0.2（阶段 2，开发中，未发布）
 
+- 接管核查：以最新 main 9cc9a16 为正式基线，重新执行常规测试，统一 README/构建/安全文档中的现有 LAN 与签名状态，保留业务代码、版本号、旧迁移及原始品牌素材。当前 API 可用；Secrets 权限、恢复文件位置和附件存储域名仍阻挡正式发布。
+
 - CI 修复：Windows accepted socket 显式切回阻塞 I/O，新增延迟 ClientHello 的真实 TLS 1.3 双证书回归；Android 固定 Command-line Tools 并验证 JDK/SDK/NDK；发布前重新验签实际 v0.0.1 APK。e65b3ed 的 Linux/Windows/Android CI 已全成功，Android 仍为未签名检查包，原签名发布未完成；完整结果见 docs/PHASE2_CI_FIX_REPORT.md。
 
 - 在 0.0.1 基线上实现局域网生产同步：mDNS/NSD、短期高熵配对码与二维码、双方确认、TLS 1.3、可信设备与撤销。
 - 新增签名事件、SQLite 事务待发队列、双向分页游标、逻辑字段合并、冲突副本与删除标记；保留人格 UUID、永久聊天及离线本地使用。
 - 新增独立同步页面、重连/手动同步/设备管理/真实错误提示；不新增云数据库或付费 API。
 - 新增 v4 迁移备份/回滚、模拟双设备和 TLS 集成测试、二维码解码、版本计算测试。
-- 建立最小权限 CI 与授权 Release 流程、同 SHA 双端包证据与 Android 原签名强制检查。双端构建/发布尚未完成，实机验收待用户执行。
+- 建立最小权限 CI 与授权 Release 流程、同 SHA 双端包证据与 Android 原签名强制检查。Windows EXE 与 Android 未签名 APK 的双端 CI 已通过；原签名发布和实机验收尚未完成。
 
 # Changelog
 

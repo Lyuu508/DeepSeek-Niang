@@ -15,7 +15,7 @@
 - 不同步 API Key、TLS/签名私钥、账号登录凭据、任意设备设置、执行 lease_boot_id/期限/owner/fence。Windows 使用独立 Credential Manager 槽，Android 使用 Keystore AES-GCM 加密私有文件。已有配对但本机密钥缺失时失败关闭，不冒用原身份自动换钥。
 - 独立同步页：设备/指纹/最近成功/双向状态/待发事件/进度/错误/重连/撤销/冲突修订、配对二维码图片识别与明确的隔离网络提示。旧聊天、人格切换和 Key 管理保持可用。阶段 3～9 自主引擎没有启用。
 
-## 当前实例实际验证
+## 初次实现时的实例验证（历史）
 
 | 检查 | 结果与边界 |
 |---|---|
@@ -39,7 +39,7 @@ CI 与 Release 分离。`ci.yml` 测试并调用双平台构建；Windows 复用
 
 正式 Release 附件为 EXE、同 SHA 且匹配原签名的 APK、SHA256SUMS、BUILD-RESULTS、变更记录与安装验收说明。公开后实际下载全部附件再验证哈希。历史 Tag/Release 不覆盖；仅可清理本次操作明确创建且尚未公开的失败草稿。没有依据包 PID/文件名或普通源码 ZIP 宣称构建成功。
 
-## 尚待解除的外部阻塞
+## 初次实现时的外部阻塞（历史，现状见接管报告）
 
 1. 当前 Cloud 运行策略仍拒绝 `api.github.com`（CONNECT 403），Git 读取正常。所需域名与新的 install_script/start_skill 已保存到环境草稿，尚未应用/发布；不能通过此次草稿保存声称 API 已可用。网络生效后须重试 Secrets 元数据、Actions 触发/结果及 Release 操作。
 2. 原 v0.0.1 APK 已重新下载并实际验签：证书 SHA-256 为 `9de96ea5fb1d0b3f91ea73d9a16c030428453b15838927a85f86773eaef208a1`。当前可访问机器未找到 keystore，但这不证明旧环境或 GitHub Secrets 中没有；**可恢复性未确定**。见 [恢复调查](ANDROID_SIGNING_RECOVERY.md)。没有生成新应用签名、改变 applicationId、要求卸载或清库。
@@ -50,3 +50,7 @@ CI 与 Release 分离。`ci.yml` 测试并调用双平台构建；Windows 复用
 ## b7330d9 双端 CI 修复
 
 最新修复、73 项 Rust 回归、历史 APK 实际验签、Run 43554759767 双端 Hosted 构建成功及原签名发布阻碍见 [CI 修复报告](PHASE2_CI_FIX_REPORT.md)。本节不将旧本地未签名构建计为此次可发布产物。
+
+## 最新 main 接管核查
+
+2026-11-14 已通过 GitHub API 核验 main 9cc9a16 与 CI 43555778492 三个作业成功；当前 API 连通，Secrets 接口授权不足，附件下载有独立存储域名限制。原签名文件当前会话位置仍待确认。已重跑 73 项 Rust、10 项 Python、3 项同步模型和18项显式 UI Mock，均通过。完整事实、功能完成范围与下一步见 [接管报告](TAKEOVER_2026-11-14.md)。不将历史阻碍或旧测试计为当前新执行结果。

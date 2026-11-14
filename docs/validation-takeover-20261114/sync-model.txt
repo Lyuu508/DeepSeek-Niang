@@ -1,0 +1,11 @@
+✔ manual endpoint accepts private IPv4 only, never DNS/public/loopback (1.694368ms)
+✔ stale success and pending work cannot be displayed as synchronized (0.237134ms)
+✔ generated native pairing QR decodes to the exact one-time invitation (140.686214ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 416.170812

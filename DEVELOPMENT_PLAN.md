@@ -2,7 +2,7 @@
 
 阶段 2 正在开发，目标 v0.0.2，尚未发布。用户已授权本阶段开发、GitHub 更新、双端构建与测试发布；停止在阶段 2，不开始阶段 3。
 生产同步实现及验证见 [PHASE2_REPORT](docs/PHASE2_REPORT.md)，家庭网线 PC + Wi-Fi 手机实机验收见 [PHASE2_ACCEPTANCE](docs/PHASE2_ACCEPTANCE.md)。
-Android 原签名是否可恢复尚待 GitHub Secrets 与旧环境核实，不替换 applicationId、不清除旧数据。每阶段双端包都必须来自同一 SHA；长期规则见 [VERSIONING](docs/VERSIONING.md)。
+用户已报告找回原 Keystore，但本会话可访问目录尚未发现该文件，文件位置待确认；当前 GitHub 集成没有 Secrets 接口权限，不能据此判定 Secrets 缺失。原签名核验与安全迁移仍待完成，不替换 applicationId、不清除旧数据。每阶段双端包都必须来自同一 SHA；长期规则见 [VERSIONING](docs/VERSIONING.md)。
 
 以下保留 0.0.1 发布时的阶段历史，不能据此将阶段 2 或后续阶段勾选为完成。
 
@@ -48,4 +48,8 @@ Android 原签名是否可恢复尚待 GitHub Secrets 与旧环境核实，不�
 
 ## 阶段 2 CI 修复（2026-11-14）
 
-从 b7330d9 修复 Windows accepted socket 模式与 Android SDK 命令路径，保留全部原有测试，新增真实 TLS 非阻塞回归；本地 73 项 Rust 与其余常规检查通过。原 APK 已重新实际验签。e65b3ed 的 Run 43554759767 三个 Hosted 作业均成功，Windows 含原生测试与安装 smoke，Android 为未签名 ARM64 APK；本机另有完整未签名 APK 与脱敏日志。签名 Secrets 元数据、原签名升级包、远程附件复核与发布仍受 API 访问阻挡；不开始阶段 3。见 [CI 修复报告](docs/PHASE2_CI_FIX_REPORT.md)。
+从 b7330d9 修复 Windows accepted socket 模式与 Android SDK 命令路径，保留全部原有测试，新增真实 TLS 非阻塞回归；本地 73 项 Rust 与其余常规检查通过。原 APK 已重新实际验签。e65b3ed 的 Run 43554759767 三个 Hosted 作业均成功，Windows 含原生测试与安装 smoke，Android 为未签名 ARM64 APK；本机另有完整未签名 APK 与脱敏日志。当前 GitHub API 已连通，Secrets 接口受授权权限限制，构建附件另受 Azure 存储域名限制；原签名升级包、远程附件复核与发布尚待完成，不开始阶段 3。见 [CI 修复报告](docs/PHASE2_CI_FIX_REPORT.md)。
+
+## 接管后执行顺序（2026-11-14）
+
+以最新 main 9cc9a16 为接管基线，不使用旧环境代码覆盖。当前下一个未完成环节是阶段 2 的签名身份/Secrets、正式升级 APK、构建附件复核与发布，随后执行家庭网线 PC + Wi-Fi Android 实机验收。关系与记忆的产品实现属于阶段 3，不因阶段 2 签名受阻而擅自占用 0.0.3 或启动后续阶段。独立完成的常规测试、品牌核验和文档校正见 [接管报告](docs/TAKEOVER_2026-11-14.md)。

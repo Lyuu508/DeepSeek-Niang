@@ -1,3 +1,11 @@
+# 双端构建与验证范围
+
+当前开发目标 0.0.2 / Android versionCode 1002；已公开发布版本仍是 0.0.1。最新核验的 main 9cc9a16 在 CI 43555778492 中完成 Linux 测试、Windows EXE 构建/安装启动和 Android ARM64 未签名 APK 构建。普通 CI 不读取原签名，未签名 APK 不能安装或覆盖升级；它不等于独立签名测试包。
+
+Windows 和 Android 是 native-packages.yml 中两个独立 job，分别保留成功产物及失败日志，Android 签名问题不取消 Windows 构建。release.yml 固定完整 source_sha，等待测试与双端原签名验证全部成功后才公开同版本 Pre-release。原签名不可用时保留独立构建结果，不生成替代密钥、不公开不完整升级版本。
+
+当前签名/网络阻碍与最新证据见 [接管报告](TAKEOVER_2026-11-14.md)；平台前置条件和构建命令沿用下文。后续历史验收中的“尚不互通”等描述仅适用于原 0.0.1，不适用于当前阶段 2。
+
 阶段 2 起通过 CI 与手动授权 Release 流程构建。Windows 复用 build-windows.ps1，Android 复用 build-android.sh；两端使用同一 source_sha。Android Release 强制已有签名 Secrets，CI 的 --unsigned-ci 产物只供编译检查，不能安装或冒充覆盖升级包。原签名调查见 [ANDROID_SIGNING_RECOVERY](ANDROID_SIGNING_RECOVERY.md)。以下保留本机构建的系统前置条件。
 
 # 阶段 1 本机构建与设备验收
