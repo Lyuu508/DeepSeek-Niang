@@ -1,0 +1,13 @@
+{
+  "source_commit": "7e1d1ceb97d9213c1d307353518b7a86d23f1e1a",
+  "ci_run": 43580981180,
+  "rust_passed": 77,
+  "python_passed": 17,
+  "node_passed": 5,
+  "browser_ui_fixture_passed": {
+    "standard": 20,
+    "isolated_banner": 20
+  },
+  "physical_windows_android_tested": false,
+  "note": "Real loopback TCP/TLS and SQLite are automated; browser camera lifecycle uses synthetic streams, not physical devices."
+}

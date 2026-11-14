@@ -2,15 +2,16 @@
 
 ## 0.0.2 测试版直接下载
 
-- [Windows EXE 安装程序](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/DeepSeek-Niang_0.0.2_windows-x64-setup.exe)
+- [Windows 中文 EXE 安装程序](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/DeepSeek-Niang_0.0.2_windows-x64-setup-zh.exe)
+- [中文 Windows 修订校验](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/WINDOWS-ZH-SHA256SUMS.txt) · [构建/安装报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/WINDOWS-ZH-BUILD-RESULTS.json)
 - [Android 独立测试 APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/DeepSeek-Niang_0.0.2_android-arm64-isolated-test.apk)
-- [SHA256SUMS.txt](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/SHA256SUMS.txt) · [BUILD-RESULTS.json](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/BUILD-RESULTS.json) · [GitHub Release](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.0.2)
+- [初始成套包 SHA256SUMS.txt](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/SHA256SUMS.txt) · [初始 BUILD-RESULTS.json](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/BUILD-RESULTS.json) · [GitHub Release](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.0.2)
 
 直接下载安装，不需要解压。Android 测试包为 `io.local.deepseekcompanion.test`，可与 v0.0.1 并存，不能覆盖旧正式身份。真实双端与家庭局域网验收仍待用户进行；原签名升级保持独立待办。以后已授权版本均直接提供 Release 安装包附件，Actions 仅保留构建证据，不作为唯一交付。
 
 以下保留项目与历史版本说明；最新公开版本为 0.0.2 测试版。
 
-扫码与中文安装修订正在验证：电脑出码即授权一次配对，新版手机扫码后自动选取二维码中的局域网地址并验证身份。**已发布手机包暂不更新**：按用户选择保持当前测试身份，等待相同签名；旧手机使用“旧版手机：显示兼容配对码”。Windows 中文安装器独立交付，具体范围见 [修订报告](docs/PHASE2_SCAN_ZH_REPORT.md)。
+中文 Windows 修订已通过原生向导、安装/启动检查并公开，源码 `7e1d1ce`；它与初始手机包使用各自的报告和校验清单。扫码代码已实现电脑出码授权、新版手机自动读取地址并验证身份。**已发布手机包暂不更新**：按用户选择保持当前测试身份，等待相同签名；旧手机使用“旧版手机：显示兼容配对码”。具体结果与待实机项目见 [修订报告](docs/PHASE2_SCAN_ZH_REPORT.md)。
 
 内部英文名称：DeepSeek-Niang AI Companion。最新测试交付见 [阶段 2 测试报告](docs/PHASE2_TEST_DELIVERY.md)；接管时的状态快照见 [项目状态报告](docs/TAKEOVER_2026-11-14.md)。
 
@@ -33,8 +34,7 @@ Windows + Android 本地优先陪伴应用，0.0.1 历史测试版已发布，�
 ## 阶段 2 开发状态（目标 0.0.2）
 
 以 main `22096939c20134708c6dc1a4476468a7bbe96827` 为基线重新实现局域网同步，没有使用旧云端未提交代码。
-当前新增生产同步协议、Windows mDNS/Android NSD、一次性二维码与双方确认、TLS 1.3 与系统安全存储、来源签名、事务队列与同步页面。
-阶段 2 的 LAN 同步实现和双端测试构建已完成：测试源码 `1c86678` 的 [CI 43567948075](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43567948075) 中 Linux 测试、Windows EXE 构建/安装启动和 Android `.test` 独立开发签名 APK 检查全部成功。[测试包、SHA256SUMS 与报告下载](docs/PHASE2_TEST_DELIVERY.md#最终同源-ci-交付结果)；测试 APK 可独立安装，不能覆盖正式版。原签名升级 APK、远程附件独立复核、家庭局域网实机验收与正式发布仍未完成；**0.0.2 独立测试 Pre-release 已公开，原签名升级版尚未提供**，上方 0.0.1 链接是历史包。旧 Run 的未签名检查 APK 仍不可安装，不能与本次隔离测试包混淆。
+已实现生产同步协议、Windows mDNS/Android NSD、一次性二维码、TLS 1.3 与系统安全存储、来源签名、事务队列与同步页面。原成套测试包源码 `1c86678` 已公开并验证下载；本次源码 `7e1d1ce` 的 [CI 43580981180](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43580981180) 三端成功，新增扫码授权、实时识码和中文安装。中文 Windows 包已独立发布，手机新代码等待已发布测试包的同一签名；当前旧手机仍用兼容双方确认流程。原身份升级和家庭实机验收保持待办。
 见 [阶段报告](docs/PHASE2_REPORT.md)、[实机验收](docs/PHASE2_ACCEPTANCE.md)、[迁移恢复](docs/PHASE2_MIGRATION.md)、[签名调查](docs/ANDROID_SIGNING_RECOVERY.md)、[版本规则](docs/VERSIONING.md)。
 
 ## 本地开发

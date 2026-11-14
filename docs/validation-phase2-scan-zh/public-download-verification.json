@@ -1,0 +1,56 @@
+{
+  "downloads": [
+    {
+      "file": "DeepSeek-Niang_0.0.2_windows-x64-setup-zh.exe",
+      "http_status": 200,
+      "bytes": 6484690,
+      "sha256": "c20e8de48c0636bf1b29b7c7a6a68a2c1ddd8635c347fcaebcb2d80a10fdaaf0",
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/DeepSeek-Niang_0.0.2_windows-x64-setup-zh.exe"
+    },
+    {
+      "file": "WINDOWS-ZH-AUTOMATED-TESTS.json",
+      "http_status": 200,
+      "bytes": 415,
+      "sha256": "c420a1fa626e0d28c929a2d988f1bcb5e79f56e97d037298bb2f706be59b7707",
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/WINDOWS-ZH-AUTOMATED-TESTS.json"
+    },
+    {
+      "file": "WINDOWS-ZH-BUILD-RESULTS.json",
+      "http_status": 200,
+      "bytes": 1871,
+      "sha256": "0cc6c690a3a130368740c98d3ac717ef03468f309821a9742a1ce40ad905ea5d",
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/WINDOWS-ZH-BUILD-RESULTS.json"
+    },
+    {
+      "file": "WINDOWS-ZH-BUILD.log",
+      "http_status": 200,
+      "bytes": 1308,
+      "sha256": "e44d93c35cf575a92c0cf21e9a8d7d27ce3eae30f7ba24f94329872b889b856c",
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/WINDOWS-ZH-BUILD.log"
+    },
+    {
+      "file": "WINDOWS-ZH-INSTALLER-LANGUAGE.json",
+      "http_status": 200,
+      "bytes": 574,
+      "sha256": "89ad769a5a569126574fda2c4bb460faa6834d020b8af4e6739cc02b22aaea1b",
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/WINDOWS-ZH-INSTALLER-LANGUAGE.json"
+    },
+    {
+      "file": "WINDOWS-ZH-SHA256SUMS.txt",
+      "http_status": 200,
+      "bytes": 112,
+      "sha256": "c2392b9463eea9cebfe00b05dfe7d3ab688de55bc41ce4cdbf2a97a012c107c4",
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/WINDOWS-ZH-SHA256SUMS.txt"
+    },
+    {
+      "file": "WINDOWS-ZH-TESTS.log",
+      "http_status": 200,
+      "bytes": 27649,
+      "sha256": "d60822e48d5917ec388ff3676bc17d8a84b2c821f0b5a85c1d046fceb0b74257",
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/WINDOWS-ZH-TESTS.log"
+    }
+  ],
+  "all_original_assets_unchanged": true,
+  "original_assets": 13,
+  "original_tag_source": "1c86678963cb83819e7a72cada6d279fcac9736c"
+}

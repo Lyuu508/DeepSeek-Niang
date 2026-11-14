@@ -13,7 +13,18 @@
       "tag": "v0.0.2",
       "distribution": "isolated-test",
       "androidApplicationId": "io.local.deepseekcompanion.test",
-      "releaseId": 445111880
+      "releaseId": 445111880,
+      "revisions": [
+        {
+          "scope": "windows-only-chinese",
+          "commit": "7e1d1ceb97d9213c1d307353518b7a86d23f1e1a",
+          "ciRun": 43580981180,
+          "publishRun": 43581796297,
+          "file": "DeepSeek-Niang_0.0.2_windows-x64-setup-zh.exe",
+          "sha256": "c20e8de48c0636bf1b29b7c7a6a68a2c1ddd8635c347fcaebcb2d80a10fdaaf0",
+          "androidReplaced": false
+        }
+      ]
     }
   ]
 }

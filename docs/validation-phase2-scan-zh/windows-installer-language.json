@@ -1,0 +1,13 @@
+{
+  "labels": [
+    "下一步(&N) >",
+    "取消(&C)",
+    "Nullsoft Install System v3.13 ",
+    "Nullsoft Install System v3.13",
+    "欢迎使用 DeepSeek娘 安装程序",
+    "此程序将引导你完成 DeepSeek娘 的安装。\r\n\r\n在安装之前，请先关闭其他所有应用程序。这将确保安装程序能够更新所需的系统文件，从而避免在安装后重新启动计算机。\r\n\r\n点击 [下一步(N)] 继续。"
+  ],
+  "source_commit": "7e1d1ceb97d9213c1d307353518b7a86d23f1e1a",
+  "native_wizard_verified": true,
+  "language": "zh-CN"
+}

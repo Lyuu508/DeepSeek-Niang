@@ -35,3 +35,15 @@ Node 同步模型五项通过，其中从 Rust 产生的中文实际 QR SVG 解�
 ## 发布机制
 
 `publish-windows-zh.yml` 只响应本次固定请求文件：要求指定 main 源码仍在历史中、CI 核心测试和 Windows 成功，下载该运行的真实 Windows 附件。发布器验证 EXE、哈希、源码、干净工作区、原生安装/启动与中文控件证据，再增加 `-setup-zh.exe`、`WINDOWS-ZH-SHA256SUMS.txt`、`WINDOWS-ZH-BUILD-RESULTS.json` 和语言报告，回读下载校验。原 Android、所有旧资产 ID/哈希、Tag 和 Release 身份必须保持。不会自动发布下一版本，也不会将新电脑包与旧手机包描述为同源配套。
+
+## 最终交付结果
+
+- 安装器源码：[7e1d1ceb97d9213c1d307353518b7a86d23f1e1a](https://github.com/Lyuu508/DeepSeek-Niang/commit/7e1d1ceb97d9213c1d307353518b7a86d23f1e1a)。[CI 43580981180](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43580981180) Linux、Windows、Android 均成功。Linux 实际 77 Rust、17 Python、5 Node、两组各 20 UI 夹具；版本、DDL、Clippy、品牌及前端通过。Windows 执行原生 Rust（含系统凭据）测试、真实中文向导、静默安装退出码 0 和窗口启动；未统计为物理双端验收。
+- [发布运行 43581796297](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43581796297) 成功。此前一次上传前的校验失败是发布器仅接受旧 Node TAP 文本，而 Node 24 输出 spec 格式；修正后以真实报告总数验证，通过新增解析回归。本地后续 Python 共 18 项；这不改写构建源码原 CI 的 17 项结果。
+- [Windows 中文 EXE](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/DeepSeek-Niang_0.0.2_windows-x64-setup-zh.exe)：6,484,690 字节，SHA-256 `c20e8de48c0636bf1b29b7c7a6a68a2c1ddd8635c347fcaebcb2d80a10fdaaf0`。实际语言报告包含“下一步(&N) >”“取消(&C)”与“欢迎使用 DeepSeek娘 安装程序”。
+- [校验清单](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/WINDOWS-ZH-SHA256SUMS.txt)、[构建/安装报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/WINDOWS-ZH-BUILD-RESULTS.json)、[语言控件报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/WINDOWS-ZH-INSTALLER-LANGUAGE.json)、[自动化报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/WINDOWS-ZH-AUTOMATED-TESTS.json)、[测试日志](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/WINDOWS-ZH-TESTS.log)、[PowerShell transcript](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/WINDOWS-ZH-BUILD.log) 已上传。新 EXE 与六项证据均完整公开下载 HTTP 200，逐文件大小和 GitHub digest 一致；[独立回读证据](validation-phase2-scan-zh/public-download-verification.json)。
+- transcript 没有收录所有原生命令输出，完整 Windows 命令输出保留在上述 CI 的 Windows job。当前云环境下载 Actions ZIP 日志受到 `results-receiver.actions.githubusercontent.com` 的策略限制，未修改白名单或尝试绕过；这不影响已验证的公开 EXE/报告下载。
+- [现有 Release](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.0.2) ID 445111880 不变，正文顶部指向中文安装器；原十三项资产 ID/哈希和原 Tag 指向 `1c86678` 均保持。Android 为原 `.test` 开发签名文件，未重新构建为可安装更新，未替换签名或正式身份。
+- Android 同源码 CI 成功生成真实 ARM64 未签名 release 检查包，工作区干净、版本 0.0.2 / 1002；该附件仅在 Actions 作为编译证据，不能安装，也未作为手机新版本公开。新版扫码的物理手机验证仍等待同签名 APK 与用户设备验收。
+
+修改涉及同步核心/真实 TLS 测试、Tauri 命令、实时扫码组件与同步页面、Android 权限准备、Windows 安装语言、CI/独立发布校验、三份已有锁文件以及说明/验收/版本记录；没有增加 DDL 或修改已有数据库。下一步停在阶段 2，等待当前测试签名与用户验收，不启动新版本。
