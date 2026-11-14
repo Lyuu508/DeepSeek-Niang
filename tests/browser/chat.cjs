@@ -101,7 +101,7 @@ async function configure(page){await settings(page);await page.getByLabel('API K
    navigator.mediaDevices.getUserMedia=async()=>{const stream=canvas.captureStream(10);window.__qrStreams.push(stream);return stream;};
   },qr.svg);
   await phone.getByRole('button',{name:'扫一扫',exact:true}).click();
-  await phone.getByText('配对码已过期、错误或已取消，请重新生成。',{exact:true}).waitFor();
+  await phone.getByText('二维码已过期或不可用。请在电脑重新点击“连接手机”后再扫。',{exact:true}).waitFor();
   await phone.waitForFunction(()=>window.__qrStreams.length>0&&window.__qrStreams.every(s=>s.getTracks().every(t=>t.readyState==='ended')));
   assert.equal(await phone.getByRole('dialog').count(),0);assert.equal(await phone.getByText('同步成功',{exact:true}).count(),0);
   await phone.evaluate(()=>{clearInterval(window.__qrFrameInterval);navigator.mediaDevices.getUserMedia=window.__savedCamera;});

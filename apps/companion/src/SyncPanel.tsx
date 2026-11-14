@@ -13,7 +13,7 @@ export function SyncPanel({mobile}:{mobile:boolean}){
  useEffect(()=>{alive.current=true;void refresh();const timer=setInterval(()=>void refresh(),2000);return()=>{alive.current=false;clearInterval(timer);void syncAPI.command('cancel').catch(()=>{});};},[refresh]);
  const cancelCode=useCallback(()=>{setCode(null);void syncAPI.command('cancel').catch(()=>{});},[]);
  useEffect(()=>{if(!code)return;const end=Date.now()+code.expires_in_seconds*1000;setSeconds(code.expires_in_seconds);const timer=setInterval(()=>{const remaining=Math.max(0,Math.ceil((end-Date.now())/1000));setSeconds(remaining);if(!remaining){cancelCode();setNotice('二维码已过期，请点击“连接手机”重新生成。');}},1000);return()=>clearInterval(timer);},[code,cancelCode]);
- useEffect(()=>{if(code&&status&&status.pairing_session===JSON.parse(code.text).session&&status.pairing_code_active===false){setCode(null);setNotice('配对码已使用或失效，请查看设备连接状态。');}},[code,status?.pairing_code_active,status?.pairing_session]);
+ useEffect(()=>{if(code&&status&&status.pairing_session===JSON.parse(code.text).session&&status.pairing_code_active===false){setCode(null);setNotice('二维码已使用或失效，请查看设备连接状态。');}},[code,status?.pairing_code_active,status?.pairing_session]);
  async function command(action:string,args:Parameters<typeof syncAPI.command>[1]={}){
   setBusy(true);setError('');setNotice('');
   try{
