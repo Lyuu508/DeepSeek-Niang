@@ -1,0 +1,14 @@
+{
+  "ci_run": 43597948623,
+  "source_commit": "c609b8ba366139956aa91562259bdc3e06d459a6",
+  "scope": "Secrets available to this main CI run; no values accessed or printed",
+  "secrets": {
+    "ANDROID_KEYSTORE_B64": false,
+    "ANDROID_KEYSTORE_PASSWORD": false,
+    "ANDROID_KEY_ALIAS": false,
+    "ANDROID_KEY_PASSWORD": false
+  },
+  "certificate_match_verified": false,
+  "secrets_metadata_api_http_status": 403,
+  "github_environments_count": 0
+}

@@ -1,0 +1,68 @@
+{
+  "source_commit": "c609b8ba366139956aa91562259bdc3e06d459a6",
+  "ci_run": 43597948623,
+  "url": "https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43597948623",
+  "conclusion": "success",
+  "jobs": [
+    {
+      "name": "signing-readiness",
+      "id": 132456372153,
+      "conclusion": "success",
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43597948623/job/132456372153"
+    },
+    {
+      "name": "packages / windows",
+      "id": 132456372342,
+      "conclusion": "success",
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43597948623/job/132456372342"
+    },
+    {
+      "name": "test",
+      "id": 132456372365,
+      "conclusion": "success",
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43597948623/job/132456372365"
+    },
+    {
+      "name": "packages / android",
+      "id": 132456372432,
+      "conclusion": "success",
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43597948623/job/132456372432"
+    }
+  ],
+  "artifacts": [
+    {
+      "name": "android-package-1",
+      "id": 14115385681,
+      "bytes": 56669042,
+      "digest": "sha256:e7c11b23c65e0579b41fe2c74f3cda27a688f46ae8b565abf11943e12c3be4b4",
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43597948623/artifacts/14115385681"
+    },
+    {
+      "name": "automated-test-reports-1",
+      "id": 14115321239,
+      "bytes": 1601543,
+      "digest": "sha256:bcde0989f86f7d09ba95065f7e86722efab776265af7bfee06e64524e1d4e627",
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43597948623/artifacts/14115321239"
+    },
+    {
+      "name": "windows-package-1",
+      "id": 14115223957,
+      "bytes": 25624654,
+      "digest": "sha256:fcba6629b01dc4af2eb7c5c33c73a82a2988d53467277089e81d6d4eee740bfd",
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43597948623/artifacts/14115223957"
+    },
+    {
+      "name": "signing-presence-1",
+      "id": 14114554996,
+      "bytes": 338,
+      "digest": "sha256:850e41d1cf6e663d49cd0f3c795609a98e2e93d0690200ebac0cd79dd6f790fd",
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43597948623/artifacts/14114554996"
+    }
+  ],
+  "android_distribution": "isolated-test-unsigned; not installable",
+  "same_signer_ready": false,
+  "new_release_published": false,
+  "release_assets_unchanged": 20,
+  "tag_source_unchanged": "1c86678963cb83819e7a72cada6d279fcac9736c",
+  "physical_windows_android_tested": false
+}

@@ -1,0 +1,9 @@
+{
+  "published_test_apk_available": true,
+  "current_build_keystore_exists": true,
+  "same_test_signer_available": false,
+  "published_apk_signature_valid": true,
+  "published_apk_sha256": "cb8cb0c4daef387aad9ed3d6ebdc9f0c934b6f9dcb81762e499a0c1b9a306dec",
+  "published_certificate_sha256": "4a092d7012af2d1063f6420cf2d3ba77d0cf53882118926a8fc5e1723cc460c0",
+  "current_build_keystore_readable": true
+}

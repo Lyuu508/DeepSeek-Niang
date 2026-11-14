@@ -13,6 +13,8 @@
 
 目前公开的中文 Windows 包来自 `7e1d1ce`，手机包仍来自 `1c86678`，各自使用对应报告与校验清单。本次新源码已改为电脑一个按钮弹出二维码、手机一个“扫一扫”，移除旧版/文件/手动输入入口，并重做手机导航与系统栏适配。**手机更新继续等待当前测试包的相同签名**，新双端替换尚未发布；不能把现有公开 APK 当作新版扫码手机端。[最新手机修订报告](docs/PHASE2_MOBILE_QR_REPORT.md) · [上次 Windows 修订历史](docs/PHASE2_SCAN_ZH_REPORT.md)。
 
+最新修订源码 [`c609b8b`](https://github.com/Lyuu508/DeepSeek-Niang/commit/c609b8ba366139956aa91562259bdc3e06d459a6) 的 [同源 CI](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43597948623) 已全部通过，包含 Windows EXE/安装启动与 Android `.test` 未签名更新候选；它不等于可安装手机更新。[新手机布局预览（UI 夹具）](docs/validation-phase2-mobile-qr/README.md)。
+
 内部英文名称：DeepSeek-Niang AI Companion。最新测试交付见 [阶段 2 测试报告](docs/PHASE2_TEST_DELIVERY.md)；接管时的状态快照见 [项目状态报告](docs/TAKEOVER_2026-11-14.md)。
 
 > 项目愿景（保留仓库初始说明）：使用GPT制作的电脑跟手机数据互通的养一只有自己生活能刷b站主动聊天还有好感度系统的大肥鱼开源软件。

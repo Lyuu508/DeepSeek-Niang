@@ -22,6 +22,27 @@
 
 用户已明确选择“保持当前测试身份，等待同一签名可用”，本次不恢复/迁移 Keystore，不生成替代签名，不变更 applicationId，不要求卸载。实际已发布 0.0.2 APK SHA-256 为 `cb8cb0c4daef387aad9ed3d6ebdc9f0c934b6f9dcb81762e499a0c1b9a306dec`，官方 apksigner 再次验签有效，其真实测试证书 SHA-256 为 `4a092d7012af2d1063f6420cf2d3ba77d0cf53882118926a8fc5e1723cc460c0`。这与 v0.0.1 正式身份的证书不同。当前本地构建目录里的已有开发签名不匹配，未用于本次候选包。
 
-当前 gh 授权读取仓库 Secrets 元数据返回 403（Resource not accessible by integration）；这不证明 Secrets 丢失。CI 额外只传四个存在布尔值，记录本次 main 运行可用的配置名/状态，不读取或输出密钥值；存在也不证明与上述测试证书匹配。
+当前 gh 授权读取仓库 Secrets 元数据返回 403（Resource not accessible by integration）；这不证明 Secrets 丢失。[CI 43597397423](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43597397423) 只传四个存在布尔值，确认该 main 运行的 `ANDROID_KEYSTORE_B64`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD` 均不可用，未读取或输出密钥值。仓库 Environments 读取成功，列表为空。配置存在也不证明与上述测试证书匹配。[仅含状态的证据](validation-phase2-mobile-qr/signing-presence.json)。
 
 新 EXE 与手机候选按同一完整 SHA 构建。只有手机实际同签名验证和双端检查均满足后，才替换既有 0.0.2 下载与报告；不再用单独 Windows 发布宣称手机扫码交付。当前既有 Release、原 APK 和数据保持，后续等待同一测试签名或用户新的明确决定。
+
+签名保管者可在仓库 **Settings → Secrets and variables → Actions → New repository secret** 安全配置以上四项，值仅填写到 GitHub 加密 Secrets，不发聊天、不写仓库文件或命令日志。必须是与实际 0.0.2 `.test` APK 相同的私钥；只有原 v0.0.1 正式签名不能满足本次测试包覆盖条件。配置后仍须执行实际证书、私钥可用性与新 APK 验签，才允许替换。若该私钥已不可恢复，继续遵守当前等待选择，不擅自生成替代身份或要求卸载。
+
+## 构建记录与界面预览
+
+源码 `cf3e0f5cbb552c0dd9ab295e1fc3ac3f40df429e` 的上述首轮 CI 已全部成功，Windows 实际中文向导、安装和启动通过，Android 实际 `.test` ARM64 未签名候选通过。后续仅将错误提示改为纯扫码路径；最终交付源码与结果如下。
+
+[手机聊天与连接页面预览](validation-phase2-mobile-qr/README.md) 为明确标注的 UI 夹具截图，可查看单一扫码、底部导航与紧凑聊天；不代表手机实机截图，不验证通知栏、相机硬件或真实局域网。所有物理验收项仍保持待验证。
+
+## 最终同源构建结果
+
+- 最终源码：[c609b8ba366139956aa91562259bdc3e06d459a6](https://github.com/Lyuu508/DeepSeek-Niang/commit/c609b8ba366139956aa91562259bdc3e06d459a6)。[CI 43597948623](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43597948623) 的 Linux `test`、Windows Package、Android Package 和仅检查配置存在状态的 job 均成功；[API 回读的作业/附件记录](validation-phase2-mobile-qr/ci-results.json)。
+- Linux：77 Rust、19 Python、5 Node、两组各 23 浏览器 UI 夹具；版本、Clippy、SQLite schema、前端/TypeScript 与 69 项品牌文件哈希通过。没有删除/忽略原测试，实际失败 0；有意移除的手动界面场景改验新入口和相同安全边界。
+- Windows：真实 EXE 已生成；原生 cargo test（含随机系统凭据往返）、中文 NSIS 控件、静默安装及窗口启动均成功。保存 `windows-native-build.log`、安装结果、`windows-build.json` 和 `SHA256SUMS.txt`。
+- Android：真实 ARM64 `.test` 未签名更新候选 APK 已生成，0.0.2/1002、测试名称、`io.local.deepseekcompanion.test`、实际签名缺失与干净源码检查通过；保存完整构建/SDK日志、`android-build.json`、分发状态和 `SHA256SUMS.txt`。这是可供同签名持有人后续签署的候选，当前不可安装，未使用其他密钥冒充升级。
+- 两端构建 job 都检出并验证上述完整源码 SHA；不是把旧 Windows 与新手机混成同源。日志与测试报告分别随 Actions Artifacts 保存 30 天，不能把原生构建通过等同实机验收。
+- **本次未替换 GitHub Release 的安装包**：最终 CI 再次确认四项签名配置在该运行不可用，当前本地已有签名与真实旧测试 APK 不匹配。当前既有 20 项 Release 附件的 ID/哈希与 Tag `v0.0.2 → 1c86678` 均保持；未占用新版本，也未更改数据库/迁移或删除用户数据。待当前测试签名可用后继续实际签名验证与同源替换，不用单独发布电脑端代替手机交付。
+
+本次修改涉及 `SyncPanel.tsx`、`PairScanner.tsx`、新增 `Modal.tsx` / `MobileNav.tsx`、主界面/样式/viewport、受版本管理的 Android Activity、Android 准备/构建/验包脚本、CI/日志保留、对应测试与说明。原同步核心、TLS、数据库与品牌原图未重写。
+
+待实机：已签名更新的覆盖与旧库保留、各机型通知栏/刘海/导航栏/键盘、相机硬件扫码及权限、网线 Windows + Wi-Fi 手机自动同步、断线/冲突/重启与手动重试。用户已说明由其在安装包可用后验收；本次没有实机通过记录。
