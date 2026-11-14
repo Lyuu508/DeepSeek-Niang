@@ -1,0 +1,66 @@
+name: Publish Chinese Windows revision
+on:
+  push:
+    branches: [main]
+    paths: ['.github/release-requests/v0.0.2-windows-zh.json']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: stage-release
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: verify
+        name: Check the independently successful Windows and core tests
+        run: |
+          python3 - <<'PY'
+          import json,os,re,subprocess
+          from pathlib import Path
+          request=json.loads(Path('.github/release-requests/v0.0.2-windows-zh.json').read_text())
+          sha=request['source_sha'];run=request['ci_run_id'];repo=os.environ['GH_REPO']
+          assert re.fullmatch('[0-9a-f]{40}',sha) and isinstance(run,int)
+          def api(path):return json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/'+path],text=True))
+          status=api(f'actions/runs/{run}')
+          assert status['head_sha']==sha and status['head_branch']=='main' and status['head_repository']['full_name']==repo
+          assert status['path']=='.github/workflows/ci.yml'
+          jobs=api(f'actions/runs/{run}/jobs?per_page=100')['jobs']
+          for name in ['test','packages / windows']:
+              assert any(j['name']==name and j['conclusion']=='success' for j in jobs), name
+          subprocess.run(['git','merge-base','--is-ancestor',sha,'origin/main'],check=True)
+          artifacts=api(f'actions/runs/{run}/artifacts')['artifacts']
+          artifact=next(a for a in artifacts if a['name']==request['artifact_name'])
+          assert not artifact['expired'] and artifact['workflow_run']['head_sha']==sha
+          tests=next(a for a in artifacts if a['name']==request['test_artifact_name'])
+          assert not tests['expired'] and tests['workflow_run']['head_sha']==sha
+          with open(os.environ['GITHUB_OUTPUT'],'a') as output:output.write('id='+str(artifact['id'])+'\ntests='+str(tests['id'])+'\nrun='+str(run)+'\n')
+          PY
+          python3 -m unittest discover -s tests -p 'test_*.py'
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          artifact-ids: ${{ steps.verify.outputs.id }}
+          run-id: ${{ steps.verify.outputs.run }}
+          github-token: ${{ github.token }}
+          path: windows-artifact
+          merge-multiple: true
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          artifact-ids: ${{ steps.verify.outputs.tests }}
+          run-id: ${{ steps.verify.outputs.run }}
+          github-token: ${{ github.token }}
+          path: test-artifact
+          merge-multiple: true
+      - name: Add the verified Chinese installer without changing the phone package
+        run: python3 .github/scripts/publish-windows-revision.py windows-artifact test-artifact

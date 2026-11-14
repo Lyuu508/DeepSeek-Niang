@@ -32,10 +32,13 @@ impl Discovery for NoDiscovery {
     fn stop(&self) {}
 }
 fn service() -> Arc<SyncService> {
+    service_named("fixture")
+}
+fn service_named(name: &str) -> Arc<SyncService> {
     SyncService::start(
         Arc::new(Mutex::new(Store::open(":memory:").unwrap())),
         Arc::new(MemoryVault(Mutex::new(None))),
-        "fixture",
+        name,
         Arc::new(NoDiscovery),
     )
     .unwrap()
@@ -650,4 +653,146 @@ fn real_bootstrap_tls_pairing_both_confirmations_then_mutual_sync() {
     assert_eq!(b.store.lock().unwrap().personas().unwrap().len(), 2);
     a.stop();
     b.stop();
+}
+
+#[test]
+fn quick_scan_real_tls_pairs_once_and_syncs_without_extra_confirmation() {
+    let pc = service_named("Windows 电脑");
+    let phone = service_named("Android 手机");
+    let persona = pc
+        .store
+        .lock()
+        .unwrap()
+        .create_persona("扫码空间", "合成测试")
+        .unwrap();
+    let address = format!("127.0.0.1:{}", pc.port);
+    let code = pc.make_invite(vec![address], true).unwrap();
+    assert!(pc.status().unwrap().pairing_code_active);
+    phone.pair_scanned(&code.text).unwrap();
+    phone.tick().unwrap();
+    assert!(!pc.status().unwrap().pairing_code_active);
+    assert!(
+        phone
+            .store
+            .lock()
+            .unwrap()
+            .personas()
+            .unwrap()
+            .iter()
+            .any(|p| p.id == persona.id)
+    );
+    let request = StartChat {
+        request_id: uuid::Uuid::new_v4().to_string(),
+        conversation_id: persona.main_conversation_id.clone(),
+        text: Some("扫码后的消息".into()),
+        regenerate_user_id: None,
+    };
+    phone
+        .store
+        .lock()
+        .unwrap()
+        .begin_chat(&request, &ChatSettings::default())
+        .unwrap();
+    phone
+        .store
+        .lock()
+        .unwrap()
+        .finish_chat(&request.request_id, "", "interrupted", None, None, None)
+        .unwrap();
+    phone.tick().unwrap();
+    assert!(
+        pc.store
+            .lock()
+            .unwrap()
+            .chat_messages(&persona.main_conversation_id)
+            .unwrap()
+            .iter()
+            .any(|m| m.content == "扫码后的消息")
+    );
+    // A lost TLS reply may be retried by the same proved identity, not another phone.
+    phone.pair_scanned(&code.text).unwrap();
+    let other = service();
+    assert!(other.pair_scanned(&code.text).is_err());
+    pc.revoke(&phone.identity.public.id).unwrap();
+    assert!(phone.pair_scanned(&code.text).is_err());
+    let qr = pc
+        .make_invite(vec![format!("192.168.1.20:{}", pc.port)], true)
+        .unwrap();
+    let path =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.cache/phase2-quick-qr.json");
+    std::fs::write(
+        path,
+        serde_json::to_vec(&serde_json::json!({"text":qr.text,"svg":qr.svg})).unwrap(),
+    )
+    .unwrap();
+    pc.stop();
+    phone.stop();
+    other.stop();
+}
+
+#[test]
+fn qr_quick_flag_cannot_replace_desktop_consent_in_legacy_pairing() {
+    let pc = service();
+    let phone = service();
+    let legacy = pc.invite().unwrap();
+    let mut qr: serde_json::Value = serde_json::from_str(&legacy.text).unwrap();
+    assert!(qr.get("quick").is_none() && qr.get("addresses").is_none());
+    qr["quick"] = serde_json::json!(true);
+    qr["addresses"] = serde_json::json!([format!("127.0.0.1:{}", pc.port)]);
+    assert!(matches!(
+        phone.pair_scanned(&qr.to_string()),
+        Err(Error::Confirmation)
+    ));
+    assert!(pc.store.lock().unwrap().lan_peers().unwrap().is_empty());
+    assert!(phone.store.lock().unwrap().lan_peers().unwrap().is_empty());
+    pc.stop();
+    phone.stop();
+}
+
+#[test]
+fn scan_validates_all_endpoints_before_any_network_request() {
+    let pc = service();
+    let phone = service();
+    let code = pc
+        .make_invite(vec![format!("127.0.0.1:{}", pc.port)], true)
+        .unwrap();
+    let original: serde_json::Value = serde_json::from_str(&code.text).unwrap();
+    for invalid in [
+        "8.8.8.8:443",
+        "example.com:443",
+        "0.0.0.0:80",
+        "192.168.1.2:0",
+    ] {
+        let mut qr = original.clone();
+        qr["addresses"] = serde_json::json!([format!("127.0.0.1:{}", pc.port), invalid]);
+        assert!(matches!(
+            phone.pair_scanned(&qr.to_string()),
+            Err(Error::Address)
+        ));
+        assert!(pc.status().unwrap().pending.is_empty());
+    }
+    pc.stop();
+    phone.stop();
+}
+
+#[test]
+fn quick_qr_expiry_cancellation_and_attempt_limit_are_enforced() {
+    let pc = service();
+    let phone = service();
+    let endpoints = vec![format!("127.0.0.1:{}", pc.port)];
+    let code = pc.make_invite(endpoints.clone(), true).unwrap();
+    pc.window.lock().unwrap().as_mut().unwrap().expires = Instant::now() - Duration::from_secs(1);
+    assert!(phone.pair_scanned(&code.text).is_err());
+    let code = pc.make_invite(endpoints.clone(), true).unwrap();
+    pc.cancel_pair();
+    assert!(phone.pair_scanned(&code.text).is_err());
+    let code = pc.make_invite(endpoints, true).unwrap();
+    let mut invalid: serde_json::Value = serde_json::from_str(&code.text).unwrap();
+    invalid["token"] = serde_json::json!("00".repeat(32));
+    for _ in 0..5 {
+        assert!(phone.pair_scanned(&invalid.to_string()).is_err());
+    }
+    assert!(phone.pair_scanned(&code.text).is_err());
+    pc.stop();
+    phone.stop();
 }

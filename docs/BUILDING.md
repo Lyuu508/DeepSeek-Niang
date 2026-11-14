@@ -1,10 +1,12 @@
 # 当前独立测试包构建方式
 
-普通 CI 现在构建可安装的隔离 Android 测试包，使用 `.test` applicationId、开发测试签名和“DeepSeek娘 测试版”启动名称；下文关于 unsigned-ci 是历史检查包或显式 `--unsigned-ci` 模式，不再描述新 CI 的默认产物。Windows EXE 继续独立构建与安装 smoke。
+已发布的 0.0.2 为 `.test` applicationId、开发测试签名和“DeepSeek娘 测试版”名称。用户现在选择等待相同测试签名以保留升级与数据连续性，因此普通 CI 改为 `--unsigned-ci` 原生编译检查，不生成新的测试签名或替换手机 APK。该检查包不能安装、不能用于升级。Windows EXE 独立构建，NSIS 强制 `SimpChinese`、WiX 配置 `zh-CN`；runner 读取实际安装向导的中文控件后，再静默安装并启动窗口。
 
 - Linux/macOS：`sh scripts/build-android.sh --test-package`。
 - Windows：`.\scripts\build-android.ps1 -TestPackage`。
 - 正式升级：原签名配置可用时，无参数脚本执行原 Keystore 校验、release 构建和原证书验签；不使用 debug 签名。
+
+上面的 `--test-package` 是显式开发工具，不代表本次授权重新生成已发布测试包的签名。新版扫码源码可先编译验证，手机交付等待已发布 `.test` APK 的同一签名；不得用正式 v0.0.1 签名替换 `.test` 签名冒充覆盖升级。中文 Windows 修订通过 `publish-windows-zh.yml` 校验指定 CI 的核心测试和 Windows 成功后，给现有 Release 增加独立附件；最初成套包、Tag、APK 与校验文件均保留。
 
 Android debug 变体始终增加 `.test`，release 的固定 applicationId/namespace 不变；资源覆盖只在 debug 目录，正式图标原图和 release 名称不变。开发测试 Keystore 只生成在被忽略的 Android gen/.test-signing 中，既不是原签名，也不用于正式升级；不会进入源码、构建附件或普通文件上传。不同 Runner 不保证同一测试签名，不要求卸载正式版。
 

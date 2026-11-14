@@ -17,6 +17,47 @@ $AppCopy = Join-Path $Output "DeepSeek-Niang_$($Config.version)_windows-x64.exe"
 Copy-Item -LiteralPath $Packages[0].FullName -Destination $Installer
 Copy-Item -LiteralPath $Application -Destination $AppCopy
 
+if ($Config.bundle.windows.nsis.languages.Count -ne 1 -or $Config.bundle.windows.nsis.languages[0] -ne 'SimpChinese') { throw 'Simplified Chinese installer configuration missing' }
+Add-Type @'
+using System;
+using System.Text;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+public static class CompanionInstallerUi {
+  public delegate bool EnumProc(IntPtr handle, IntPtr param);
+  [DllImport("user32.dll")] public static extern bool EnumChildWindows(IntPtr handle, EnumProc callback, IntPtr param);
+  [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetWindowText(IntPtr handle, StringBuilder value, int count);
+  public static string[] Text(IntPtr handle) {
+    var result = new List<string>();
+    EnumChildWindows(handle, (child, param) => {
+      var text = new StringBuilder(2048); GetWindowText(child, text, text.Capacity);
+      if (!String.IsNullOrWhiteSpace(text.ToString())) result.Add(text.ToString());
+      return true;
+    }, IntPtr.Zero);
+    return result.ToArray();
+  }
+}
+'@
+$Wizard = $null
+$InstallerLabels = @()
+try {
+    $Wizard = Start-Process -FilePath $Installer -PassThru
+    for ($Attempt = 0; $Attempt -lt 40; $Attempt++) {
+        Start-Sleep -Milliseconds 500
+        $Wizard.Refresh()
+        if ($Wizard.HasExited) { throw 'Installer language preview exited before opening its wizard' }
+        if ($Wizard.MainWindowHandle -ne 0) {
+            $InstallerLabels = @([CompanionInstallerUi]::Text($Wizard.MainWindowHandle))
+            if (($InstallerLabels -join ' ') -match '下一步|取消') { break }
+        }
+    }
+    if (($InstallerLabels -join ' ') -notmatch '下一步|取消') { throw 'Native installer did not display Chinese wizard controls' }
+    @{ language='zh-CN'; native_wizard_verified=$true; labels=$InstallerLabels; source_commit=(git rev-parse HEAD) } | ConvertTo-Json -Depth 4 | Set-Content (Join-Path $Output 'windows-installer-language.json') -Encoding utf8
+} finally {
+    # Preview only: never click Install. The actual install smoke below is separate.
+    if ($Wizard -and -not $Wizard.HasExited) { Stop-Process -Id $Wizard.Id -Force }
+}
+
 $InstallFolder = Join-Path $env:RUNNER_TEMP 'deepseek-install-smoke'
 $Setup = Start-Process -FilePath $Installer -ArgumentList @('/S', "/D=$InstallFolder") -PassThru
 if (-not $Setup.WaitForExit(180000)) { Stop-Process -Id $Setup.Id -Force; throw 'Installer timed out' }
@@ -77,6 +118,8 @@ public static class CompanionWindowCapture {
         real_deepseek_api_tested = $false
         authenticode_signed = $false
         api_key_embedded = $false
+        installer_language = 'zh-CN'
+        installer_language_verified = $true
         installer_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $Installer).Hash.ToLowerInvariant()
         application_sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $AppCopy).Hash.ToLowerInvariant()
     }

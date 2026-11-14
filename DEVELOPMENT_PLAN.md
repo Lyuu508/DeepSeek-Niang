@@ -1,5 +1,7 @@
 # 当前进度
 
+本次用户要求简化扫码配对和中文安装，仍停留在阶段 2 / 0.0.2。扫码授权流程已实现：电脑显式出码授权一台手机，手机识码自动连接，保留 TLS、密钥证明、过期/一次性/撤销检查和旧版兼容入口。用户选择等待当前 `.test` APK 的相同签名，手机安装包暂不更新；普通 CI 改为未签名原生编译检查。Windows 中文安装器单独验证和交付，不替换原成套包/Tag，不宣称与旧手机包同源码。实际结果见 [扫码与中文修订报告](docs/PHASE2_SCAN_ZH_REPORT.md)。
+
 阶段 2 的 v0.0.2 独立测试 Pre-release 已公开，当前等待用户真实双端验收；原签名升级包未提供，不启动新版本或阶段 3。用户已授权本阶段开发、GitHub 更新、双端构建与测试发布；停止在阶段 2，不开始阶段 3。
 生产同步实现及验证见 [PHASE2_REPORT](docs/PHASE2_REPORT.md)，家庭网线 PC + Wi-Fi 手机实机验收见 [PHASE2_ACCEPTANCE](docs/PHASE2_ACCEPTANCE.md)。
 用户已确认原 Keystore 在另一账号的旧任务中。原签名恢复/迁移与 Secrets 作为独立待办，本次不查找、不恢复，也不阻挡代码开发、Windows EXE 或隔离 Android 测试包。正式 applicationId 与旧版数据保持不变。每阶段双端包都必须来自同一 SHA；长期规则见 [VERSIONING](docs/VERSIONING.md)。

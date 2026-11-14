@@ -94,25 +94,37 @@ pub async fn sync_command(
             .map_err(|_| "STORAGE_ERROR")?
             .lan_enabled()
             .map_err(|e| e.to_string())?;
-        if action != "enable" && (host.suspended.load(Ordering::Acquire) || !enabled) {
+        let explicit_start = matches!(
+            action.as_str(),
+            "enable" | "invite_quick" | "pair_scanned" | "invite"
+        );
+        if !explicit_start && (host.suspended.load(Ordering::Acquire) || !enabled) {
             return Err("SYNC_DISABLED".into());
         }
         let service = host.ensure()?;
-        match action.as_str() {
-            "enable" => {
-                let result = host
-                    .store
-                    .lock()
-                    .map_err(|_| "STORAGE_ERROR")?
-                    .lan_set_enabled(true);
-                if let Err(e) = result {
-                    service.stop();
-                    host.suspended.store(true, Ordering::Release);
-                    *host.service.lock().map_err(|_| "STORAGE_ERROR")? = None;
-                    return Err(e.to_string());
-                }
-                host.suspended.store(false, Ordering::Release);
+        if explicit_start {
+            let result = host
+                .store
+                .lock()
+                .map_err(|_| "STORAGE_ERROR")?
+                .lan_set_enabled(true);
+            if let Err(e) = result {
+                service.stop();
+                host.suspended.store(true, Ordering::Release);
+                *host.service.lock().map_err(|_| "STORAGE_ERROR")? = None;
+                return Err(e.to_string());
             }
+            host.suspended.store(false, Ordering::Release);
+        }
+        match action.as_str() {
+            "enable" => {}
+            "invite_quick" => {
+                return serde_json::to_value(service.invite_quick().map_err(|e| e.to_string())?)
+                    .map_err(|_| "PAIR_ERROR".into());
+            }
+            "pair_scanned" => service
+                .pair_scanned(text.as_deref().ok_or("PAIR_CODE_REQUIRED")?)
+                .map_err(|e| e.to_string())?,
             "invite" => {
                 return serde_json::to_value(service.invite().map_err(|e| e.to_string())?)
                     .map_err(|_| "PAIR_ERROR".into());

@@ -19,9 +19,11 @@ def prepare(project: Path, branding: Path | None = None) -> None:
     tree = ET.parse(manifest)
     root = tree.getroot()
     name = f"{{{ANDROID}}}name"
-    for permission in ["android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE", "android.permission.ACCESS_LOCAL_NETWORK"]:
+    for permission in ["android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE", "android.permission.ACCESS_LOCAL_NETWORK", "android.permission.CAMERA"]:
         if not any(p.get(name) == permission for p in root.findall("uses-permission")):
             ET.SubElement(root, "uses-permission", {name: permission})
+    if not any(feature.get(name) == "android.hardware.camera.any" for feature in root.findall("uses-feature")):
+        ET.SubElement(root, "uses-feature", {name: "android.hardware.camera.any", f"{{{ANDROID}}}required": "false"})
     application = root.find("application")
     if application is None:
         raise SystemExit("Application element missing; refusing to rewrite an unknown manifest.")

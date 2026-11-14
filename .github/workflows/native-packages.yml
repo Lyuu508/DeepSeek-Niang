@@ -8,6 +8,9 @@ on:
       signed_android:
         type: boolean
         default: false
+      android_compile_only:
+        type: boolean
+        default: false
     secrets:
       ANDROID_KEYSTORE_B64:
         required: false
@@ -172,6 +175,7 @@ jobs:
       - name: Build ARM64 APK
         env:
           SIGNED: ${{ inputs.signed_android }}
+          COMPILE_ONLY: ${{ inputs.android_compile_only }}
           COMPANION_ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/deepseek-signing.jks
           COMPANION_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           COMPANION_ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -184,6 +188,12 @@ jobs:
             variant=release
             package_name="DeepSeek-Niang_$(python3 -c 'import json;print(json.load(open("VERSION.json"))["version"])')_android-arm64.apk"
             verify_mode=()
+          elif [ "$COMPILE_ONLY" = 'true' ]; then
+            python3 scripts/run_logged.py "$RUNNER_TEMP/deepseek-android-artifacts/android-build.log" sh scripts/build-android.sh --unsigned-ci
+            variant=release
+            package_name="DeepSeek-Niang_$(python3 -c 'import json;print(json.load(open("VERSION.json"))["version"])')_android-arm64-unsigned-check.apk"
+            verify_mode=(--unsigned-ci)
+            echo '仅编译检查：未签名，不能安装，不能替换当前手机上的 0.0.2。等待相同签名后才交付手机更新。' > "$RUNNER_TEMP/deepseek-android-artifacts/ANDROID-DISTRIBUTION.txt"
           else
             python3 scripts/run_logged.py "$RUNNER_TEMP/deepseek-android-artifacts/android-build.log" sh scripts/build-android.sh --test-package
             variant=debug
@@ -219,8 +229,11 @@ jobs:
         env:
           ARTIFACT_URL: ${{ steps.android_artifact.outputs.artifact-url }}
           SIGNED: ${{ inputs.signed_android }}
+          COMPILE_ONLY: ${{ inputs.android_compile_only }}
         run: |
           echo "APK, SHA256SUMS, signature/identity report and build log: $ARTIFACT_URL" >> "$GITHUB_STEP_SUMMARY"
-          if [ "$SIGNED" != 'true' ]; then
+          if [ "$SIGNED" != 'true' ] && [ "$COMPILE_ONLY" = 'true' ]; then
+            echo 'Android compile check only: unsigned and not installable. No new signing identity or replacement APK is published.' >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$SIGNED" != 'true' ]; then
             echo 'Isolated development test APK: io.local.deepseekcompanion.test. Separate data; cannot replace v0.0.1. Development signer may change between runners. Physical-device LAN acceptance is pending.' >> "$GITHUB_STEP_SUMMARY"
           fi

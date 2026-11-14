@@ -1,5 +1,6 @@
 """Build/export policy tests with temporary fixtures; not Android native verification."""
 import importlib.util
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -16,6 +17,12 @@ def module(name):
 
 
 class BuildPolicy(unittest.TestCase):
+    def test_windows_installer_defaults_to_simplified_chinese(self):
+        config = json.loads((ROOT / 'apps/companion/src-tauri/tauri.conf.json').read_text())
+        self.assertEqual(config['bundle']['windows']['nsis']['languages'], ['SimpChinese'])
+        self.assertFalse(config['bundle']['windows']['nsis']['displayLanguageSelector'])
+        self.assertEqual(config['bundle']['windows']['wix']['language'], 'zh-CN')
+        self.assertEqual(config['identifier'], 'io.local.deepseekcompanion')
     def test_android_preparation_is_idempotent_and_disables_automatic_backup(self):
         prepare = module("prepare_android")
         with tempfile.TemporaryDirectory() as folder:
@@ -29,7 +36,8 @@ class BuildPolicy(unittest.TestCase):
             prepare.prepare(project)
             root = ET.parse(manifest).getroot()
             android = "{http://schemas.android.com/apk/res/android}"
-            self.assertEqual(len(root.findall("uses-permission")), 3)
+            self.assertEqual(len(root.findall("uses-permission")), 4)
+            self.assertEqual(root.find("uses-feature").get(android + "required"), "false")
             self.assertEqual(root.find("application").get(android + "allowBackup"), "false")
             self.assertEqual(root.find("application").get(android + "usesCleartextTraffic"), "false")
             self.assertEqual(root.find("application/activity").get(android + "windowSoftInputMode"), "adjustResize")

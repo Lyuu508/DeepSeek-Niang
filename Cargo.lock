@@ -188,6 +188,7 @@ version = "0.0.2"
 dependencies = [
  "companion-core",
  "companion-secrets",
+ "if-addrs",
  "mdns-sd",
  "qrcode",
  "rcgen",

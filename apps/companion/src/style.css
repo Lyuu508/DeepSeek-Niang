@@ -10,3 +10,5 @@
 .pair-code{margin:20px 0}.pair-code img{width:min(100%,340px);height:auto;border-radius:12px}
 .pair-code textarea{font-size:.75rem;min-height:90px}.discovered-list button{margin:4px}
 .sync-panel details{margin:12px 0}.sync-panel .danger{color:#ad3434}
+.camera-scanner video{display:block;width:100%;max-height:360px;aspect-ratio:4/3;object-fit:contain;background:#17252c;border-radius:12px;margin:12px 0}.sync-panel summary{cursor:pointer;font-weight:600}
+.pair-code img{width:min(100%,440px);image-rendering:pixelated}

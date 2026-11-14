@@ -55,6 +55,10 @@ pub struct Invitation {
     pub session: String,
     pub identity: PublicIdentity,
     pub token: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub addresses: Vec<String>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub quick: bool,
 }
 #[derive(Serialize)]
 pub struct PairCode {
@@ -115,6 +119,9 @@ pub struct Status {
     pub pending: Vec<Pending>,
     pub conflicts: Vec<serde_json::Value>,
     pub discovery_error: Option<String>,
+    pub pairing_code_active: bool,
+    pub local_addresses: Vec<String>,
+    pub pairing_session: Option<String>,
 }
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "kind", deny_unknown_fields)]
@@ -169,6 +176,20 @@ fn peer(identity: &PublicIdentity, address: Option<String>) -> Peer {
         last_success_ms: None,
         acknowledged_seq: 0,
     }
+}
+fn local_endpoints(port: u16) -> Vec<String> {
+    let mut addresses = if_addrs::get_if_addrs()
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|interface| interface.is_oper_up())
+        .map(|interface| interface.ip())
+        .filter(|ip| transport::private(*ip))
+        .map(|ip| format!("{ip}:{port}"))
+        .collect::<Vec<_>>();
+    addresses.sort();
+    addresses.dedup();
+    addresses.truncate(8);
+    addresses
 }
 pub struct SyncService {
     store: Arc<Mutex<Store>>,
@@ -356,20 +377,43 @@ impl SyncService {
                 .lock()
                 .map_err(|_| Error::Storage)?
                 .clone()),
+            pairing_code_active: window
+                .as_ref()
+                .is_some_and(|w| w.expires > Instant::now() && !w.committed),
+            local_addresses: local_endpoints(self.port),
+            pairing_session: window.as_ref().map(|w| w.session.clone()),
         })
     }
     pub fn invite(&self) -> Result<PairCode> {
+        self.make_invite(Vec::new(), false)
+    }
+    /// The desktop user explicitly authorizes one scanner for two minutes by
+    /// opening this QR. The phone consents by scanning it. Both private-key
+    /// proofs, token validation and TLS pinning remain mandatory.
+    pub fn invite_quick(&self) -> Result<PairCode> {
+        let addresses = local_endpoints(self.port);
+        self.make_invite(addresses, true)
+    }
+    fn make_invite(&self, mut addresses: Vec<String>, quick: bool) -> Result<PairCode> {
+        addresses.sort();
+        addresses.dedup();
+        addresses.truncate(8);
+        if quick && addresses.is_empty() {
+            return Err(Error::Address);
+        }
         let invite = Invitation {
             version: 2,
             session: uuid::Uuid::new_v4().to_string(),
             identity: self.identity.public.clone(),
             token: random()?,
+            addresses,
+            quick,
         };
         let text = serde_json::to_string(&invite).map_err(|_| Error::Invalid)?;
         let code = qrcode::QrCode::new(text.as_bytes()).map_err(|_| Error::Invalid)?;
         let width = code.width() + 8;
         let mut svg = format!(
-            "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 {width} {width}\"><path fill=\"white\" d=\"M0 0h{width}v{width}H0z\"/><path fill=\"black\" d=\""
+            "<svg xmlns=\"http://www.w3.org/2000/svg\" shape-rendering=\"crispEdges\" viewBox=\"0 0 {width} {width}\"><path fill=\"white\" d=\"M0 0h{width}v{width}H0z\"/><path fill=\"black\" d=\""
         );
         for y in 0..code.width() {
             for x in 0..code.width() {
@@ -388,7 +432,7 @@ impl SyncService {
             expires: Instant::now() + Duration::from_secs(120),
             attempts: 0,
             pending: None,
-            approved: false,
+            approved: quick,
             committed: false,
         });
         Ok(PairCode {
@@ -451,6 +495,72 @@ impl SyncService {
             approved: false,
         });
         Ok(())
+    }
+    /// Address candidates come only from the locally scanned invitation, never
+    /// from a subnet scan. No data is trusted before a pinned TLS handshake.
+    pub fn pair_scanned(&self, text: &str) -> Result<()> {
+        if text.len() > 8192 {
+            return Err(Error::Limit);
+        }
+        let invite: Invitation = serde_json::from_str(text).map_err(|_| Error::Invalid)?;
+        invite.identity.validate()?;
+        if invite.version != 2
+            || !invite.quick
+            || invite.identity.id == self.identity.public.id
+            || unhex(&invite.token)?.len() != 32
+            || invite.addresses.is_empty()
+            || invite.addresses.len() > 8
+        {
+            return Err(Error::Invalid);
+        }
+        // Validate the complete list first: a malicious QR cannot mix private
+        // endpoints with a public address or DNS destination.
+        for endpoint in &invite.addresses {
+            transport::address(endpoint)?;
+        }
+        let proof = pair_bytes(
+            &invite.session,
+            &invite.token,
+            &self.identity.public,
+            &invite.identity.certificate,
+            true,
+        )?;
+        let request = Request::Pair {
+            session: invite.session.clone(),
+            token: invite.token.clone(),
+            identity: self.identity.public.clone(),
+            signature: self.identity.sign(&proof),
+            tls_signature: self.identity.sign_tls(&proof)?,
+            confirm: true,
+        };
+        let mut last = Error::Offline;
+        for endpoint in &invite.addresses {
+            let reply: Result<Reply> = transport::request(
+                &self.identity,
+                endpoint,
+                &invite.identity.certificate,
+                false,
+                &request,
+            );
+            match reply {
+                Ok(Reply::Paired { identity }) => {
+                    if identity != invite.identity {
+                        return Err(Error::Authentication);
+                    }
+                    self.store
+                        .lock()
+                        .map_err(|_| Error::Storage)?
+                        .lan_trust(&peer(&identity, Some(endpoint.clone())))?;
+                    self.set_progress(&identity.id, "syncing", None, 0);
+                    self.wake();
+                    return Ok(());
+                }
+                Ok(Reply::Waiting) => return Err(Error::Confirmation),
+                Ok(_) => return Err(Error::Pair),
+                Err(error) => last = error,
+            }
+        }
+        Err(last)
     }
     pub fn confirm(&self, id: &str) -> Result<()> {
         if let Some(w) = self.window.lock().map_err(|_| Error::Storage)?.as_mut()
@@ -636,6 +746,17 @@ impl SyncService {
                         .map_err(|_| Error::Storage)?
                         .lan_trust(&peer(&identity, None))?;
                     w.committed = true;
+                } else if !self
+                    .store
+                    .lock()
+                    .map_err(|_| Error::Storage)?
+                    .lan_peers()?
+                    .iter()
+                    .any(|p| p.id == identity.id && !p.revoked)
+                {
+                    // A consumed code can retry a lost reply for the same peer,
+                    // but it must never undo an explicit subsequent revocation.
+                    return Err(Error::Authentication);
                 }
                 Ok(Reply::Paired {
                     identity: self.identity.public.clone(),

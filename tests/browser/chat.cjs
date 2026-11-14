@@ -52,6 +52,7 @@ async function configure(page){await settings(page);await page.getByLabel('API K
   await page.getByRole('button',{name:'局域网同步',exact:true}).click();
   await page.getByText('本页为 UI 模拟夹具，未验证真实设备发现、配对或同步。',{exact:true}).waitFor();
   await page.getByRole('button',{name:'启用局域网同步',exact:true}).click();
+  await page.getByText('兼容旧版 / 手动配对',{exact:true}).click();
   await page.getByLabel('对端一次性配对码',{exact:true}).fill('{}');
   await page.getByLabel('对端局域网 IP:端口',{exact:true}).fill('8.8.8.8:443');
   assert(await page.getByRole('button',{name:'连接并核对设备身份',exact:true}).isDisabled());
@@ -69,5 +70,22 @@ async function configure(page){await settings(page);await page.getByLabel('API K
   assert(await phone.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual(mobileErrors,[]);
   await phone.screenshot({path:path.join(artifact,'sync-mobile-mock.png'),fullPage:true});
  });
- fs.writeFileSync(path.join(artifact,'results.json'),JSON.stringify({scope:'Explicit UI Mock; no real API, SQLite, file migration or OS credentials',passed:checks.length,checks,browser:browser.version()},null,2)+'\n');console.log(JSON.stringify({scope:'explicit UI Mock',passed:checks.length,checks}));
+ await check('camera denial is explained without claiming a device connected',async()=>{
+  await phone.evaluate(()=>{window.__savedCamera=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);navigator.mediaDevices.getUserMedia=async()=>{throw new DOMException('denied','NotAllowedError');};});
+  await phone.getByRole('button',{name:'手机：扫码连接电脑',exact:true}).click();
+  await phone.getByText('相机未授权。请在系统设置允许相机，或关闭扫码后从照片识别。',{exact:true}).waitFor();
+  assert.equal(await phone.getByText('同步成功',{exact:true}).count(),0);
+  await phone.getByRole('button',{name:'关闭扫码',exact:true}).click();
+ });
+ await check('closing scanner before camera permission resolves stops all late tracks',async()=>{
+  await phone.evaluate(()=>{window.__cameraResolvers=[];navigator.mediaDevices.getUserMedia=()=>new Promise(resolve=>window.__cameraResolvers.push(resolve));});
+  await phone.getByRole('button',{name:'手机：扫码连接电脑',exact:true}).click();
+  await phone.waitForFunction(()=>window.__cameraResolvers.length>0);
+  await phone.getByRole('button',{name:'关闭扫码',exact:true}).click();
+  await phone.evaluate(()=>{const canvas=document.createElement('canvas');canvas.width=640;canvas.height=480;window.__cameraStreams=window.__cameraResolvers.map(resolve=>{const stream=canvas.captureStream();resolve(stream);return stream;});});
+  await phone.waitForFunction(()=>window.__cameraStreams.every(stream=>stream.getTracks().every(track=>track.readyState==='ended')));
+  await phone.evaluate(()=>{navigator.mediaDevices.getUserMedia=window.__savedCamera;});
+  assert.equal(await phone.getByLabel('实时扫码',{exact:true}).count(),0);assert.deepEqual(mobileErrors,[]);
+ });
+ fs.writeFileSync(path.join(artifact,'results.json'),JSON.stringify({scope:'Explicit UI Mock; no real API, SQLite, file migration or OS credentials; camera lifecycle uses a synthetic browser stream',passed:checks.length,checks,browser:browser.version()},null,2)+'\n');console.log(JSON.stringify({scope:'explicit UI Mock',passed:checks.length,checks}));
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{await browser?.close();server?.kill('SIGTERM');});
