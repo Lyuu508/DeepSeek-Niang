@@ -22,8 +22,8 @@
 | Windows主机/Android手机 LAN 与网线PC+Wi-Fi拓扑 | 监听私有IPv4、mDNS/NSD、手动地址回退已实现；无云数据库 | 真实TCP/TLS自动化及既有原生编译；发现/系统凭据夹具不当作原生发现 | 未执行，待用户家庭网络 |
 | 安全配对、双方确认、TLS1.3、身份固定与撤销 | 已实现 | 原有真实loopback TLS、客户端证书、两种私钥证明、坏证书/撤销拒绝测试保留通过 | 未执行 |
 | 聊天/人格/记忆、SQLite增量、断线恢复、冲突/删除 | 已实现 | 原73项Rust含迁移/回滚、真实SQLite、分页/去重/离线补传；部分服务为同进程+测试Vault/NoDiscovery | 未执行 |
-| Windows安装程序 | 既有构建与安装smoke路径保持 | 9cc9a16 与7acd099既有CI已成功；本次提交后重新跑Windows原生构建 | 用户Windows未验收 |
-| Android独立测试包 | 本次补齐 | 本地实际APK生成、验签/身份/ABI/Manifest通过；本次提交后重新跑Hosted Android | 未安装到物理手机 |
+| Windows安装程序 | 既有构建与安装smoke路径保持 | 1c86678 的Hosted Windows原生测试、EXE和安装/窗口smoke全部通过 | 用户Windows未验收 |
+| Android独立测试包 | 本次补齐 | 本地实际APK检查通过；1c86678 的Hosted Android构建、验签/身份/ABI/Manifest与源SHA检查全部通过 | 未安装到物理手机 |
 | 原签名升级与正式发布 | 独立待办，本次不恢复/迁移 | 不计通过，不运行release.yml | 待后续 |
 
 用户已明确没有可供代理连接的 Windows/Android 设备，交付后由用户验收。本机是 Linux，ADB 默认用户目录只读，且没有提供家庭双端通道；没有把 Mock、APK编译或Windows安装窗口当成真实双端LAN验收。
@@ -53,3 +53,15 @@ PowerShell Android入口已对齐，但本机没有PowerShell/Windows Android工
 收到包后按 [PHASE2_ACCEPTANCE](PHASE2_ACCEPTANCE.md) 在Windows独立测试账户与Android测试应用执行同路由器网线+Wi-Fi发现/双方确认、双向聊天/人格/记忆、断网重启补传、增量/重复、字段冲突、删除/撤销、凭据与生命周期。确认原v0.0.1仍可打开且旧数据保留。不要上传真实数据、Key、私钥或配对码。
 
 原签名恢复、RSA文件传输和Secrets迁移本次不执行，只保留独立待办。实机项目未验收前不勾选完成，等待用户验收后再决定阶段3。
+
+## 最终同源 CI 交付结果
+
+2026-11-14 14:54（Asia/Shanghai），[Run 43567948075](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43567948075) 的三个作业全部成功，源码均为 **1c86678963cb83819e7a72cada6d279fcac9736c**。本节随后的文档提交只记录结果，不能冒充该源码的安装包。源SHA、作业步骤和Artifact元数据均已由GitHub API核实，快照见 [ci-delivery.json](validation-phase2-isolated-test/ci-delivery.json)。
+
+- Windows：原生cargo test、EXE构建、NSIS安装、窗口启动、源码一致/干净检查及SHA256SUMS生成/上传均通过。[Windows安装包及校验/报告/日志](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43567948075/artifacts/14102788404)。Windows安装器未做Authenticode签名。
+- Android：实际生成 DeepSeek-Niang_0.0.2_android-arm64-isolated-test.apk，约54MiB，.test身份、开发签名、正式包不兼容和安全Manifest校验均通过，sourceSHA/干净源码检查通过；原签名恢复步骤按测试模式跳过。[APK及SHA256SUMS/报告/日志](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43567948075/artifacts/14102914238)。CI开发证书由该Runner生成，不能用本地诊断证书或哈希替代其包内报告。
+- Linux：Rust/Clippy/版本/DDL/Python/同步模型/前端/品牌以及常规与测试标记两个UI模式全部成功。[自动化测试报告和截图](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43567948075/artifacts/14102854124)。测试范围仍按上文区分，不计为物理双端。
+
+以上是需登录GitHub下载的真实Actions ZIP，各安装包ZIP分别含SHA256SUMS.txt和本平台构建报告/日志，不是虚构的Release文件链接。当前会话实际尝试下载三个远程附件时，均被 productionresultssa8.blob.core.windows.net 拒绝；没有修改白名单、绕过限制或输出带临时签名的URL。故确认CI受检步骤/上传成功与包来源元数据，不声称本会话已取回并独立复验远程二进制内容。
+
+GitHub仍仅有历史v0.0.1 Release，未创建v0.0.2正式Tag/Release。Windows/Android物理设备与家庭网线+Wi-Fi实测仍未执行，用户已确认收到包后自行验收。原签名恢复/Secrets保持独立待办，阶段3未开始。

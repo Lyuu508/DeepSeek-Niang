@@ -22,7 +22,7 @@ Windows + Android 本地优先陪伴应用，当前已发布 **0.0.1 测试版**
 
 以 main `22096939c20134708c6dc1a4476468a7bbe96827` 为基线重新实现局域网同步，没有使用旧云端未提交代码。
 当前新增生产同步协议、Windows mDNS/Android NSD、一次性二维码与双方确认、TLS 1.3 与系统安全存储、来源签名、事务队列与同步页面。
-阶段 2 的 LAN 同步实现和双端 CI 已完成：最新已核验 main `9cc9a16` 的 [CI 43555778492](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43555778492) 中 Linux 测试、Windows EXE 构建/安装启动检查、Android ARM64 未签名 APK 构建全部成功。原签名升级 APK、附件独立复核、家庭局域网实机验收与正式发布仍未完成；**0.0.2 尚未发布**，上方 0.0.1 链接是历史包。未签名 APK 不可安装，不是独立签名测试 APK，也不能覆盖升级。
+阶段 2 的 LAN 同步实现和双端测试构建已完成：测试源码 `1c86678` 的 [CI 43567948075](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43567948075) 中 Linux 测试、Windows EXE 构建/安装启动和 Android `.test` 独立开发签名 APK 检查全部成功。[测试包、SHA256SUMS 与报告下载](docs/PHASE2_TEST_DELIVERY.md#最终同源-ci-交付结果)；测试 APK 可独立安装，不能覆盖正式版。原签名升级 APK、远程附件独立复核、家庭局域网实机验收与正式发布仍未完成；**0.0.2 尚未正式发布**，上方 0.0.1 链接是历史包。旧 Run 的未签名检查 APK 仍不可安装，不能与本次隔离测试包混淆。
 见 [阶段报告](docs/PHASE2_REPORT.md)、[实机验收](docs/PHASE2_ACCEPTANCE.md)、[迁移恢复](docs/PHASE2_MIGRATION.md)、[签名调查](docs/ANDROID_SIGNING_RECOVERY.md)、[版本规则](docs/VERSIONING.md)。
 
 ## 本地开发

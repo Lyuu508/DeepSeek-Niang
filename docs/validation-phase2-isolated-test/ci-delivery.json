@@ -1,0 +1,71 @@
+{
+  "source_commit": "1c86678963cb83819e7a72cada6d279fcac9736c",
+  "run": 43567948075,
+  "conclusion": "success",
+  "jobs": [
+    {
+      "name": "test",
+      "result": "success",
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43567948075/job/132365815385"
+    },
+    {
+      "name": "packages / windows",
+      "result": "success",
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43567948075/job/132365815691"
+    },
+    {
+      "name": "packages / android",
+      "result": "success",
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43567948075/job/132365815753"
+    }
+  ],
+  "artifacts": [
+    {
+      "name": "android-package-1",
+      "id": 14102914238,
+      "bytes": 56580426,
+      "source_sha": "1c86678963cb83819e7a72cada6d279fcac9736c",
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43567948075/artifacts/14102914238"
+    },
+    {
+      "name": "automated-test-reports-1",
+      "id": 14102854124,
+      "bytes": 1237757,
+      "source_sha": "1c86678963cb83819e7a72cada6d279fcac9736c",
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43567948075/artifacts/14102854124"
+    },
+    {
+      "name": "windows-package-1",
+      "id": 14102788404,
+      "bytes": 25560240,
+      "source_sha": "1c86678963cb83819e7a72cada6d279fcac9736c",
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43567948075/artifacts/14102788404"
+    }
+  ],
+  "remote_artifact_downloads": [
+    {
+      "artifact": "android-package-1",
+      "download_status": 1,
+      "blocked_hosts": [
+        "productionresultssa8.blob.core.windows.net"
+      ]
+    },
+    {
+      "artifact": "automated-test-reports-1",
+      "download_status": 1,
+      "blocked_hosts": [
+        "productionresultssa8.blob.core.windows.net"
+      ]
+    },
+    {
+      "artifact": "windows-package-1",
+      "download_status": 1,
+      "blocked_hosts": [
+        "productionresultssa8.blob.core.windows.net"
+      ]
+    }
+  ],
+  "physical_device_tested": false,
+  "production_release_created": false,
+  "distribution": "Windows installer and isolated Android development test; not an original-signature upgrade release"
+}
