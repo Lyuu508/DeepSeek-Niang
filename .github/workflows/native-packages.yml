@@ -33,6 +33,7 @@ jobs:
       CARGO_BUILD_JOBS: '4'
       CARGO_INCREMENTAL: '0'
       EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
+      PYTHONUTF8: '1'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -59,7 +60,8 @@ jobs:
           try {
             python scripts/version.py
             if ($LASTEXITCODE) { throw 'Version mismatch' }
-            .\scripts\build-windows.ps1
+            python scripts/run_logged.py (Join-Path $root 'windows-native-build.log') pwsh -NoProfile -File scripts/build-windows.ps1
+            if ($LASTEXITCODE) { throw 'Windows native build/tests failed; see windows-native-build.log' }
             .\.github\scripts\windows-package-smoke.ps1
           } finally { Stop-Transcript }
       - name: Record source SHA and package hash
@@ -189,10 +191,10 @@ jobs:
             package_name="DeepSeek-Niang_$(python3 -c 'import json;print(json.load(open("VERSION.json"))["version"])')_android-arm64.apk"
             verify_mode=()
           elif [ "$COMPILE_ONLY" = 'true' ]; then
-            python3 scripts/run_logged.py "$RUNNER_TEMP/deepseek-android-artifacts/android-build.log" sh scripts/build-android.sh --unsigned-ci
-            variant=release
-            package_name="DeepSeek-Niang_$(python3 -c 'import json;print(json.load(open("VERSION.json"))["version"])')_android-arm64-unsigned-check.apk"
-            verify_mode=(--unsigned-ci)
+            python3 scripts/run_logged.py "$RUNNER_TEMP/deepseek-android-artifacts/android-build.log" sh scripts/build-android.sh --unsigned-test-ci
+            variant=debug
+            package_name="DeepSeek-Niang_$(python3 -c 'import json;print(json.load(open("VERSION.json"))["version"])')_android-arm64-test-update-unsigned-check.apk"
+            verify_mode=(--unsigned-test-ci)
             echo '仅编译检查：未签名，不能安装，不能替换当前手机上的 0.0.2。等待相同签名后才交付手机更新。' > "$RUNNER_TEMP/deepseek-android-artifacts/ANDROID-DISTRIBUTION.txt"
           else
             python3 scripts/run_logged.py "$RUNNER_TEMP/deepseek-android-artifacts/android-build.log" sh scripts/build-android.sh --test-package

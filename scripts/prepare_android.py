@@ -10,9 +10,10 @@ import xml.etree.ElementTree as ET
 ANDROID = "http://schemas.android.com/apk/res/android"
 ET.register_namespace("android", ANDROID)
 ET.register_namespace("tools", "http://schemas.android.com/tools")
+UNSIGNED_TEST_POLICY = '\n// DeepSeek unsigned test compile only\nandroid.buildTypes.getByName("debug") { signingConfig = null }\n'
 
 
-def prepare(project: Path, branding: Path | None = None) -> None:
+def prepare(project: Path, branding: Path | None = None, unsigned_test: bool = False) -> None:
     manifest = project / "app/src/main/AndroidManifest.xml"
     if not manifest.is_file():
         raise SystemExit("Generated Android project missing. Run tauri android init with a valid SDK/NDK first.")
@@ -41,6 +42,9 @@ def prepare(project: Path, branding: Path | None = None) -> None:
             activity.set(f"{{{ANDROID}}}label", "@string/main_activity_title")
     ET.indent(tree, space="    ")
     tree.write(manifest, encoding="utf-8", xml_declaration=True)
+    activity = project / "app/src/main/java/io/local/deepseekcompanion/MainActivity.kt"
+    activity.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(Path(__file__).resolve().parents[1] / 'apps/companion/android/MainActivity.kt', activity)
     res = project / "app/src/main/res"
     strings_file = res / "values/strings.xml"
     strings_file.parent.mkdir(parents=True, exist_ok=True)
@@ -88,7 +92,7 @@ def prepare(project: Path, branding: Path | None = None) -> None:
     # library and our Keystore plugin, even when CLI templates change defaults.
     gradle = project / "app/build.gradle.kts"
     if gradle.is_file():
-        text = gradle.read_text(encoding="utf-8")
+        text = gradle.read_text(encoding="utf-8").replace(UNSIGNED_TEST_POLICY, '')
         for setting in ("compileSdk", "targetSdk"):
             text, count = re.subn(rf"(?m)^(\s*{setting}\s*=\s*)\d+\s*$", rf"\g<1>36", text)
             if count != 1:
@@ -106,6 +110,8 @@ android {
     }
 }
 '''
+        if unsigned_test:
+            text += UNSIGNED_TEST_POLICY
         gradle.write_text(text, encoding="utf-8")
     wrapper = project / "gradle/wrapper/gradle-wrapper.properties"
     if wrapper.is_file():
@@ -134,5 +140,7 @@ android {
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--project", type=Path, default=Path(__file__).resolve().parents[1] / "apps/companion/src-tauri/gen/android")
-    prepare(parser.parse_args().project)
+    parser.add_argument('--unsigned-test-ci', action='store_true')
+    args = parser.parse_args()
+    prepare(args.project, unsigned_test=args.unsigned_test_ci)
     print("Android prepared: API 36, INTERNET, adjustResize, disabled automatic backup and production cleartext.")

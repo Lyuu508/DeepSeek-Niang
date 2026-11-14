@@ -1,6 +1,7 @@
 [CmdletBinding()]
-param([switch]$CheckOnly, [switch]$TestPackage)
+param([switch]$CheckOnly, [switch]$TestPackage, [switch]$UnsignedTestCI)
 $ErrorActionPreference = 'Stop'
+if ($TestPackage -and $UnsignedTestCI) { throw 'Select one Android distribution mode' }
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 function Invoke-Checked([string]$Command, [string[]]$Arguments) {
     & $Command @Arguments
@@ -22,7 +23,7 @@ $PreviousDevDebug = $env:CARGO_PROFILE_DEV_DEBUG
 $PreviousDevStrip = $env:CARGO_PROFILE_DEV_STRIP
 try {
     $env:VITE_COMPANION_TEST_PACKAGE = $null
-    if ($TestPackage) {
+    if ($TestPackage -or $UnsignedTestCI) {
         $env:VITE_COMPANION_TEST_PACKAGE = '1'
         $env:CARGO_PROFILE_DEV_DEBUG = '0'
         $env:CARGO_PROFILE_DEV_STRIP = 'debuginfo'
@@ -33,17 +34,21 @@ try {
     Invoke-Checked 'npm' @('ci','--ignore-scripts')
     Invoke-Checked 'cargo' @('test','--workspace','--locked')
     Invoke-Checked 'npm' @('run','tauri','--','android','init','--ci')
-    Invoke-Python @('scripts/prepare_android.py')
+    if ($UnsignedTestCI) { Invoke-Python @('scripts/prepare_android.py','--unsigned-test-ci') }
+    else { Invoke-Python @('scripts/prepare_android.py') }
     if ($TestPackage) {
         Invoke-Python @('scripts/android_test_signing.py')
         Invoke-Checked 'npm' @('run','tauri','--','android','build','--apk','--debug','--target','aarch64')
         Invoke-Python @('scripts/verify_android.py','--test-package')
+    } elseif ($UnsignedTestCI) {
+        Invoke-Checked 'npm' @('run','tauri','--','android','build','--apk','--debug','--target','aarch64')
+        Invoke-Python @('scripts/verify_android.py','--unsigned-test-ci')
     } else {
         Invoke-Python @('scripts/android_signing.py','--configure')
         Invoke-Checked 'npm' @('run','tauri','--','android','build','--apk','--target','aarch64')
         Invoke-Python @('scripts/verify_android.py')
     }
-    $Variant = if ($TestPackage) { 'debug' } else { 'release' }
+    $Variant = if ($TestPackage -or $UnsignedTestCI) { 'debug' } else { 'release' }
     $Packages = @(Get-ChildItem 'apps/companion/src-tauri/gen/android/app/build/outputs/apk' -Filter '*.apk' -Recurse | Where-Object { $_.Directory.Name -eq $Variant })
     if ($Packages.Count -ne 1) { throw 'Expected exactly one APK for the requested variant. No installation success is claimed.' }
     $Packages | ForEach-Object { Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName }

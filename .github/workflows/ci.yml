@@ -7,6 +7,35 @@ on:
 permissions:
   contents: read
 jobs:
+  signing-readiness:
+    # Presence only: no secret value is passed into the runner or printed.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record signing configuration presence without accessing values
+        env:
+          HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_B64 != '' }}
+          HAS_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD != '' }}
+          HAS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS != '' }}
+          HAS_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD != '' }}
+        run: |
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          names={'ANDROID_KEYSTORE_B64':'HAS_KEYSTORE','ANDROID_KEYSTORE_PASSWORD':'HAS_STORE_PASSWORD','ANDROID_KEY_ALIAS':'HAS_ALIAS','ANDROID_KEY_PASSWORD':'HAS_KEY_PASSWORD'}
+          data={'source_commit':os.environ['GITHUB_SHA'],'secrets':{name:os.environ[var]=='true' for name,var in names.items()},'values_read_or_printed':False,'certificate_match_verified':False}
+          path=Path(os.environ['RUNNER_TEMP'])/'signing-readiness.json';path.write_text(json.dumps(data,indent=2)+'\n')
+          summary=['Android signing configuration presence only; names do not prove certificate continuity.']
+          summary += [name+': '+('configured' if present else 'not configured for this run') for name,present in data['secrets'].items()]
+          print('\n'.join(summary))
+          print('::notice title=Android signing presence::'+json.dumps(data['secrets']))
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as out:out.write('\n'.join(summary)+'\n')
+          PY
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: signing-presence-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/signing-readiness.json
+          retention-days: 30
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 25

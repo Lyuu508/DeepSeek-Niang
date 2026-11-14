@@ -1,5 +1,9 @@
 # 当前独立测试包构建方式
 
+最新 CI 的 `android_compile_only` 现在构建 **`.test` 未签名更新候选**：`sh scripts/build-android.sh --unsigned-test-ci`，Windows 对应 `-UnsignedTestCI`。它沿用已发布测试包的 applicationId、0.0.2/1002 与测试标记，通过 Gradle 显式 `signingConfig = null`，不创建任何密钥；实际 apksigner 必须确认没有可验证签名。该候选不可安装，等待相同 `.test` 私钥签署才可替换现有 APK。普通 `--unsigned-ci` 仍是原身份 release 编译模式，两者不能混淆。
+
+`prepare_android.py` 将受版本管理的 `apps/companion/android/MainActivity.kt` 写入生成工程：原生 WindowInsets 处理系统状态栏、导航栏、刘海及输入法；传给 WebView 的边距已消费，防止 CSS 重复偏移。CSS env() 只作为支持浏览器的回退。原生构建不等于实际手机状态栏/键盘验收，仍由用户设备验证。Windows 完整原生命令输出保存在 `windows-native-build.log`，原 transcript 仅作补充。
+
 已发布的 0.0.2 为 `.test` applicationId、开发测试签名和“DeepSeek娘 测试版”名称。用户现在选择等待相同测试签名以保留升级与数据连续性，因此普通 CI 改为 `--unsigned-ci` 原生编译检查，不生成新的测试签名或替换手机 APK。该检查包不能安装、不能用于升级。Windows EXE 独立构建，NSIS 强制 `SimpChinese`、WiX 配置 `zh-CN`；runner 读取实际安装向导的中文控件后，再静默安装并启动窗口。
 
 - Linux/macOS：`sh scripts/build-android.sh --test-package`。

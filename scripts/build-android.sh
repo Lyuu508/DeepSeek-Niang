@@ -12,7 +12,7 @@ unset VITE_COMPANION_TEST_PACKAGE
 case "$mode" in
   signed) python3 scripts/android_signing.py ;;
   --unsigned-ci) ;;
-  --test-package)
+  --test-package|--unsigned-test-ci)
     export VITE_COMPANION_TEST_PACKAGE=1
     export CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_DEV_STRIP=debuginfo
     ;;
@@ -23,13 +23,20 @@ rustup target add aarch64-linux-android
 npm ci --ignore-scripts
 cargo test --workspace --locked
 npm run tauri -- android init --ci
-python3 scripts/prepare_android.py
+if test "$mode" = '--unsigned-test-ci'; then
+    python3 scripts/prepare_android.py --unsigned-test-ci
+else
+    python3 scripts/prepare_android.py
+fi
 if test "$mode" = '--test-package'; then
     python3 scripts/android_test_signing.py
     npm run tauri -- android build --apk --debug --target aarch64
     python3 scripts/verify_android.py --test-package
 elif test "$mode" = '--unsigned-ci'; then
     npm run tauri -- android build --apk --target aarch64
+elif test "$mode" = '--unsigned-test-ci'; then
+    npm run tauri -- android build --apk --debug --target aarch64
+    python3 scripts/verify_android.py --unsigned-test-ci
 else
     python3 scripts/android_signing.py --configure
     npm run tauri -- android build --apk --target aarch64
@@ -39,7 +46,7 @@ python3 - "$mode" <<'PY'
 from pathlib import Path
 import hashlib
 import sys
-variant = 'debug' if sys.argv[1] == '--test-package' else 'release'
+variant = 'debug' if sys.argv[1] in ['--test-package', '--unsigned-test-ci'] else 'release'
 packages = [p for p in Path('apps/companion/src-tauri/gen/android/app/build/outputs/apk').rglob('*.apk') if p.parent.name == variant]
 if len(packages) != 1:
     raise SystemExit('Expected exactly one APK for the requested variant; no installation success is claimed.')
@@ -48,4 +55,6 @@ for package in packages:
 print('APK files exist; installation, Keystore and real API tests require a device.')
 if sys.argv[1] == '--test-package':
     print('Isolated .test applicationId with a development signer; cannot replace the original app. Test signer continuity is not guaranteed across runners.')
+if sys.argv[1] == '--unsigned-test-ci':
+    print('Unsigned .test update candidate only: not installable. Requires the same published test signer before any replacement is allowed.')
 PY

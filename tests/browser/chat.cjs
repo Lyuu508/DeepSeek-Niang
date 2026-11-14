@@ -16,7 +16,7 @@ async function configure(page){await settings(page);await page.getByLabel('API K
  await page.goto(base+'/?test=mock',{waitUntil:'networkidle'});
  await check('one default persona, permanent space, and no traditional conversation entry',async()=>{await page.locator('.persona-list button').waitFor();assert.equal(await page.locator('.persona-list button').count(),1);assert.match(await page.locator('.mode-banner').innerText(),/模拟验收模式/);for(const text of ['开启新对话','最近的对话','默认对话'])assert.equal(await page.getByText(text,{exact:true}).count(),0);assert.match(await page.locator('.brand').innerText(),/DeepSeek娘/);assert(!(await page.locator('.avatar').allInnerTexts()).some(x=>x==='DS'));});
  const defaultId=await page.locator('.persona-list button').getAttribute('data-persona-id');
- await page.screenshot({path:path.join(artifact,'persona-welcome-mock.png'),fullPage:true});
+ await page.screenshot({path:path.join(artifact,'persona-welcome-mock.png'),fullPage:true,animations:'disabled'});
  await check('mock key form clears and does not use browser credential caches',async()=>{await configure(page);assert(!JSON.stringify(await page.evaluate(()=>({...localStorage}))).includes('fixture-ui-key-only'));assert(!(await context.cookies()).some(c=>c.value.includes('fixture-ui-key-only')));});
  await check('persona-specific preferences can be edited',async()=>{await page.getByLabel('如何称呼你').fill('旅人A');await page.getByRole('button',{name:'保存聊天设置',exact:true}).click();await page.getByText('聊天与人设设置已保存，新消息将使用这些设置。',{exact:true}).waitFor();await chat(page);assert.match(await page.locator('.companion-card').innerText(),/旅人A/);});
  await check('Chinese streaming stop is durable within the UI fixture',async()=>{const input=page.getByLabel('发送给当前人格的消息');await input.fill('中文停止测试');await input.press('Enter');await page.locator('.message.assistant').filter({hasText:'模拟'}).first().waitFor();await page.getByRole('button',{name:/停止.*生成/}).click();await page.locator('.message.assistant[data-state="interrupted"]').waitFor();assert.equal(await page.locator('.message.user').count(),1);});
@@ -28,11 +28,11 @@ async function configure(page){await settings(page);await page.getByLabel('API K
  await check('switching during generation retains reply and usage under its original persona',async()=>{await page.getByLabel('发送给当前人格的消息').fill('生成中切换人格');await page.getByRole('button',{name:'发送消息',exact:true}).click();await page.locator('.message.assistant[data-state="generating"]').waitFor();await switchTo(page,'测试角色B');await page.getByRole('button',{name:'发送消息',exact:true}).waitFor();assert.equal(await page.locator('.message.user').count(),0);assert.equal((await page.locator('.usage-count').innerText()).replace(/\s/g,''),'0次生成');await switchTo(page,'DeepSeek娘');assert.equal(await page.locator('.message.user').count(),3);assert.match((await page.locator('.message.assistant').last().innerText()),/DeepSeek娘/);});
  await check('desktop Shift Enter and IME Enter do not accidentally send',async()=>{const input=page.getByLabel('发送给当前人格的消息');await input.fill('第一行');await input.press('Shift+Enter');await input.type('第二行');assert.equal(await input.inputValue(),'第一行\n第二行');const count=await page.locator('.message.user').count();await input.dispatchEvent('keydown',{key:'Enter',code:'Enter',isComposing:true,bubbles:true});assert.equal(await page.locator('.message.user').count(),count);await input.fill('');});
  await check('theme changes preserve persona and messages',async()=>{await page.getByRole('button',{name:'切换深浅色',exact:true}).click();assert.equal(await page.locator('.app').getAttribute('data-theme'),'dark');assert.equal(await page.locator('.message.user').count(),3);});
- await page.screenshot({path:path.join(artifact,'persona-desktop-mock.png'),fullPage:true});
+ await page.screenshot({path:path.join(artifact,'persona-desktop-mock.png'),fullPage:true,animations:'disabled'});
  await check('no desktop JavaScript errors or external requests',async()=>{assert.deepEqual(errors,[]);assert.deepEqual(outbound,[]);});
  const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const phone=await mobile.newPage();const mobileErrors=[];phone.on('pageerror',e=>mobileErrors.push(e.message));await phone.goto(base+'/?test=mock',{waitUntil:'networkidle'});
  await check('mobile persona menu and Enter newline with tap send',async()=>{await configure(phone);await chat(phone);const input=phone.getByLabel('发送给当前人格的消息');await input.fill('手机输入');await input.press('Enter');assert.equal(await input.inputValue(),'手机输入\n');assert.equal(await phone.locator('.message.user').count(),0);await phone.getByRole('button',{name:'发送消息',exact:true}).click();await phone.locator('.message.assistant[data-state="complete"]').waitFor();assert(await phone.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual(mobileErrors,[]);});
- await phone.screenshot({path:path.join(artifact,'persona-mobile-mock.png'),fullPage:true});
+ await phone.screenshot({path:path.join(artifact,'persona-mobile-mock.png'),fullPage:true,animations:'disabled'});
  await check('a delayed history snapshot cannot overwrite a completed stream after persona switching',async()=>{
   const delayed=await context.newPage();await delayed.goto(base+'/?test=mock&read-delay=1800',{waitUntil:'networkidle'});
   await delayed.waitForFunction(()=>document.querySelector('#chat-input')?.disabled===false);
@@ -51,41 +51,82 @@ async function configure(page){await settings(page);await page.getByLabel('API K
  await check('sync UI explicitly distinguishes fixtures, private endpoints, and failed pairing',async()=>{
   await page.getByRole('button',{name:'局域网同步',exact:true}).click();
   await page.getByText('本页为 UI 模拟夹具，未验证真实设备发现、配对或同步。',{exact:true}).waitFor();
-  await page.getByRole('button',{name:'启用局域网同步',exact:true}).click();
-  await page.getByText('兼容旧版 / 手动配对',{exact:true}).click();
-  await page.getByLabel('对端一次性配对码',{exact:true}).fill('{}');
-  await page.getByLabel('对端局域网 IP:端口',{exact:true}).fill('8.8.8.8:443');
-  assert(await page.getByRole('button',{name:'连接并核对设备身份',exact:true}).isDisabled());
-  await page.getByLabel('对端局域网 IP:端口',{exact:true}).fill('192.168.1.20:54321');
-  await page.getByRole('button',{name:'连接并核对设备身份',exact:true}).click();
-  await page.getByText('配对码已过期、错误或已取消，请重新生成。',{exact:true}).waitFor();
+  const connect=page.getByRole('region',{name:'扫码连接',exact:true});
+  assert.equal(await connect.getByRole('button').count(),1);await connect.getByRole('button',{name:'连接手机',exact:true}).click();
+  const dialog=page.getByRole('dialog',{name:'用手机扫一扫',exact:true});await dialog.waitFor();
+  assert((await dialog.getByAltText('一次性连接二维码').getAttribute('src')).startsWith('data:image/svg+xml,'));
+  assert.equal(await page.locator('input[type=file],.sync-panel textarea,.sync-panel input').count(),0);
+  for(const name of ['扫一扫','旧版手机：显示兼容配对码','兼容旧版 / 手动配对'])assert.equal(await page.getByRole('button',{name,exact:true}).count(),0);
+  await page.screenshot({path:path.join(artifact,'sync-qr-dialog-mock.png'),fullPage:true,animations:'disabled'});
+  await page.keyboard.press('Escape');await dialog.waitFor({state:'detached'});
   assert.equal(await page.getByText('同步成功',{exact:true}).count(),0);
-  await page.screenshot({path:path.join(artifact,'sync-desktop-mock.png'),fullPage:true});
-  await page.getByRole('button',{name:'关闭同步',exact:true}).click();
+  assert.equal(await page.locator('.sync-panel>section').last().getAttribute('aria-label'),'本机信息');
+  await page.screenshot({path:path.join(artifact,'sync-desktop-mock.png'),fullPage:true,animations:'disabled'});
   await switchTo(page,'DeepSeek娘');assert.equal(await page.locator('.message.user').count(),3);
  });
  await check('mobile sync management stays within the viewport and labels offline use',async()=>{
-  await menu(phone);await phone.getByRole('button',{name:'局域网同步',exact:true}).click();
-  await phone.getByRole('button',{name:'启用局域网同步',exact:true}).waitFor();
+  await phone.getByRole('button',{name:'手机连接',exact:true}).click();
+  await phone.getByRole('button',{name:'扫一扫',exact:true}).waitFor();
+  assert.equal(await phone.getByRole('region',{name:'扫码连接'}).getByRole('button').count(),1);
+  assert.equal(await phone.getByRole('button',{name:'连接手机',exact:true}).count(),0);
+  assert.equal(await phone.locator('input[type=file],.sync-panel textarea,.sync-panel input').count(),0);
+  assert.equal(await phone.locator('.sync-panel>section').last().getAttribute('aria-label'),'本机信息');
   assert(await phone.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));assert.deepEqual(mobileErrors,[]);
-  await phone.screenshot({path:path.join(artifact,'sync-mobile-mock.png'),fullPage:true});
+  await phone.screenshot({path:path.join(artifact,'sync-mobile-mock.png'),fullPage:true,animations:'disabled'});
  });
  await check('camera denial is explained without claiming a device connected',async()=>{
   await phone.evaluate(()=>{window.__savedCamera=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);navigator.mediaDevices.getUserMedia=async()=>{throw new DOMException('denied','NotAllowedError');};});
-  await phone.getByRole('button',{name:'手机：扫码连接电脑',exact:true}).click();
-  await phone.getByText('相机未授权。请在系统设置允许相机，或关闭扫码后从照片识别。',{exact:true}).waitFor();
+  await phone.getByRole('button',{name:'扫一扫',exact:true}).click();
+  await phone.getByText('相机未授权。请在系统设置允许相机后重试。',{exact:true}).waitFor();
   assert.equal(await phone.getByText('同步成功',{exact:true}).count(),0);
   await phone.getByRole('button',{name:'关闭扫码',exact:true}).click();
  });
  await check('closing scanner before camera permission resolves stops all late tracks',async()=>{
   await phone.evaluate(()=>{window.__cameraResolvers=[];navigator.mediaDevices.getUserMedia=()=>new Promise(resolve=>window.__cameraResolvers.push(resolve));});
-  await phone.getByRole('button',{name:'手机：扫码连接电脑',exact:true}).click();
+  await phone.getByRole('button',{name:'扫一扫',exact:true}).click();
   await phone.waitForFunction(()=>window.__cameraResolvers.length>0);
   await phone.getByRole('button',{name:'关闭扫码',exact:true}).click();
   await phone.evaluate(()=>{const canvas=document.createElement('canvas');canvas.width=640;canvas.height=480;window.__cameraStreams=window.__cameraResolvers.map(resolve=>{const stream=canvas.captureStream();resolve(stream);return stream;});});
   await phone.waitForFunction(()=>window.__cameraStreams.every(stream=>stream.getTracks().every(track=>track.readyState==='ended')));
   await phone.evaluate(()=>{navigator.mediaDevices.getUserMedia=window.__savedCamera;});
   assert.equal(await phone.getByLabel('实时扫码',{exact:true}).count(),0);assert.deepEqual(mobileErrors,[]);
+ });
+ await check('live scan decodes an actual Rust QR frame and rejects the fixture backend without fake TLS success',async()=>{
+  const qr=JSON.parse(fs.readFileSync(path.join(root,'.cache/phase2-quick-qr.json'),'utf8'));
+  await phone.evaluate(async svg=>{
+   const image=new Image();image.src='data:image/svg+xml,'+encodeURIComponent(svg);await image.decode();
+   const canvas=document.createElement('canvas');canvas.width=774;canvas.height=774;
+   const draw=()=>canvas.getContext('2d').drawImage(image,0,0,774,774);draw();
+   window.__qrFrameInterval=setInterval(draw,100);window.__qrStreams=[];
+   navigator.mediaDevices.getUserMedia=async()=>{const stream=canvas.captureStream(10);window.__qrStreams.push(stream);return stream;};
+  },qr.svg);
+  await phone.getByRole('button',{name:'扫一扫',exact:true}).click();
+  await phone.getByText('配对码已过期、错误或已取消，请重新生成。',{exact:true}).waitFor();
+  await phone.waitForFunction(()=>window.__qrStreams.length>0&&window.__qrStreams.every(s=>s.getTracks().every(t=>t.readyState==='ended')));
+  assert.equal(await phone.getByRole('dialog').count(),0);assert.equal(await phone.getByText('同步成功',{exact:true}).count(),0);
+  await phone.evaluate(()=>{clearInterval(window.__qrFrameInterval);navigator.mediaDevices.getUserMedia=window.__savedCamera;});
+ });
+ await check('phone bottom navigation preserves the chat draft and remains distinct from desktop',async()=>{
+  assert.equal(await phone.locator('.app').getAttribute('data-platform'),'android');
+  assert.equal(await page.locator('.app').getAttribute('data-platform'),'desktop');
+  assert(await phone.getByRole('navigation',{name:'手机主导航'}).isVisible());assert(!(await page.getByRole('navigation',{name:'手机主导航'}).isVisible()));
+  await phone.getByRole('button',{name:'手机聊天',exact:true}).click();await phone.getByLabel('发送给当前人格的消息').fill('保留这份手机草稿');
+  await phone.getByRole('button',{name:'手机设置',exact:true}).click();await phone.getByLabel('API Key',{exact:true}).waitFor();
+  await phone.getByRole('button',{name:'手机聊天',exact:true}).click();assert.equal(await phone.getByLabel('发送给当前人格的消息').inputValue(),'保留这份手机草稿');
+ });
+ await check('phone compact viewport and landscape keep composer and navigation inside the usable bounds',async()=>{
+  for(const viewport of [{width:390,height:520},{width:844,height:390}]){
+   await phone.setViewportSize(viewport);await phone.getByLabel('发送给当前人格的消息').focus();
+   const rect=await phone.getByLabel('发送给当前人格的消息').boundingBox();assert(rect.y>=0&&rect.y+rect.height<=viewport.height);
+   assert(await phone.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+   const button=await phone.getByRole('button',{name:'手机连接',exact:true}).boundingBox();assert(button.height>=44&&button.y+button.height<=viewport.height);
+   assert(!(await phone.getByRole('region',{name:'当前人格资料'}).isVisible()));
+  }
+  await phone.setViewportSize({width:390,height:844});await phone.getByLabel('发送给当前人格的消息').fill('');
+  await phone.screenshot({path:path.join(artifact,'phone-chat-redesign-mock.png'),fullPage:true,animations:'disabled'});
+  await phone.getByRole('button',{name:'手机连接',exact:true}).click();
+  await phone.screenshot({path:path.join(artifact,'phone-scan-redesign-mock.png'),fullPage:true,animations:'disabled'});
+  assert.deepEqual(mobileErrors,[]);
  });
  fs.writeFileSync(path.join(artifact,'results.json'),JSON.stringify({scope:'Explicit UI Mock; no real API, SQLite, file migration or OS credentials; camera lifecycle uses a synthetic browser stream',passed:checks.length,checks,browser:browser.version()},null,2)+'\n');console.log(JSON.stringify({scope:'explicit UI Mock',passed:checks.length,checks}));
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{await browser?.close();server?.kill('SIGTERM');});
