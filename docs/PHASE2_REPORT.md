@@ -60,3 +60,7 @@ CI 与 Release 分离。`ci.yml` 测试并调用双平台构建；Windows 复用
 原签名恢复/Secrets 已按用户最新指令移出日常开发的前置条件。本次新增隔离可安装测试 APK，生产同步、TLS 与历史迁移保持原实现；修复打包脚本的 debug 身份、变体选择与校验报告，并保留独立 Windows 构建。实际证据和未执行的真实双端清单见 [PHASE2_TEST_DELIVERY](PHASE2_TEST_DELIVERY.md)。这不是正式 v0.0.2 发布验收。
 
 本次最终测试交付CI：1c86678 / Run 43567948075，Linux测试、Windows EXE/安装启动和Android隔离测试APK均成功，三份Artifact已上传。源码/状态/附件元数据快照见 validation-phase2-isolated-test/ci-delivery.json；物理双端验收、原签名升级和正式Release不计完成。
+
+## v0.0.2 公开测试发布结果
+
+依用户最新明确授权，v0.0.2独立测试Pre-release已公开：两端源码1c86678963cb83819e7a72cada6d279fcac9736c，发布工作流43571208371成功，EXE与.test APK可以直接下载，不再仅提供压缩包。13个公开附件下载/哈希与实际APK签名复验通过，证据见validation-release-0.0.2。原有“尚未发布”段落是此前阶段的历史记录；原签名升级包及真实双端验收仍未完成，阶段3未开始。

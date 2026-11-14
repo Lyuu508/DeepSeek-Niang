@@ -5,6 +5,15 @@
       "androidVersionCode": 1001,
       "commit": "8ae10e7c62602fde124989800c6e16d5a951dcb0",
       "tag": "v0.0.1"
+    },
+    {
+      "version": "0.0.2",
+      "androidVersionCode": 1002,
+      "commit": "1c86678963cb83819e7a72cada6d279fcac9736c",
+      "tag": "v0.0.2",
+      "distribution": "isolated-test",
+      "androidApplicationId": "io.local.deepseekcompanion.test",
+      "releaseId": 445111880
     }
   ]
 }

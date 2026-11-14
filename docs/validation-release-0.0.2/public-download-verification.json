@@ -1,0 +1,80 @@
+[
+  {
+    "file": "android-build.log",
+    "http": 200,
+    "bytes": 59974,
+    "sha256": "a7f4c83fb98a83cbc794e0f2beabb4ea124fd0741b364e67ead8ec38e2ec2901"
+  },
+  {
+    "file": "android-reverified.json",
+    "http": 200,
+    "bytes": 804,
+    "sha256": "5dcf459836a565e044214fbcfac5abd7391cb3ea5ee761f239d0ad562b5d51b9"
+  },
+  {
+    "file": "android-toolchain.log",
+    "http": 200,
+    "bytes": 13179,
+    "sha256": "5e9a2e3c8bed782bcd9e83d5610803e20ce21db4db445c90b4f5b56ccf343b85"
+  },
+  {
+    "file": "AUTOMATED-TEST-RESULTS.txt",
+    "http": 200,
+    "bytes": 26850,
+    "sha256": "c039a9e38a2800c2fa5d12ce99da5c3a56c7d6c5981800bc398551a5df0d83ad"
+  },
+  {
+    "file": "BUILD-RESULTS-WINDOWS.json",
+    "http": 200,
+    "bytes": 701,
+    "sha256": "5ccb46fc2858f8ac8c966aab97ba1f45083b3bd31ab41a97e8295a48bc3a96aa"
+  },
+  {
+    "file": "BUILD-RESULTS.json",
+    "http": 200,
+    "bytes": 1589,
+    "sha256": "b9e89842e6b7a546d3ca0710a2cdfc6441f22fd5e82d6d6ea2845da8a21e990e"
+  },
+  {
+    "file": "CHANGELOG.md",
+    "http": 200,
+    "bytes": 7131,
+    "sha256": "0af681d0a3d96db1a6c35404adebbae62a233dc6135cffc94b375385652dc49a"
+  },
+  {
+    "file": "DeepSeek-Niang_0.0.2_android-arm64-isolated-test.apk",
+    "http": 200,
+    "bytes": 56505624,
+    "sha256": "cb8cb0c4daef387aad9ed3d6ebdc9f0c934b6f9dcb81762e499a0c1b9a306dec"
+  },
+  {
+    "file": "DeepSeek-Niang_0.0.2_windows-x64-setup.exe",
+    "http": 200,
+    "bytes": 6476283,
+    "sha256": "8f6138db362c434671df4f424e5d44bd7b370000c42d6639ee8fc2ef9071c94d"
+  },
+  {
+    "file": "INSTALL-AND-ACCEPTANCE.md",
+    "http": 200,
+    "bytes": 5478,
+    "sha256": "7b36785e242e102aacf8ee6ffa2515fbc301f9023b8f76d8bd63e1cfbff4d13b"
+  },
+  {
+    "file": "SHA256SUMS.txt",
+    "http": 200,
+    "bytes": 228,
+    "sha256": "45214d7339f25cf504ca9f1ab5386d6982fe881bca0d094bba61ff22d5897cd6"
+  },
+  {
+    "file": "UI-TEST-RESULTS.json",
+    "http": 200,
+    "bytes": 3138,
+    "sha256": "c941f8bb5ce7b7f0a1519ee74b317e030057059a6f234aecfea2b8823cf5399b"
+  },
+  {
+    "file": "windows-build.log",
+    "http": 200,
+    "bytes": 1308,
+    "sha256": "a0211df4b929322b6aada429bcfbacaa11cc0d07d287530b72e40b78e2e45897"
+  }
+]

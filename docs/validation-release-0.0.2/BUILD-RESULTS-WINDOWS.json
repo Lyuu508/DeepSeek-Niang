@@ -1,0 +1,18 @@
+{
+  "version": "0.0.2",
+  "build_commit": "1c86678963cb83819e7a72cada6d279fcac9736c",
+  "workflow_run": "43567948075",
+  "host": "GitHub-hosted Windows runner",
+  "embedded_product_version": "0.0.2",
+  "installer_exit_code": 0,
+  "installed_on_windows_runner": true,
+  "installed_process_started": true,
+  "window_title": "DeepSeek娘",
+  "window_screenshot": true,
+  "real_user_device_tested": false,
+  "real_deepseek_api_tested": false,
+  "authenticode_signed": false,
+  "api_key_embedded": false,
+  "installer_sha256": "8f6138db362c434671df4f424e5d44bd7b370000c42d6639ee8fc2ef9071c94d",
+  "application_sha256": "f7a10c3c28abd652a2fc3d7484c0b5e13e6f1c30de94d3530c7f90c863cff25e"
+}

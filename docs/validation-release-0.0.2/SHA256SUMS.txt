@@ -1,0 +1,2 @@
+cb8cb0c4daef387aad9ed3d6ebdc9f0c934b6f9dcb81762e499a0c1b9a306dec  DeepSeek-Niang_0.0.2_android-arm64-isolated-test.apk
+8f6138db362c434671df4f424e5d44bd7b370000c42d6639ee8fc2ef9071c94d  DeepSeek-Niang_0.0.2_windows-x64-setup.exe

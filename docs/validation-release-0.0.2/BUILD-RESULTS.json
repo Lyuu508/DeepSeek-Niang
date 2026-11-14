@@ -1,0 +1,43 @@
+{
+  "version": "0.0.2",
+  "source_commit": "1c86678963cb83819e7a72cada6d279fcac9736c",
+  "builds": {
+    "windows": {
+      "version": "0.0.2",
+      "platform": "windows",
+      "hosted_runner_install_smoke": true,
+      "source_commit": "1c86678963cb83819e7a72cada6d279fcac9736c",
+      "sha256": "8f6138db362c434671df4f424e5d44bd7b370000c42d6639ee8fc2ef9071c94d",
+      "working_tree_clean": true,
+      "bytes": 6476283,
+      "physical_device_tested": false,
+      "file": "DeepSeek-Niang_0.0.2_windows-x64-setup.exe"
+    },
+    "android": {
+      "platform": "android",
+      "source_commit": "1c86678963cb83819e7a72cada6d279fcac9736c",
+      "working_tree_clean": true,
+      "version": "0.0.2",
+      "version_code": 1002,
+      "application_id": "io.local.deepseekcompanion.test",
+      "abi": "arm64-v8a",
+      "file": "DeepSeek-Niang_0.0.2_android-arm64-isolated-test.apk",
+      "bytes": 56505624,
+      "sha256": "cb8cb0c4daef387aad9ed3d6ebdc9f0c934b6f9dcb81762e499a0c1b9a306dec",
+      "signature_verified": true,
+      "signer_certificate_sha256": "4a092d7012af2d1063f6420cf2d3ba77d0cf53882118926a8fc5e1723cc460c0",
+      "distribution": "isolated-test",
+      "upgrade_compatible": false,
+      "test_signer_persistence_guaranteed": false,
+      "automatic_backup": false,
+      "cleartext_traffic": false,
+      "shared_application_uid": false,
+      "debuggable": true,
+      "physical_device_tested": false
+    }
+  },
+  "distribution": "isolated-test",
+  "physical_windows_tested": false,
+  "physical_android_tested": false,
+  "home_ethernet_wifi_sync_tested": false
+}

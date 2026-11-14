@@ -65,3 +65,9 @@ PowerShell Android入口已对齐，但本机没有PowerShell/Windows Android工
 以上是需登录GitHub下载的真实Actions ZIP，各安装包ZIP分别含SHA256SUMS.txt和本平台构建报告/日志，不是虚构的Release文件链接。当前会话实际尝试下载三个远程附件时，均被 productionresultssa8.blob.core.windows.net 拒绝；没有修改白名单、绕过限制或输出带临时签名的URL。故确认CI受检步骤/上传成功与包来源元数据，不声称本会话已取回并独立复验远程二进制内容。
 
 GitHub仍仅有历史v0.0.1 Release，未创建v0.0.2正式Tag/Release。Windows/Android物理设备与家庭网线+Wi-Fi实测仍未执行，用户已确认收到包后自行验收。原签名恢复/Secrets保持独立待办，阶段3未开始。
+
+## 最新授权：独立文件公开到 Releases
+
+用户随后明确要求以与0.0.1相同方式公开测试版，故 v0.0.2 Pre-release 现已发布，而非继续等待或仅提供Actions ZIP。下载入口见 README 和 docs/RELEASE_0.0.2.md。两端仍为同一源码1c86678的原CI产物，没有重新签名/编译或冒充原身份升级。发布运行43571208371成功，Release ID445111880，Tag指向1c86678963cb83819e7a72cada6d279fcac9736c；安装包、校验/报告及日志13项公开附件均已实际下载HTTP200并比对SHA-256，APK用官方apksigner独立复验通过。
+
+本文件之前“不创建Release”的描述为上一次授权阶段的历史结果，已由本次用户明确公开授权替代。物理双端仍未验收，阶段3未开始，原签名恢复/Secrets仍独立待办。完整CI编译输出保存在原始CI 43567948075，附件windows-build.log为安装构建流程的PowerShell transcript，不将其短文本等同于全部cargo编译输出。
