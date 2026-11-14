@@ -19,3 +19,7 @@ GitHub Actions Secrets 元数据目前查询被当前云代理拒绝（api.githu
 4. 发布工作流只在临时受限文件中恢复 keystore，先验证证书，再构建、apksigner 验签并清理临时文件；指纹不符立即失败。
 
 没有找到匹配私钥前，原签名是否可恢复仍是未确定状态；正式 v0.0.2 覆盖升级与发布被阻止。不生成替代密钥，不改变 applicationId，不要求卸载或清除数据。仅在确实无法恢复且用户另行同意后，才能设计独立测试包身份和安全数据迁移，不能将独立包描述为直接覆盖升级。
+
+## 本次 CI 修复复核（2026-11-14）
+
+在 b7330d9 修复任务中再次下载实际公开 v0.0.1 APK，使用官方 Build Tools 36 的 apksigner 与 aapt2 重验；上方 APK 哈希、唯一签名证书与应用身份全部一致，原始输出保存于 validation-phase2-ci-fix/v0.0.1-apksigner.txt。e65b3ed 双端 CI 已成功，但 Android 仍为未签名编译检查 APK。列出四项 Secrets 名称的请求仍被 api.github.com 代理拒绝，不能据此判断 Secrets 缺失或旧私钥丢失；未触发原签名 Release。详情见 PHASE2_CI_FIX_REPORT.md。

@@ -1,0 +1,11 @@
+{
+  "run": 43554759767,
+  "source_commit": "e65b3ed6601bbf8accab89ad5497c45e872a2970",
+  "observed_at": "2026-11-14T04:14:00.299005+00:00",
+  "url": "https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43554759767",
+  "jobs": {
+    "test": "completed successfully",
+    "packages.windows": "completed successfully",
+    "packages.android": "completed successfully"
+  }
+}

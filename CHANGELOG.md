@@ -1,6 +1,6 @@
 # 0.0.2（阶段 2，开发中，未发布）
 
-- CI 修复：Windows accepted socket 显式切回阻塞 I/O，新增延迟 ClientHello 的真实 TLS 1.3 双证书回归；Android 固定 Command-line Tools 并验证 JDK/SDK/NDK；发布前重新验签实际 v0.0.1 APK。原生双端结果与发布状态见 docs/PHASE2_CI_FIX_REPORT.md。
+- CI 修复：Windows accepted socket 显式切回阻塞 I/O，新增延迟 ClientHello 的真实 TLS 1.3 双证书回归；Android 固定 Command-line Tools 并验证 JDK/SDK/NDK；发布前重新验签实际 v0.0.1 APK。e65b3ed 的 Linux/Windows/Android CI 已全成功，Android 仍为未签名检查包，原签名发布未完成；完整结果见 docs/PHASE2_CI_FIX_REPORT.md。
 
 - 在 0.0.1 基线上实现局域网生产同步：mDNS/NSD、短期高熵配对码与二维码、双方确认、TLS 1.3、可信设备与撤销。
 - 新增签名事件、SQLite 事务待发队列、双向分页游标、逻辑字段合并、冲突副本与删除标记；保留人格 UUID、永久聊天及离线本地使用。

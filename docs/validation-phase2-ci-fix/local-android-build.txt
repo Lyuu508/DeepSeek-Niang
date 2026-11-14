@@ -1,0 +1,863 @@
+{"status":"ready","source_sha256":"070adedf4a8896745ea8fb7755b3cbe4b673bcb51d1edc88cc76e46ea937aff1","verified_files":69}
+info: downloading component rust-std
+
+added 36 packages in 2s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.10s
+     Running unittests src/lib.rs (target/debug/deps/companion_chat-b52090c5fac5992e)
+
+running 13 tests
+test tests::cancelled_stream_keeps_partial_content_and_never_waits_for_eof ... ok
+test tests::explicitly_rejected_429_retries_once_without_duplicate_output ... ok
+test tests::official_request_is_documented_and_has_no_key_in_json ... ok
+test tests::real_loopback_http_stream_assembles_chinese_and_measured_usage ... ok
+test tests::redirects_are_rejected_without_forwarding_credentials ... ok
+test tests::idle_timeout_and_truncated_stream_are_not_success ... ok
+test tests::missing_key_has_explicit_failure_and_still_keeps_sent_user_text ... ok
+test tests::sse_parser_handles_every_utf8_split_and_multiline_events ... ok
+test tests::sse_rejects_oversized_or_invalid_utf8_frames ... ok
+test tests::untrusted_http_error_body_cannot_leak_key_or_get_retried ... ok
+test tests::credential_delete_cancels_active_generation_and_removes_mock_key ... ok
+test tests::service_persists_stream_and_reuses_user_on_regenerate_with_clean_context ... ok
+test tests::service_stop_is_durable_and_cannot_duplicate_user_message ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.35s
+
+     Running unittests src/lib.rs (target/debug/deps/companion_core-4be9e1322f717247)
+
+running 24 tests
+test chat::tests::character_is_editable_with_optional_verified_state_and_no_fixed_affection ... ok
+test chat::tests::invalid_usage_cannot_partially_commit_a_response ... ok
+test chat::tests::escaped_output_limit_cannot_corrupt_the_recovery_checkpoint ... ok
+test chat::tests::empty_failure_is_durable_without_fake_assistant_message_event ... ok
+test chat::tests::conversations_and_history_scope_are_isolated ... ok
+test chat::tests::regeneration_keeps_one_user_and_both_reply_variants ... ok
+test chat::tests::send_is_transactional_idempotent_and_preserves_sync_fields ... ok
+test chat::tests::restart_recovers_partial_reply_and_keeps_history_and_personality ... ok
+test chat::tests::second_instance_cannot_recover_a_live_generation ... ok
+test chat::tests::stream_checkpoints_finalize_once_and_ignore_late_tokens ... ok
+test persona::tests::history_memory_personality_states_and_tokens_are_isolated ... ok
+test persona::tests::memory_owner_cannot_be_changed_or_deleted_from_another_persona ... ok
+test persona::tests::failed_cross_profile_migration_rolls_back_the_whole_schema_upgrade ... ok
+test chat::tests::v1_migration_preserves_raw_events_sequence_and_creates_consistent_backup ... ok
+test persona::tests::renaming_keeps_main_thread_and_refuses_unknown_personas ... ok
+test persona::tests::one_main_thread_and_last_persona_survive_reopen_without_changing_device_identity ... ok
+test persona::tests::sql_guards_block_cross_persona_relations_and_profile_reassignment ... ok
+test persona::tests::migrated_last_turn_can_regenerate_in_the_permanent_space ... ok
+test persona::tests::switching_mid_generation_does_not_move_the_reply_or_usage ... ok
+test replication::migration_tests::failed_v4_ddl_rolls_back_and_retains_the_usable_v3_backup ... ok
+test persona::tests::v2_backup_merges_legacy_views_without_touching_ids_events_or_timestamps ... ok
+test replication::migration_tests::evidence_life_tasks_and_public_preferences_sync_without_credentials_or_live_leases ... ok
+test replication::migration_tests::logical_message_order_survives_device_wall_clock_skew ... ok
+test replication::migration_tests::v3_migration_backup_and_restart_preserve_identity_and_existing_content ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.50s
+
+     Running tests/invariants.rs (target/debug/deps/invariants-3d674e4556cba48a)
+
+running 21 tests
+test authority_restart_invalidates_all_previous_boot_leases ... ok
+test corrupted_batch_is_rejected_without_partial_commit ... ok
+test checkpoint_never_skips_missing_sequence ... ok
+test concurrent_memory_edits_choose_same_logical_version ... ok
+test delete_wins_even_when_received_before_create ... ok
+test expired_lease_requires_reconciliation_and_old_fence_cannot_commit ... ok
+test empty_incremental_vector_can_bootstrap_a_new_replica ... ok
+test identity_equivocation_rolls_back_prior_valid_events_in_same_transaction ... ok
+test keyword_index_tracks_updates_and_deletion_and_short_chinese_queries ... ok
+test ordinary_chat_never_mechanically_adds_affection ... ok
+test message_deletion_propagates_without_overwriting_other_messages ... ok
+test relationship_cooldown_decay_caps_and_evidence_validation_apply ... ok
+test relationship_events_deduplicate_and_replay_order_is_stable ... ok
+test incremental_pagination_drains_more_than_one_batch ... ok
+test one_authority_grants_one_lease_and_task_key_deduplicates ... ok
+test restart_preserves_identity_history_clock_and_integrity ... ok
+test video_progress_uses_union_and_joint_modal_coverage ... ok
+test video_segmentation_covers_the_entire_timeline_including_tail ... ok
+test pause_resume_cancel_and_bounded_retry_work ... ok
+test simultaneous_offline_messages_converge_and_deduplicate ... ok
+test untrusted_and_wrong_profile_origins_are_rejected ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.65s
+
+     Running unittests src/main.rs (target/debug/deps/companion_node-c2560d5b430314ea)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/companion_secrets-fd8c3b88aa223390)
+
+running 3 tests
+test tests::debug_and_errors_never_contain_secret ... ok
+test tests::rejects_header_injection_and_whitespace ... ok
+test tests::unsupported_platform_fails_closed ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/companion_sync-98c86ba4a08c2e86)
+
+running 12 tests
+test tests::copied_public_certificate_cannot_prove_its_tls_private_key ... ok
+test tests::concurrent_same_field_retains_losing_candidate_and_converges ... ok
+test tests::accepted_nonblocking_socket_waits_for_real_tls_client ... ok
+test tests::field_conflicts_keep_both_revisions_and_delete_always_wins ... ok
+test tests::actual_disconnect_restart_same_identity_and_offline_backfill ... ok
+test tests::pair_requires_both_confirmations_token_expiry_and_private_addresses ... ok
+test tests::real_bootstrap_tls_pairing_both_confirmations_then_mutual_sync ... ok
+test tests::paginated_incremental_batches_ack_only_committed_data_and_survive_reopen ... ok
+test tests::signatures_tamper_duplicates_gaps_unknown_origin_and_revocation ... ok
+test tests::signing_identity_restores_from_same_secure_slot_and_secrets_do_not_enter_outbox ... ok
+test tests::two_independent_profiles_preserve_personas_chats_memories_and_offline_backfill ... ok
+test tests::real_tls13_mutual_auth_pinning_and_reconnect ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.34s
+
+   Doc-tests companion_chat
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests companion_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests companion_secrets
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests companion_sync
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+> deepseek-ai-companion@0.0.2 tauri
+> npm run tauri --workspace @deepseek/companion -- android init --ci
+
+
+> @deepseek/companion@0.0.2 tauri
+> tauri android init --ci
+
+        Info Using installed NDK: /workspace/.cache/android-sdk/ndk/28.2.13676358
+        Info Installing Android Rust targets...
+        Info Installing target armv7-linux-androideabi
+info: downloading component rust-std
+        Info Installing target i686-linux-android
+info: downloading component rust-std
+        Info Installing target x86_64-linux-android
+info: downloading component rust-std
+Generating Android Studio project...
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri" relative to "/workspace/DeepSeek-Niang/apps/companion/src-tauri/gen/android/companion_app" is "../../../"
+victory: Project generated successfully!
+    Make cool apps! 🌻 🐕 🎉
+Android prepared: API 36, INTERNET, adjustResize, disabled automatic backup and production cleartext.
+
+> deepseek-ai-companion@0.0.2 tauri
+> npm run tauri --workspace @deepseek/companion -- android build --apk --target aarch64
+
+
+> @deepseek/companion@0.0.2 tauri
+> tauri android build --apk --target aarch64
+
+        Info Using installed NDK: /workspace/.cache/android-sdk/ndk/28.2.13676358
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `node ../../scripts/check-branding.mjs && npm run build`
+{"status":"ready","source_sha256":"070adedf4a8896745ea8fb7755b3cbe4b673bcb51d1edc88cc76e46ea937aff1","verified_files":69}
+
+> @deepseek/companion@0.0.2 build
+> tsc --noEmit && vite build
+
+vite v8.3.8 building client environment for production...
+transforming...
+✓ 28 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.41 kB │ gzip:   0.29 kB
+dist/assets/index-D2h8rGJs.css   21.46 kB │ gzip:   5.16 kB
+dist/assets/index-CGK9ZM62.js   402.22 kB │ gzip: 132.95 kB
+
+✓ built in 143ms
+    Updating crates.io index
+ Downloading crates ...
+  Downloaded android_system_properties v0.1.6
+  Downloaded bit-set v0.8.0
+  Downloaded bit-vec v0.8.0
+  Downloaded alloc-no-stdlib v3.0.0
+  Downloaded atk v0.18.2
+  Downloaded block-buffer v0.10.4
+  Downloaded cairo-rs v0.18.5
+  Downloaded brotli v9.1.1
+  Downloaded bitflags v1.3.2
+  Downloaded anyhow v1.0.104
+  Downloaded bs58 v0.5.1
+  Downloaded camino v1.2.6
+  Downloaded bit-vec v0.10.2
+  Downloaded bit-set v0.11.1
+  Downloaded cairo-sys-rs v0.18.2
+  Downloaded adler2 v2.0.1
+  Downloaded alloc-stdlib v0.3.0
+  Downloaded brotli-decompressor v6.3.1
+  Downloaded cargo_toml v1.0.1
+  Downloaded atk-sys v0.18.2
+  Downloaded cargo-platform v0.1.9
+  Downloaded byteorder v1.5.0
+  Downloaded cargo_metadata v0.19.2
+  Downloaded aho-corasick v1.1.5
+  Downloaded cesu8 v1.1.0
+  Downloaded cfb v0.14.0
+  Downloaded cfg-expr v0.15.8
+  Downloaded chrono v0.4.45
+  Downloaded cssparser v0.38.0
+  Downloaded combine v4.6.9
+  Downloaded dlopen2 v0.8.2
+  Downloaded cpufeatures v0.2.17
+  Downloaded crypto-common v0.1.7
+  Downloaded digest v0.10.7
+  Downloaded ctor v1.0.13
+  Downloaded crc32fast v1.5.5
+  Downloaded crossbeam-channel v0.5.17
+  Downloaded derive_more v2.1.1
+  Downloaded cssparser v0.37.0
+  Downloaded derive_more-impl v2.1.1
+  Downloaded darling_core v0.24.1
+  Downloaded dirs-sys v0.5.0
+  Downloaded dlopen2_derive v0.4.3
+  Downloaded cookie v0.18.2
+  Downloaded dirs v7.0.0
+  Downloaded darling v0.24.1
+  Downloaded crossbeam-utils v0.8.23
+  Downloaded cssparser-macros v0.7.1
+  Downloaded darling_macro v0.24.1
+  Downloaded dtoa v1.0.11
+  Downloaded dyn-clone v1.0.20
+  Downloaded dbus v0.9.12
+  Downloaded dpi v0.1.2
+  Downloaded dtoa-short v0.3.5
+  Downloaded dom_query v0.29.0
+  Downloaded embed-resource v3.0.12
+  Downloaded dunce v1.0.5
+  Downloaded equivalent v1.0.3
+  Downloaded fnv v1.0.7
+  Downloaded erased-serde v0.4.11
+  Downloaded dom_query v0.28.0
+  Downloaded field-offset v0.3.6
+  Downloaded gdk-pixbuf v0.18.5
+  Downloaded fdeflate v0.3.7
+  Downloaded gdk v0.18.2
+  Downloaded flate2 v1.1.11
+  Downloaded gdk-pixbuf-sys v0.18.0
+  Downloaded futures-executor v0.3.34
+  Downloaded gdk-sys v0.18.2
+  Downloaded gdkx11 v0.18.2
+  Downloaded gdkx11-sys v0.18.2
+  Downloaded getrandom v0.3.4
+  Downloaded gdkwayland-sys v0.18.2
+  Downloaded generic-array v0.14.7
+  Downloaded gio-sys v0.18.1
+  Downloaded glib v0.18.5
+  Downloaded gio v0.18.4
+  Downloaded glib-sys v0.18.1
+  Downloaded glib-macros v0.18.5
+  Downloaded gtk v0.18.2
+  Downloaded gobject-sys v0.18.0
+  Downloaded gtk3-macros v0.18.2
+  Downloaded hashbrown v0.12.3
+  Downloaded heck v0.4.1
+  Downloaded gtk-sys v0.18.2
+  Downloaded glob v0.3.4
+  Downloaded heck v0.5.0
+  Downloaded hex v0.4.3
+  Downloaded html5ever v0.39.0
+  Downloaded ico v0.6.0
+  Downloaded iana-time-zone v0.1.65
+  Downloaded ident_case v1.0.1
+  Downloaded indexmap v1.9.3
+  Downloaded html5ever v0.40.1
+  Downloaded javascriptcore-rs-sys v1.1.1
+  Downloaded jiff-core v0.1.5
+  Downloaded javascriptcore-rs v1.1.2
+  Downloaded infer v0.22.0
+  Downloaded toml v0.8.2
+  Downloaded jiff v0.2.43
+  Downloaded webkit2gtk-sys v2.0.2
+  Downloaded indexmap v2.14.2
+  Downloaded toml_edit v0.19.15
+  Downloaded toml_writer v1.2.0+spec-1.1.0
+  Downloaded version-compare v0.2.1
+  Downloaded jni-sys-macros v0.4.1
+  Downloaded web-time v1.1.0
+  Downloaded libappindicator v0.9.0
+  Downloaded x11-dl v2.21.0
+  Downloaded libloading v0.7.4
+  Downloaded num_enum_derive v0.7.6
+  Downloaded parking_lot_core v0.9.12
+  Downloaded miniz_oxide v0.8.9
+  Downloaded parking_lot v0.12.5
+  Downloaded miniz_oxide v0.9.1
+  Downloaded phf_generator v0.13.1
+  Downloaded png v0.18.1
+  Downloaded servo_arc v0.5.0
+  Downloaded rustc_version v0.4.1
+  Downloaded string_cache_codegen v0.6.1
+  Downloaded regex v1.13.1
+  Downloaded plist v1.10.3
+  Downloaded soup3 v0.5.0
+  Downloaded quick-xml v0.42.0
+  Downloaded serde_repr v0.1.21
+  Downloaded schemars v0.8.22
+  Downloaded jni v0.21.1
+  Downloaded serde_spanned v0.6.9
+  Downloaded string_cache_codegen v0.11.2
+  Downloaded string_cache v0.11.0
+  Downloaded selectors v0.41.0
+  Downloaded syn v1.0.109
+  Downloaded system-deps v6.2.2
+  Downloaded strsim v0.11.1
+  Downloaded tao-macros v0.1.4
+  Downloaded tao v0.37.2
+  Downloaded target-lexicon v0.12.16
+  Downloaded tauri v2.12.5
+  Downloaded tauri-macros v2.7.4
+  Downloaded tauri-plugin v2.7.2
+  Downloaded tauri-build v2.7.4
+  Downloaded toml_datetime v1.1.3+spec-1.1.0
+  Downloaded toml_datetime v0.6.3
+  Downloaded tauri-codegen v2.7.4
+  Downloaded tauri-winres v0.3.7
+  Downloaded tauri-runtime v2.12.2
+  Downloaded toml_edit v0.20.2
+  Downloaded tauri-runtime-wry v2.12.3
+  Downloaded thiserror-impl v1.0.69
+  Downloaded tendril v0.5.1
+  Downloaded thiserror v1.0.69
+  Downloaded toml v1.2.1+spec-1.1.0
+  Downloaded tauri-utils v2.10.2
+  Downloaded toml_edit v0.25.19+spec-1.1.0
+  Downloaded toml_parser v1.1.5+spec-1.1.0
+  Downloaded tray-icon v0.25.1
+  Downloaded urlpattern v0.6.0
+  Downloaded typeid v1.0.3
+  Downloaded walkdir v2.5.0
+  Downloaded web_atoms v0.2.6
+  Downloaded version_check v0.9.5
+  Downloaded webkit2gtk v2.0.2
+  Downloaded web_atoms v0.3.0
+  Downloaded winnow v0.5.40
+  Downloaded winnow v1.0.5
+  Downloaded x11 v2.21.0
+  Downloaded wry v0.57.2
+  Downloaded jni-sys v0.3.1
+  Downloaded zlib-rs v0.6.8
+  Downloaded json-patch v4.2.0
+  Downloaded jsonptr v0.7.1
+  Downloaded keyboard-types v0.8.3
+  Downloaded jni-sys v0.4.1
+  Downloaded libappindicator-sys v0.9.0
+  Downloaded markup5ever v0.40.0
+  Downloaded markup5ever v0.39.0
+  Downloaded memoffset v0.9.1
+  Downloaded libdbus-sys v0.2.7
+  Downloaded mime v0.3.18
+  Downloaded ndk v0.9.0
+  Downloaded new_debug_unreachable v1.0.6
+  Downloaded ndk-context v0.1.1
+  Downloaded option-ext v0.2.0
+  Downloaded muda v0.20.0
+  Downloaded phf v0.13.1
+  Downloaded ndk-sys v0.6.0+11769913
+  Downloaded pango-sys v0.18.0
+  Downloaded num_enum v0.7.6
+  Downloaded phf v0.14.0
+  Downloaded pango v0.18.3
+  Downloaded phf_codegen v0.13.1
+  Downloaded phf_codegen v0.14.0
+  Downloaded phf_generator v0.14.0
+  Downloaded phf_macros v0.13.1
+  Downloaded precomputed-hash v0.1.1
+  Downloaded phf_macros v0.14.0
+  Downloaded proc-macro-crate v1.3.1
+  Downloaded phf_shared v0.13.1
+  Downloaded proc-macro-crate v3.5.0
+  Downloaded proc-macro-error-attr v1.0.4
+  Downloaded phf_shared v0.14.0
+  Downloaded proc-macro-error v1.0.4
+  Downloaded proc-macro-crate v2.0.2
+  Downloaded ref-cast v1.0.27
+  Downloaded raw-window-handle v0.6.2
+  Downloaded same-file v1.0.6
+  Downloaded regex-syntax v0.8.11
+  Downloaded ref-cast-impl v1.0.27
+  Downloaded rustversion v1.0.23
+  Downloaded reqwest v0.13.5
+  Downloaded regex-automata v0.4.18
+  Downloaded serde-untagged v0.1.9
+  Downloaded schemars_derive v0.8.22
+  Downloaded schemars v0.9.0
+  Downloaded schemars v1.2.3
+  Downloaded serde_derive_internals v0.29.1
+  Downloaded semver v1.0.28
+  Downloaded selectors v0.38.0
+  Downloaded serde_with v3.24.0
+  Downloaded serde_with_macros v3.24.0
+  Downloaded serialize-to-javascript-impl v0.1.2
+  Downloaded servo_arc v0.4.3
+  Downloaded siphasher v1.0.4
+  Downloaded serialize-to-javascript v0.1.2
+  Downloaded serde_spanned v1.1.3
+  Downloaded sha2 v0.10.9
+  Downloaded static_vcruntime v3.0.0
+  Downloaded soup3-sys v0.5.0
+  Downloaded string_cache v0.9.0
+  Downloaded simd-adler32 v0.3.10
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.27
+   Compiling quote v1.0.47
+   Compiling libc v0.2.191
+   Compiling serde_core v1.0.229
+   Compiling siphasher v1.0.4
+   Compiling fastrand v2.5.0
+   Compiling serde v1.0.229
+   Compiling syn v3.0.10
+   Compiling syn v2.0.119
+   Compiling icu_properties_data v2.4.0
+   Compiling icu_normalizer_data v2.4.0
+   Compiling zmij v1.0.23
+   Compiling cfg-if v1.0.5
+   Compiling phf_shared v0.13.1
+   Compiling memchr v2.8.3
+   Compiling thiserror v2.0.21
+   Compiling phf_generator v0.13.1
+   Compiling getrandom v0.4.3
+   Compiling stable_deref_trait v1.2.1
+   Compiling parking_lot_core v0.9.12
+   Compiling smallvec v1.16.5
+   Compiling num-conv v0.2.2
+   Compiling time-core v0.1.9
+   Compiling shlex v2.0.1
+   Compiling find-msvc-tools v0.1.15
+   Compiling cc v1.11.1
+   Compiling synstructure v0.14.0
+   Compiling autocfg v1.5.1
+   Compiling serde_derive v1.0.229
+   Compiling displaydoc v0.2.7
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling zerovec-derive v0.11.7
+   Compiling thiserror-impl v2.0.21
+   Compiling zerofrom v0.1.8
+   Compiling yoke v0.8.4
+   Compiling itoa v1.0.19
+   Compiling log v0.4.35
+   Compiling winnow v1.0.5
+   Compiling zerovec v0.11.9
+   Compiling toml_datetime v1.1.3+spec-1.1.0
+   Compiling toml_parser v1.1.5+spec-1.1.0
+   Compiling phf_macros v0.13.1
+   Compiling typeid v1.0.3
+   Compiling hashbrown v0.17.1
+   Compiling bytes v1.12.1
+   Compiling equivalent v1.0.3
+   Compiling version_check v0.9.5
+   Compiling tinystr v0.8.5
+   Compiling phf_codegen v0.13.1
+   Compiling indexmap v2.14.2
+   Compiling erased-serde v0.4.11
+   Compiling strsim v0.11.1
+   Compiling writeable v0.6.4
+   Compiling ident_case v1.0.1
+   Compiling litemap v0.8.3
+   Compiling utf_types v1.0.0
+   Compiling icu_locale_core v2.4.0
+   Compiling utf8_iter v1.1.0
+   Compiling darling_core v0.24.1
+   Compiling potential_utf v0.1.6
+   Compiling zerotrie v0.2.5
+   Compiling derive_more-impl v2.1.1
+   Compiling cssparser-macros v0.7.1
+   Compiling icu_collections v2.4.0
+   Compiling icu_provider v2.4.0
+   Compiling scopeguard v1.2.0
+   Compiling new_debug_unreachable v1.0.6
+   Compiling anyhow v1.0.104
+   Compiling lock_api v0.4.14
+   Compiling phf v0.13.1
+   Compiling string_cache_codegen v0.6.1
+   Compiling precomputed-hash v0.1.1
+   Compiling serde_json v1.0.154
+   Compiling parking_lot v0.12.5
+   Compiling icu_properties v2.4.0
+   Compiling web_atoms v0.2.6
+   Compiling icu_normalizer v2.4.0
+   Compiling generic-array v0.14.7
+   Compiling semver v1.0.28
+   Compiling futures-core v0.3.34
+   Compiling idna_adapter v1.2.2
+   Compiling darling_macro v0.24.1
+   Compiling string_cache v0.9.0
+   Compiling darling v0.24.1
+   Compiling serde_with_macros v3.24.0
+   Compiling serde_spanned v1.1.3
+   Compiling phf_shared v0.14.0
+   Compiling toml_writer v1.2.0+spec-1.1.0
+   Compiling percent-encoding v2.3.2
+   Compiling bitflags v2.13.2
+   Compiling typenum v1.20.1
+   Compiling dtoa v1.0.11
+   Compiling dtoa-short v0.3.5
+   Compiling toml v1.2.1+spec-1.1.0
+   Compiling form_urlencoded v1.2.2
+   Compiling phf_generator v0.14.0
+   Compiling uuid v1.29.2
+   Compiling idna v1.1.0
+   Compiling tendril v0.5.1
+   Compiling selectors v0.38.0
+   Compiling aho-corasick v1.1.5
+   Compiling indexmap v1.9.3
+   Compiling time-macros v0.2.32
+   Compiling socket2 v0.6.5
+   Compiling pin-project-lite v0.2.17
+   Compiling deranged v0.5.9
+   Compiling regex-syntax v0.8.11
+   Compiling alloc-no-stdlib v3.0.0
+   Compiling powerfmt v0.2.1
+   Compiling camino v1.2.6
+   Compiling alloc-stdlib v0.3.0
+   Compiling time v0.3.55
+   Compiling markup5ever v0.39.0
+   Compiling url v2.5.8
+   Compiling cssparser v0.37.0
+   Compiling regex-automata v0.4.18
+   Compiling derive_more v2.1.1
+   Compiling http v1.5.0
+   Compiling mio v1.2.4
+   Compiling serde_derive_internals v0.29.1
+   Compiling servo_arc v0.4.3
+   Compiling fnv v1.0.7
+   Compiling web-time v1.1.0
+   Compiling hashbrown v0.12.3
+   Compiling rustc-hash v2.1.3
+   Compiling foldhash v0.2.0
+   Compiling bit-vec v0.8.0
+   Compiling schemars v0.8.22
+   Compiling bit-set v0.8.0
+   Compiling cfb v0.14.0
+   Compiling regex v1.13.1
+   Compiling schemars_derive v0.8.22
+   Compiling html5ever v0.39.0
+   Compiling brotli-decompressor v6.3.1
+   Compiling jsonptr v0.7.1
+   Compiling cargo-platform v0.1.9
+   Compiling quick-xml v0.42.0
+   Compiling dunce v1.0.5
+   Compiling same-file v1.0.6
+   Compiling base64 v0.23.1
+   Compiling tauri-utils v2.10.2
+   Compiling dyn-clone v1.0.20
+   Compiling plist v1.10.3
+   Compiling dom_query v0.28.0
+   Compiling walkdir v2.5.0
+   Compiling cargo_metadata v0.19.2
+   Compiling json-patch v4.2.0
+   Compiling brotli v9.1.1
+   Compiling serde-untagged v0.1.9
+   Compiling urlpattern v0.6.0
+   Compiling infer v0.22.0
+   Compiling serde_with v3.24.0
+   Compiling tokio-macros v2.7.2
+   Compiling ctor v1.0.13
+   Compiling glob v0.3.4
+   Compiling tokio v1.54.1
+   Compiling ring v0.17.14
+   Compiling once_cell v1.21.4
+   Compiling zeroize v1.9.1
+   Compiling phf_macros v0.14.0
+   Compiling jni-sys-macros v0.4.1
+   Compiling futures-macro v0.3.34
+   Compiling futures-task v0.3.34
+   Compiling slab v0.4.12
+   Compiling jni-sys v0.3.1
+   Compiling futures-util v0.3.34
+   Compiling jni-sys v0.4.1
+   Compiling phf v0.14.0
+   Compiling rustls-pki-types v1.16.0
+   Compiling http-body v1.1.0
+   Compiling string_cache_codegen v0.11.2
+   Compiling phf_codegen v0.14.0
+   Compiling rustc_version v0.4.1
+   Compiling num-traits v0.2.19
+   Compiling getrandom v0.2.17
+   Compiling untrusted v0.9.0
+   Compiling simd-adler32 v0.3.10
+   Compiling option-ext v0.2.0
+   Compiling httparse v1.10.1
+   Compiling thiserror v1.0.69
+   Compiling dirs-sys v0.5.0
+   Compiling embed-resource v3.0.12
+   Compiling web_atoms v0.3.0
+   Compiling toml_edit v0.25.19+spec-1.1.0
+   Compiling thiserror-impl v1.0.69
+   Compiling crc32fast v1.5.5
+   Compiling heck v0.5.0
+   Compiling adler2 v2.0.1
+   Compiling try-lock v0.2.5
+   Compiling rustversion v1.0.23
+   Compiling tower-service v0.3.3
+   Compiling futures-sink v0.3.34
+   Compiling want v0.3.2
+   Compiling proc-macro-crate v3.5.0
+   Compiling string_cache v0.11.0
+   Compiling tauri-winres v0.3.7
+   Compiling dirs v7.0.0
+   Compiling tracing-core v0.1.36
+   Compiling cargo_toml v1.0.1
+   Compiling hybrid-array v0.4.15
+   Compiling rustls v0.23.46
+   Compiling vcpkg v0.2.15
+   Compiling static_vcruntime v3.0.0
+   Compiling crossbeam-utils v0.8.23
+   Compiling minimal-lexical v0.2.1
+   Compiling pkg-config v0.3.34
+   Compiling atomic-waker v1.1.2
+   Compiling libsqlite3-sys v0.40.0
+   Compiling tauri-build v2.7.4
+   Compiling hyper v1.12.0
+   Compiling nom v7.1.3
+   Compiling tracing v0.1.44
+   Compiling num_enum_derive v0.7.6
+   Compiling miniz_oxide v0.9.1
+   Compiling rustls-webpki v0.103.16
+   Compiling sync_wrapper v1.0.2
+   Compiling futures-channel v0.3.34
+   Compiling combine v4.6.9
+   Compiling cookie v0.18.2
+   Compiling synstructure v0.13.2
+   Compiling cesu8 v1.1.0
+   Compiling raw-window-handle v0.6.2
+   Compiling tower-layer v0.3.3
+   Compiling ipnet v2.12.2
+   Compiling subtle v2.6.1
+   Compiling jni v0.21.1
+   Compiling hyper-util v0.1.21
+   Compiling tower v0.5.3
+   Compiling asn1-rs-derive v0.6.0
+   Compiling markup5ever v0.40.0
+   Compiling flate2 v1.1.11
+   Compiling num_enum v0.7.6
+   Compiling rusticata-macros v4.1.0
+   Compiling cssparser v0.38.0
+   Compiling crypto-common v0.2.2
+   Compiling block-buffer v0.12.1
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling miniz_oxide v0.8.9
+   Compiling ndk-sys v0.6.0+11769913
+   Compiling fdeflate v0.3.7
+   Compiling dpi v0.1.2
+   Compiling asn1-rs-impl v0.2.0
+   Compiling servo_arc v0.5.0
+   Compiling bit-vec v0.10.2
+   Compiling const-oid v0.10.3
+   Compiling digest v0.11.3
+   Compiling bit-set v0.11.1
+   Compiling selectors v0.41.0
+   Compiling asn1-rs v0.7.2
+   Compiling png v0.18.1
+   Compiling ndk v0.9.0
+   Compiling digest v0.10.7
+   Compiling crossbeam-channel v0.5.17
+   Compiling html5ever v0.40.1
+   Compiling tower-http v0.6.11
+   Compiling tauri v2.12.5
+   Compiling num-integer v0.1.47
+   Compiling tokio-util v0.7.20
+   Compiling http-body-util v0.1.5
+   Compiling hashlink v0.12.2
+   Compiling tao-macros v0.1.4
+   Compiling cpufeatures v0.3.1
+   Compiling cpufeatures v0.2.17
+   Compiling byteorder v1.5.0
+   Compiling tauri-runtime v2.12.2
+   Compiling ryu-js v0.2.2
+   Compiling fallible-streaming-iterator v0.1.9
+   Compiling oid-registry v0.8.1
+   Compiling wry v0.57.2
+   Compiling fallible-iterator v0.3.0
+   Compiling serde_jcs v0.2.0
+   Compiling sha2 v0.10.9
+   Compiling ico v0.6.0
+   Compiling sha2 v0.11.1
+   Compiling num-bigint v0.4.8
+   Compiling dom_query v0.29.0
+   Compiling tauri-plugin v2.7.2
+   Compiling spin v0.9.9
+   Compiling tauri-runtime-wry v2.12.3
+   Compiling ndk-context v0.1.1
+   Compiling getrandom v0.3.4
+   Compiling tao v0.37.2
+   Compiling flume v0.12.0
+   Compiling tauri-plugin-companion-keystore v0.0.2 (/workspace/DeepSeek-Niang/plugins/companion-keystore)
+   Compiling rusqlite v0.42.0
+   Compiling companion-core v0.0.2 (/workspace/DeepSeek-Niang/crates/companion-core)
+   Compiling der-parser v10.0.0
+   Compiling tauri-codegen v2.7.4
+   Compiling tokio-rustls v0.26.6
+   Compiling webpki-roots v1.0.12
+   Compiling companion-secrets v0.0.2 (/workspace/DeepSeek-Niang/crates/companion-secrets)
+   Compiling yasna v0.6.0
+   Compiling socket-pktinfo v0.4.2
+   Compiling serialize-to-javascript-impl v0.1.2
+   Compiling if-addrs v0.15.0
+   Compiling data-encoding v2.11.1
+   Compiling lazy_static v1.5.1
+   Compiling ryu v1.0.23
+   Compiling serde_urlencoded v0.7.1
+   Compiling x509-parser v0.18.1
+   Compiling mdns-sd v0.21.7
+   Compiling serialize-to-javascript v0.1.2
+   Compiling rcgen v0.14.10
+   Compiling hyper-rustls v0.27.10
+   Compiling tauri-macros v2.7.4
+   Compiling reqwest v0.13.5
+   Compiling serde_repr v0.1.21
+   Compiling qrcode v0.14.1
+   Compiling base64 v0.22.1
+   Compiling mime v0.3.18
+   Compiling reqwest v0.12.28
+   Compiling companion-sync v0.0.2 (/workspace/DeepSeek-Niang/crates/companion-sync)
+   Compiling companion-app v0.0.2 (/workspace/DeepSeek-Niang/apps/companion/src-tauri)
+   Compiling companion-chat v0.0.2 (/workspace/DeepSeek-Niang/crates/companion-chat)
+    Finished `release` profile [optimized] target(s) in 2m 17s
+        Info symlinking lib "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so" in jniLibs dir "/workspace/DeepSeek-Niang/apps/companion/src-tauri/gen/android/app/src/main/jniLibs/arm64-v8a"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so" requires shared lib "libandroid.so"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so" requires shared lib "libdl.so"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so" requires shared lib "liblog.so"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so" requires shared lib "libm.so"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so" requires shared lib "libc.so"
+        Info symlink at "/workspace/DeepSeek-Niang/apps/companion/src-tauri/gen/android/app/src/main/jniLibs/arm64-v8a/libcompanion_app_lib.so" points to "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so"
+Fetching distribution.
+Downloading https://services.gradle.org/distributions/gradle-9.6.1-bin.zip
+.............10%.............20%..............30%.............40%..............50%.............60%.............70%..............80%.............90%..............100%
+Unable to initialize metrics, ensure /home/agent/.android is writable, details: /home/agent/.android/analytics.settings (No such file or directory)
+WARNING: The option setting 'android.proguard.failOnMissingFiles=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+Add android.sync.suppressAgpWarnings=UNSUPPORTED_PROJECT_OPTION_USE to the gradle.properties file to suppress this warning.
+WARNING: The option setting 'android.builtInKotlin=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+Add android.sync.suppressAgpWarnings=UNSUPPORTED_PROJECT_OPTION_USE to the gradle.properties file to suppress this warning.
+WARNING: The option setting 'android.newDsl=false' is deprecated.
+The current default is 'true'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+Add android.sync.suppressAgpWarnings=UNSUPPORTED_PROJECT_OPTION_USE to the gradle.properties file to suppress this warning.
+WARNING: API 'applicationVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding 
+    android.newDsl=false
+to this project's gradle.properties file.
+For more information, see http://developer.android.com/build/r/new-dsl.
+
+To determine what is calling applicationVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+Add android.sync.suppressAgpWarnings=DEPRECATED_DSL to the gradle.properties file to suppress this warning.
+WARNING: API 'testVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding 
+    android.newDsl=false
+to this project's gradle.properties file.
+For more information, see http://developer.android.com/build/r/new-dsl.
+
+To determine what is calling testVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+Add android.sync.suppressAgpWarnings=DEPRECATED_DSL to the gradle.properties file to suppress this warning.
+WARNING: API 'unitTestVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding 
+    android.newDsl=false
+to this project's gradle.properties file.
+For more information, see http://developer.android.com/build/r/new-dsl.
+
+To determine what is calling unitTestVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+Add android.sync.suppressAgpWarnings=DEPRECATED_DSL to the gradle.properties file to suppress this warning.
+w: file:///workspace/DeepSeek-Niang/apps/companion/src-tauri/gen/android/app/build.gradle.kts:17:1: 'fun Project.android(configure: Action<BaseAppModuleExtension>): Unit' is deprecated. Replaced by com.android.build.api.dsl.ApplicationExtension.
+This class is not used for the public extensions in AGP when android.newDsl=true, which is the default in AGP 9.0, and will be removed in AGP 10.0.
+WARNING: API 'libraryVariants' is obsolete and has been replaced with 'AndroidComponentsExtension'.
+It will be removed in version 10.0 of the Android Gradle plugin.
+The legacy variant API is disabled by default in AGP 9.0, but can be re-enabled by adding 
+    android.newDsl=false
+to this project's gradle.properties file.
+For more information, see http://developer.android.com/build/r/new-dsl.
+
+To determine what is calling libraryVariants, use -Pandroid.debug.obsoleteApi=true on the command line to display more information.
+Add android.sync.suppressAgpWarnings=DEPRECATED_DSL to the gradle.properties file to suppress this warning.
+w: file:///workspace/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-2.12.5/mobile/android/build.gradle.kts:8:1: 'fun Project.android(configure: Action<LibraryExtension>): Unit' is deprecated. Replaced by com.android.build.api.dsl.LibraryExtension.
+This class is not used for the public extensions in AGP when android.newDsl=true, which is the default in AGP 9.0, and will be removed in AGP 10.0.
+w: file:///workspace/DeepSeek-Niang/plugins/companion-keystore/android/build.gradle.kts:6:1: 'fun Project.android(configure: Action<LibraryExtension>): Unit' is deprecated. Replaced by com.android.build.api.dsl.LibraryExtension.
+This class is not used for the public extensions in AGP when android.newDsl=true, which is the default in AGP 9.0, and will be removed in AGP 10.0.
+
+> @deepseek/companion@0.0.2 tauri
+> tauri android android-studio-script --release --target aarch64
+
+        Info connection; remote_addr=127.0.0.1:37854 conn_id=0
+        Info Using installed NDK: /workspace/.cache/android-sdk/ndk/28.2.13676358
+   Compiling wry v0.57.2
+   Compiling tauri v2.12.5
+   Compiling tauri-plugin-companion-keystore v0.0.2 (/workspace/DeepSeek-Niang/plugins/companion-keystore)
+   Compiling companion-app v0.0.2 (/workspace/DeepSeek-Niang/apps/companion/src-tauri)
+   Compiling tauri-runtime-wry v2.12.3
+w: file:///workspace/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-2.12.5/mobile/android/src/main/java/app/tauri/AppPlugin.kt:35:37 'fun onBackPressed(): Unit' is deprecated. Deprecated in Java.
+w: file:///workspace/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-2.12.5/mobile/android/src/main/java/app/tauri/plugin/Plugin.kt:125:5 'fun onDestroy(): Unit' is deprecated. use onDestroy(activity: AppCompatActivity) instead.
+w: file:///workspace/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-2.12.5/mobile/android/src/main/java/app/tauri/plugin/Plugin.kt:130:5 'fun onRestart(): Unit' is deprecated. use onRestart(activity: AppCompatActivity) instead.
+w: file:///workspace/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-2.12.5/mobile/android/src/main/java/app/tauri/plugin/Plugin.kt:135:5 'fun onPause(): Unit' is deprecated. use onPause(activity: AppCompatActivity) instead.
+w: file:///workspace/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-2.12.5/mobile/android/src/main/java/app/tauri/plugin/Plugin.kt:140:5 'fun onResume(): Unit' is deprecated. use onResume(activity: AppCompatActivity) instead.
+w: file:///workspace/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-2.12.5/mobile/android/src/main/java/app/tauri/plugin/Plugin.kt:145:5 'fun onStop(): Unit' is deprecated. use onStop(activity: AppCompatActivity) instead.
+w: file:///workspace/.cache/cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-2.12.5/mobile/android/src/main/java/app/tauri/plugin/PluginHandle.kt:159:22 Java type mismatch: inferred type is 'Class<in CapturedType(*)!>?', but 'Class<*>' was expected.
+Java compiler version 21 has deprecated support for compiling with source/target version 8.
+Try one of the following options:
+    1. [Recommended] Use Java toolchain with a lower language version
+    2. Set a higher source/target version
+    3. Use a lower version of the JDK running the build (if you're not using Java toolchain)
+For more details on how to configure these settings, see https://developer.android.com/build/jdks.
+To suppress this warning, set android.javaCompile.suppressSourceTargetDeprecationWarning=true in gradle.properties.
+Add android.sync.suppressAgpWarnings=JAVA_COMPILE_DEPRECATED_SOURCE_TARGET to the gradle.properties file to suppress this warning.
+warning: [options] source value 8 is obsolete and will be removed in a future release
+warning: [options] target value 8 is obsolete and will be removed in a future release
+warning: [options] To suppress warnings about obsolete options, use -Xlint:-options.
+3 warnings
+    Finished `release` profile [optimized] target(s) in 40.02s
+        Info symlinking lib "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so" in jniLibs dir "/workspace/DeepSeek-Niang/apps/companion/src-tauri/gen/android/app/src/main/jniLibs/arm64-v8a"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so" requires shared lib "libandroid.so"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so" requires shared lib "libdl.so"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so" requires shared lib "liblog.so"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so" requires shared lib "libm.so"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/release/libcompanion_app_lib.so" requires shared lib "libc.so"
+w: file:///workspace/DeepSeek-Niang/apps/companion/src-tauri/gen/android/app/src/main/java/io/local/deepseekcompanion/generated/RustWebView.kt:26:18 'var databaseEnabled: Boolean' is deprecated. Deprecated in Java.
+w: file:///workspace/DeepSeek-Niang/apps/companion/src-tauri/gen/android/app/src/main/java/io/local/deepseekcompanion/generated/WryActivity.kt:69:46 'fun onBackPressed(): Unit' is deprecated. This method has been deprecated in favor of using the
+      {@link OnBackPressedDispatcher} via {@link #getOnBackPressedDispatcher()}.
+      The OnBackPressedDispatcher controls how back button events are dispatched
+      to one or more {@link OnBackPressedCallback} objects.
+Java compiler version 21 has deprecated support for compiling with source/target version 8.
+Try one of the following options:
+    1. [Recommended] Use Java toolchain with a lower language version
+    2. Set a higher source/target version
+    3. Use a lower version of the JDK running the build (if you're not using Java toolchain)
+For more details on how to configure these settings, see https://developer.android.com/build/jdks.
+To suppress this warning, set android.javaCompile.suppressSourceTargetDeprecationWarning=true in gradle.properties.
+Add android.sync.suppressAgpWarnings=JAVA_COMPILE_DEPRECATED_SOURCE_TARGET to the gradle.properties file to suppress this warning.
+warning: [options] source value 8 is obsolete and will be removed in a future release
+warning: [options] target value 8 is obsolete and will be removed in a future release
+warning: [options] To suppress warnings about obsolete options, use -Xlint:-options.
+3 warnings
+Warning: Unable to initialize metrics, ensure /home/agent/.android is writable, details: /home/agent/.android/analytics.settings (No such file or directory)
+
+[Incubating] Problems report is available at: file:///workspace/DeepSeek-Niang/apps/companion/src-tauri/gen/android/build/reports/problems/problems-report.html
+Configuration cache entry stored.
+    Finished 1 APK at:
+        /workspace/DeepSeek-Niang/apps/companion/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk
+
+a86a1cdfb7045a3937b698be94e8fac7ccd44017335a642a01e37bea7a2e93ea apps/companion/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk
+APK files exist; installation, Keystore and real API tests require a device.

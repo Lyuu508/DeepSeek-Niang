@@ -48,4 +48,4 @@ Android 原签名是否可恢复尚待 GitHub Secrets 与旧环境核实，不�
 
 ## 阶段 2 CI 修复（2026-11-14）
 
-从 b7330d9 修复 Windows accepted socket 模式与 Android SDK 命令路径，保留全部原有测试，新增真实 TLS 非阻塞回归；本地 73 项 Rust 与其余常规检查通过。原 APK 已重新实际验签。双端 Hosted 构建、签名 Secrets 元数据和发布仍须取得远程执行证据；不开始阶段 3。见 [CI 修复报告](docs/PHASE2_CI_FIX_REPORT.md)。
+从 b7330d9 修复 Windows accepted socket 模式与 Android SDK 命令路径，保留全部原有测试，新增真实 TLS 非阻塞回归；本地 73 项 Rust 与其余常规检查通过。原 APK 已重新实际验签。e65b3ed 的 Run 43554759767 三个 Hosted 作业均成功，Windows 含原生测试与安装 smoke，Android 为未签名 ARM64 APK；本机另有完整未签名 APK 与脱敏日志。签名 Secrets 元数据、原签名升级包、远程附件复核与发布仍受 API 访问阻挡；不开始阶段 3。见 [CI 修复报告](docs/PHASE2_CI_FIX_REPORT.md)。

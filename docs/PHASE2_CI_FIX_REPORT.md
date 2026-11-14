@@ -37,15 +37,32 @@ Android：原工作流直接调用不保证在 PATH 中的 sdkmanager。GitHub r
 | check_schema / check-branding / version | 完整性与约束、69 项品牌哈希、0.0.2/1002 版本一致性通过 |
 | actionlint 1.7.12 / git diff --check | 通过 |
 | 历史 APK apksigner 与 aapt2 | 通过，公开证书输出和 JSON 已保存 |
-| 本次 Windows 原生 cargo test、EXE、安装 smoke | 待 GitHub Hosted Windows 实际执行，不计通过 |
-| 本次 Android ARM64 APK、原签名覆盖升级 APK | 待 GitHub Hosted Android 实际执行及签名条件确认，不计通过 |
+| 本次 Windows 原生 cargo test、EXE、安装 smoke | Run 43554759767 的 Windows Job 132324985477 成功；工作流中的测试、构建、静默安装与窗口启动均为失败即终止步骤。当前只能读取公开完成状态，完整日志与附件待 API 下载 |
+| 本次 Android ARM64 APK | Run 43554759767 的 Android Job 132324985408 成功（unsigned-ci）。本地也完成整个 Rust/Kotlin/Java/Gradle 构建并验证 ARM64、版本、包名和 ZIP；原签名覆盖升级包仍未构建 |
 | 同 SHA 双端包 / SHA256SUMS / Pre-release | 尚未具备，不生成虚构安装包、哈希或下载链接 |
+
+## 双端重新构建的实际结果
+
+已推送修复 [e65b3ed6601bbf8accab89ad5497c45e872a2970](https://github.com/Lyuu508/DeepSeek-Niang/commit/e65b3ed6601bbf8accab89ad5497c45e872a2970)，触发 [CI Run 43554759767](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43554759767)。2026-11-14 12:14（Asia/Shanghai）通过 GitHub 公开页面核验三个作业全部成功：
+
+- Linux Test [132324985283](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43554759767/job/132324985283)。
+- Windows [132324985477](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43554759767/job/132324985477)：原生测试、EXE 构建和安装窗口 smoke 的受检流水线成功，Artifact 名称 windows-package-1。
+- Android [132324985408](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43554759767/job/132324985408)：SDK 安装、ARM64 APK 构建与未签名结构验证成功，Artifact 名称 android-package-1。
+
+两个构建 job 的 source_sha 输入均是 e65b3ed6601bbf8accab89ad5497c45e872a2970；远程完整日志、构建 JSON 和包哈希还未下载，不能声称已独立复核远程产物内容。公开状态来自同一 Run 的 job 页面，不是 API 成功，也不是 Mock。
+
+为避免停在工作流语法检查，本机另外实际安装同版 Command-line Tools 16.0、JDK 21.0.13、Platform 36、Build Tools 36.0.0、NDK 28.2.13676358，检查安装清单和真实路径；保留 TLS、归档校验及 Gradle 分发校验。Cloud 的本地 Java 代理适配在 checkout 外为 JAVA_OPTS 的 nonProxyHosts 含管道字符参数加引号，避免 SDKmanager shell eval 将其当管道；未改仓库文件或 Hosted 工作流。
+
+本地 sh scripts/build-android.sh --unsigned-ci 退出码 0，真实生成 app-universal-release-unsigned.apk（23,539,109 字节），后续 verify_android --unsigned-ci 通过：io.local.deepseekcompanion、0.0.2/1002、仅 arm64-v8a、ZIP 完整性与私钥文件排除。构建时源码 HEAD 为 e65b3ed，working_tree_clean=true。
+SHA-256：a86a1cdfb7045a3937b698be94e8fac7ccd44017335a642a01e37bea7a2e93ea。
+该 APK 未签名，不可安装；这不是独立签名测试 APK，也不是原签名升级 APK。LOCAL-UNSIGNED-SHA256SUMS.txt 仅供此编译检查证据使用，不能替代正式双端 SHA256SUMS.txt。
+本地完整脱敏构建日志、路径清单、结构报告和远程状态快照均存于 validation-phase2-ci-fix；没有上传安装包或私钥到源码仓库。
 
 ## 发布门槛与待办
 
 目标继续为未发布的 0.0.2/1002。没有创建 Tag、Release 或占用下一版本；不覆盖历史版本。CI unsigned-ci 产物是未签名编译检查包，不能安装或当作连续升级包，也没有另生成独立签名测试 APK。只有原签名 APK、Windows installer smoke、必要自动化检查和同 SHA 证据全部通过才允许发布。
 
-当前唯一确认的远程访问阻碍是 api.github.com CONNECT 403。域名已加入环境草稿，需在环境设置保存以应用运行时网络配置，然后重试读取失败日志、列出四项 Secrets 的名称、检查本次 CI、触发固定 main SHA 的 release.yml。Secrets 若确实缺失，必须通过仓库安全设置恢复匹配原证书的旧 keystore，不在聊天中索取值。
+当前唯一确认的远程访问阻碍是 api.github.com CONNECT 403。域名已加入环境草稿，需在环境设置保存以应用运行时网络配置，然后读取完整构建日志与附件、列出四项 Secrets 的名称，触发固定源码 SHA e65b3ed6601bbf8accab89ad5497c45e872a2970 的 release.yml。Secrets 若确实缺失，必须通过仓库安全设置恢复匹配原证书的旧 keystore，不在聊天中索取值。
 
 真机未完成项目仍见 [PHASE2_ACCEPTANCE](PHASE2_ACCEPTANCE.md)：双端安装/原签名覆盖升级、旧 SQLite/人格/聊天/长期记忆保留、系统凭据与真实 API、家庭网线 PC + Wi-Fi Android 发现/双方确认/同步、断网重连/离线补传/冲突/删除/撤销及 Android 生命周期。云 loopback 和 UI Mock 不计入实机通过。
-没有修改业务数据库、DDL、聊天/人格/记忆数据或阶段 3 功能。远程提交与 Actions 结果以最终交付中的实际链接为准。
+没有修改业务数据库、DDL、聊天/人格/记忆数据或阶段 3 功能。修复源码与双端 CI 对应 e65b3ed；后续文档提交只补充这些已完成结果，不将新文档提交冒充原构建源码。

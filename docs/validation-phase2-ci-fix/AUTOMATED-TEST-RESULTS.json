@@ -1,0 +1,51 @@
+{
+  "source_commit": "e65b3ed6601bbf8accab89ad5497c45e872a2970",
+  "local_tests": {
+    "rust": 73,
+    "python": 10,
+    "sync_model": 3,
+    "ui_explicit_mock": 18,
+    "clippy": "passed",
+    "frontend": "passed",
+    "schema": "passed",
+    "branding_files_verified": 69,
+    "actionlint": "passed"
+  },
+  "remote_ci": {
+    "run": 43554759767,
+    "source_commit": "e65b3ed6601bbf8accab89ad5497c45e872a2970",
+    "observed_at": "2026-11-14T04:14:00.299005+00:00",
+    "url": "https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43554759767",
+    "jobs": {
+      "test": "completed successfully",
+      "packages.windows": "completed successfully",
+      "packages.android": "completed successfully"
+    }
+  },
+  "local_android": {
+    "platform": "android",
+    "source_commit": "e65b3ed6601bbf8accab89ad5497c45e872a2970",
+    "working_tree_clean": true,
+    "version": "0.0.2",
+    "version_code": 1002,
+    "application_id": "io.local.deepseekcompanion",
+    "abi": "arm64-v8a",
+    "file": "app-universal-release-unsigned.apk",
+    "bytes": 23539109,
+    "sha256": "a86a1cdfb7045a3937b698be94e8fac7ccd44017335a642a01e37bea7a2e93ea",
+    "signature_verified": false,
+    "signer_certificate_sha256": null,
+    "physical_device_tested": false
+  },
+  "historical_android": {
+    "reference_version": "0.0.1",
+    "application_id": "io.local.deepseekcompanion",
+    "sha256": "5100cdd29b6751e3ffd1d6536f5c125af6888f679dc524cdfbb6048afe3195d8",
+    "signer_certificate_sha256": "9de96ea5fb1d0b3f91ea73d9a16c030428453b15838927a85f86773eaef208a1",
+    "signature_verified": true,
+    "apksigner_output": "Verifies\nVerified using v1 scheme (JAR signing): false\nVerified using v2 scheme (APK Signature Scheme v2): true\nVerified using v3 scheme (APK Signature Scheme v3): false\nVerified using v3.1 scheme (APK Signature Scheme v3.1): false\nVerified using v4 scheme (APK Signature Scheme v4): false\nVerified for SourceStamp: false\nNumber of signers: 1\nSigner #1 certificate DN: C=US, O=Android, CN=Android Debug\nSigner #1 certificate SHA-256 digest: 9de96ea5fb1d0b3f91ea73d9a16c030428453b15838927a85f86773eaef208a1\nSigner #1 certificate SHA-1 digest: 5492eaa7670106f29494a810b4d9805bfa311680\nSigner #1 certificate MD5 digest: 129836e53652cb60fa34a1a68e7296f1\nSigner #1 key algorithm: RSA\nSigner #1 key size (bits): 2048\nSigner #1 public key SHA-256 digest: a575e3b8c74e3914dd52a3739e44bc258c633d891326c244acb26269671b0995\nSigner #1 public key SHA-1 digest: f6628c5bf31d162939da3a5bc8f2b5988fd7a0ec\nSigner #1 public key MD5 digest: 2cac4bc4d2576724abac50745e8b929f\n"
+  },
+  "release_status": "blocked: api.github.com proxy denies Secrets metadata, artifact retrieval and signed-release dispatch; signing identity availability is unknown",
+  "physical_device_tested": false,
+  "stage3_started": false
+}

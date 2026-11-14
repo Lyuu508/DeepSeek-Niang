@@ -49,4 +49,4 @@ CI 与 Release 分离。`ci.yml` 测试并调用双平台构建；Windows 复用
 
 ## b7330d9 双端 CI 修复
 
-最新修复、73 项 Rust 回归、历史 APK 实际验签和未完成的原生构建见 [CI 修复报告](PHASE2_CI_FIX_REPORT.md)。本节不将旧本地未签名构建计为此次可发布产物。
+最新修复、73 项 Rust 回归、历史 APK 实际验签、Run 43554759767 双端 Hosted 构建成功及原签名发布阻碍见 [CI 修复报告](PHASE2_CI_FIX_REPORT.md)。本节不将旧本地未签名构建计为此次可发布产物。

@@ -1,0 +1,11 @@
+{
+  "sdk_root": "/workspace/.cache/android-sdk",
+  "ndk_root": "/workspace/.cache/android-sdk/ndk/28.2.13676358",
+  "verified_paths": [
+    "/workspace/.cache/android-sdk/platforms/android-36/android.jar",
+    "/workspace/.cache/android-build-tools/android-16/apksigner",
+    "/workspace/.cache/android-sdk/ndk/28.2.13676358/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android29-clang"
+  ],
+  "source_commit": "e65b3ed6601bbf8accab89ad5497c45e872a2970",
+  "scope": "Local SDK installation and ARM64 compilation prerequisites; no native device or signed APK result"
+}
