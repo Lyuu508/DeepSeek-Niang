@@ -12,6 +12,11 @@ spec.loader.exec_module(revision)
 
 
 class WindowsRevision(unittest.TestCase):
+    def test_node_totals_accept_node24_spec_and_tap_and_reject_failures(self):
+        for report in ['ℹ pass 5\nℹ fail 0\n','# pass 5\n# fail 0\n']:
+            self.assertEqual(revision.node_passes(report),5)
+        for report in ['ℹ pass 4\nℹ fail 1\n','# pass 5\n','unrelated output']:
+            with self.assertRaises(AssertionError):revision.node_passes(report)
     def test_chinese_revision_requires_native_language_and_install_proof(self):
         with tempfile.TemporaryDirectory() as directory:
             installer = Path(directory) / 'setup.exe'

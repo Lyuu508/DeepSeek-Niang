@@ -34,6 +34,14 @@ def preserved_android(release, request):
     assert len(assets) == 1 and assets[0]['digest'] == 'sha256:' + request['android_sha256']
 
 
+def node_passes(log):
+    # Node 24 uses the spec reporter (ℹ); TAP uses #. Both carry real totals.
+    clean = re.sub(r'\x1b\[[0-9;]*m', '', log)
+    counts = {name:int(value) for name,value in re.findall(r'(?m)^(?:#|ℹ)\s+(pass|fail)\s+(\d+)\s*$',clean)}
+    assert counts.get('pass') == 5 and counts.get('fail') == 0, 'Node sync-model test totals are missing or failing'
+    return counts['pass']
+
+
 def main():
     request = json.loads((ROOT / '.github/release-requests/v0.0.2-windows-zh.json').read_text())
     repo = os.environ['GH_REPO']
@@ -72,7 +80,7 @@ def main():
     rust = re.findall(r'test result: ok\. (\d+) passed; 0 failed; 0 ignored;', logs['rust-tests.txt'])
     assert rust and sum(map(int,rust)) >= 77
     assert 'Ran 17 tests' in logs['python-tests.txt'] and '\nOK' in logs['python-tests.txt']
-    assert '# pass 5' in logs['sync-model.txt'] and '# fail 0' in logs['sync-model.txt']
+    node_passes(logs['sync-model.txt'])
     for mode in ['ui','ui-isolated']:
         ui = json.loads((tests / mode / 'results.json').read_text())
         assert ui['passed'] == 20 and 'Mock' in ui['scope']
@@ -124,4 +132,12 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as error:
+        # A normal check annotation remains useful when log downloads are unavailable.
+        # Do not include captured command output, credentials or a full log here.
+        import traceback
+        frame = traceback.extract_tb(error.__traceback__)[-1]
+        print(f'::error file=.github/scripts/publish-windows-revision.py,line={frame.lineno}::{type(error).__name__}: {frame.line}',flush=True)
+        raise
