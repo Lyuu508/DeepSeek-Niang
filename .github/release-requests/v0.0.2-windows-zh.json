@@ -1,0 +1,9 @@
+{
+  "source_sha": "7e1d1ceb97d9213c1d307353518b7a86d23f1e1a",
+  "ci_run_id": 43580981180,
+  "artifact_name": "windows-package-1",
+  "test_artifact_name": "automated-test-reports-1",
+  "release_id": 445111880,
+  "original_source_sha": "1c86678963cb83819e7a72cada6d279fcac9736c",
+  "android_sha256": "cb8cb0c4daef387aad9ed3d6ebdc9f0c934b6f9dcb81762e499a0c1b9a306dec"
+}

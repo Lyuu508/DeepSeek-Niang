@@ -1,4 +1,12 @@
-# Windows 首次安装与本机构建
+# 当前 0.0.2 中文修订
+
+中文 Windows 安装器的发布与检查结果见 [扫码与中文修订报告](PHASE2_SCAN_ZH_REPORT.md)。在现有 0.0.2 页面选择带 `windows-x64-setup-zh.exe` 后缀的附件与 `WINDOWS-ZH-SHA256SUMS.txt`，无需解压。原 EXE/APK 和原校验文件保留用于回退；新 Windows 修订的源码见其独立构建报告，与旧手机 APK 不同。
+
+安装前关闭正在运行的应用，保留现有安装与数据目录，勿先卸载或清理聊天。向导应直接显示简体中文；安装后核对原人格、历史与记忆，用户旧机覆盖升级仍须实机验收。Windows 系统自身的 SmartScreen、权限和 WebView2 对话框语言由系统决定，安装器未做 Authenticode 签名，不要关闭系统防护。
+
+现有手机测试包按用户选择保持原文件与签名。新电脑里选择“旧版手机：显示兼容配对码”与旧手机配对，仍需双方确认；电脑出码、手机一扫的新版流程等待相同手机签名后交付。网络条件及实机清单见 [阶段 2 验收](PHASE2_ACCEPTANCE.md)。
+
+# Windows 0.0.1 历史安装与本机构建
 
 目标：Windows 10/11 x64，测试版本 0.0.1。正式海滩PNG已导入并校验，[下载本次安装器](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.1/DeepSeek-Niang_0.0.1_windows-x64-setup.exe)。Windows原生runner已通过58项测试、静默安装和安装后窗口启动，并目视确认正式图标/头像；用户设备安装、旧库升级和真实API仍待验收。详细范围见随包 BUILD-RESULTS.json；旧dev.1安装器只代表旧版，本次不进入阶段2。
 
