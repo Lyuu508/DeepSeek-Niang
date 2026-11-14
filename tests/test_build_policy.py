@@ -37,6 +37,27 @@ class BuildPolicy(unittest.TestCase):
             self.assertIn("compileSdk = 36", gradle.read_text())
             self.assertIn("targetSdk = 36", gradle.read_text())
 
+    def test_android_debug_installation_keeps_production_identity_and_isolates_test_data(self):
+        prepare = module("prepare_android")
+        with tempfile.TemporaryDirectory() as folder:
+            project = Path(folder)
+            manifest = project / "app/src/main/AndroidManifest.xml"
+            manifest.parent.mkdir(parents=True)
+            manifest.write_text('<manifest xmlns:android="http://schemas.android.com/apk/res/android"><application><activity android:name=".MainActivity"/></application></manifest>')
+            gradle = project / "app/build.gradle.kts"
+            original = 'android {\n compileSdk = 36\n defaultConfig {\n targetSdk = 36\n applicationId = "io.local.deepseekcompanion"\n }\n}\n'
+            gradle.write_text(original)
+            prepare.prepare(project)
+            prepare.prepare(project)
+            text = gradle.read_text()
+            self.assertIn('applicationId = "io.local.deepseekcompanion"', text)
+            self.assertEqual(text.count('applicationIdSuffix = ".test"'), 1)
+            self.assertIn('buildTypes.getByName("debug")', text)
+            main = ET.parse(project / "app/src/main/res/values/strings.xml").getroot()
+            debug = ET.parse(project / "app/src/debug/res/values/companion_test.xml").getroot()
+            self.assertEqual(main.find("string[@name='app_name']").text, "DeepSeek娘")
+            self.assertEqual(debug.find("string[@name='app_name']").text, "DeepSeek娘 测试版")
+
     def test_export_excludes_databases_keys_dependencies_and_symlinks(self):
         exporter = module("export_source")
         with tempfile.TemporaryDirectory() as folder:

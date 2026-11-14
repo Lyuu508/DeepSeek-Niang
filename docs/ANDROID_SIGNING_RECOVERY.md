@@ -31,3 +31,7 @@ GitHub Actions Secrets 元数据目前查询被当前云代理拒绝（api.githu
 当前 gh 认证账号 x1770203628-prog，仓库可读写但非管理员；Secrets 公钥接口返回 GitHub Resource not accessible by integration (HTTP 403)。这证明当前集成权限不足，不能据此断定该账号经适当授权后也无法管理 Secrets。仓库所有者 Lyuu508 或有权限的管理员需要为官方 GitHub 集成授予此仓库的 Secrets 写权限，或自行在仓库 Settings 安全配置四项原签名 Secrets。
 
 在文件、密码/alias/私钥和接口写权限全部核验之前，不迁移 Secrets、不启动签名发布。详细证据见 TAKEOVER_2026-11-14.md。
+
+## 最新安排：独立待办，不阻挡开发
+
+用户已明确两个原 Keystore 来自另一个账号的旧任务，当前不再查找其本机路径、恢复文件、迁移或配置 Secrets。后续由用户单独恢复原身份。普通 CI 改为 .test 隔离测试包并使用开发测试签名，绝不当作原签名升级 APK；生产 applicationId 与 EXPECTED_CERT 不变。正式 v0.0.2 Release 仍须原身份与验收条件，不因独立测试包成功而自动创建。

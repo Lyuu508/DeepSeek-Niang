@@ -17,3 +17,5 @@ CI 仅测试、构建和保存 Artifacts。`release.yml` 只接受手动阶段�
 2026-11-14 CI 修复仍使用未发布目标 0.0.2 / 1002。本地检查通过不分配新版本；须验证同 SHA 的 Windows EXE 与原签名 Android APK 后才创建 v0.0.2 Pre-release。
 
 本次接管核查和文档校正不启动新版本：开发目标继续为未发布的 0.0.2/1002，已发布历史仍只有 0.0.1/1001。VERSION_HISTORY.json 只在真实发布完成后更新，不因 CI 构建成功或文件缺失预先占用版本。
+
+独立 Android 测试包继续使用 0.0.2/1002，但 applicationId 为 io.local.deepseekcompanion.test，不与正式 io.local.deepseekcompanion 共用更新或数据身份。Actions 构建号/完整提交 SHA 区分测试迭代；不占用 v0.0.3、不创建或覆盖正式 v0.0.2 Tag/Release。测试签名不代表原升级签名。

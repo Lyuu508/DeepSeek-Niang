@@ -1,0 +1,52 @@
+
+> deepseek-ai-companion@0.0.2 tauri
+> npm run tauri --workspace @deepseek/companion -- android build --apk --debug --target aarch64
+
+
+> @deepseek/companion@0.0.2 tauri
+> tauri android build --apk --debug --target aarch64
+
+        Info Using installed NDK: /workspace/.cache/android-sdk/ndk/28.2.13676358
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `node ../../scripts/check-branding.mjs && npm run build`
+{"status":"ready","source_sha256":"070adedf4a8896745ea8fb7755b3cbe4b673bcb51d1edc88cc76e46ea937aff1","verified_files":69}
+
+> @deepseek/companion@0.0.2 build
+> tsc --noEmit && vite build
+
+vite v8.3.8 building client environment for production...
+transforming...
+✓ 28 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.41 kB │ gzip:   0.29 kB
+dist/assets/index-D2h8rGJs.css   21.46 kB │ gzip:   5.16 kB
+dist/assets/index-DwUHR-Kn.js   402.40 kB │ gzip: 133.02 kB
+
+✓ built in 226ms
+   Compiling companion-app v0.0.2 (/workspace/DeepSeek-Niang/apps/companion/src-tauri)
+    Finished `dev` profile [unoptimized] target(s) in 4.11s
+        Info symlinking lib "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/debug/libcompanion_app_lib.so" in jniLibs dir "/workspace/DeepSeek-Niang/apps/companion/src-tauri/gen/android/app/src/main/jniLibs/arm64-v8a"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/debug/libcompanion_app_lib.so" requires shared lib "libandroid.so"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/debug/libcompanion_app_lib.so" requires shared lib "libdl.so"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/debug/libcompanion_app_lib.so" requires shared lib "liblog.so"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/debug/libcompanion_app_lib.so" requires shared lib "libm.so"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/debug/libcompanion_app_lib.so" requires shared lib "libc.so"
+        Info symlink at "/workspace/DeepSeek-Niang/apps/companion/src-tauri/gen/android/app/src/main/jniLibs/arm64-v8a/libcompanion_app_lib.so" points to "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/debug/libcompanion_app_lib.so"
+
+> @deepseek/companion@0.0.2 tauri
+> tauri android android-studio-script --target aarch64
+
+        Info connection; remote_addr=127.0.0.1:45332 conn_id=0
+        Info Using installed NDK: /workspace/.cache/android-sdk/ndk/28.2.13676358
+    Finished `dev` profile [unoptimized] target(s) in 0.38s
+        Info symlinking lib "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/debug/libcompanion_app_lib.so" in jniLibs dir "/workspace/DeepSeek-Niang/apps/companion/src-tauri/gen/android/app/src/main/jniLibs/arm64-v8a"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/debug/libcompanion_app_lib.so" requires shared lib "libandroid.so"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/debug/libcompanion_app_lib.so" requires shared lib "libdl.so"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/debug/libcompanion_app_lib.so" requires shared lib "liblog.so"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/debug/libcompanion_app_lib.so" requires shared lib "libm.so"
+        Info "/workspace/DeepSeek-Niang/apps/companion/src-tauri/target/aarch64-linux-android/debug/libcompanion_app_lib.so" requires shared lib "libc.so"
+Configuration cache entry reused.
+    Finished 1 APK at:
+        /workspace/DeepSeek-Niang/apps/companion/src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk
+

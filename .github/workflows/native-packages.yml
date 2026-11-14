@@ -29,6 +29,7 @@ jobs:
     env:
       CARGO_BUILD_JOBS: '4'
       CARGO_INCREMENTAL: '0'
+      EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -64,8 +65,12 @@ jobs:
           $exe = @(Get-ChildItem $root -Filter '*setup.exe')
           if ($exe.Count -ne 1) { throw 'Expected one Windows installer' }
           $version = (Get-Content VERSION.json | ConvertFrom-Json).version
+          if ((git rev-parse HEAD) -ne $env:EXPECTED_SOURCE_SHA) { throw 'Windows source SHA differs from requested source' }
+          if (-not [string]::IsNullOrWhiteSpace((git status --porcelain | Out-String))) { throw 'Windows build changed source files' }
           @{ platform='windows'; source_commit=(git rev-parse HEAD); version=$version; file=$exe[0].Name; sha256=(Get-FileHash $exe[0].FullName -Algorithm SHA256).Hash.ToLower(); bytes=$exe[0].Length; working_tree_clean=([string]::IsNullOrWhiteSpace((git status --porcelain | Out-String))); hosted_runner_install_smoke=$true; physical_device_tested=$false } | ConvertTo-Json | Set-Content (Join-Path $root 'windows-build.json') -Encoding utf8
+          Get-ChildItem $root -Filter '*.exe' | Sort-Object Name | ForEach-Object { (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower() + '  ' + $_.Name } | Set-Content (Join-Path $root 'SHA256SUMS.txt') -Encoding utf8
       - if: always()
+        id: windows_artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: windows-package-${{ github.run_attempt }}
@@ -73,12 +78,19 @@ jobs:
           if-no-files-found: error
           retention-days: 30
           compression-level: 0
+      - name: Link Windows installer evidence
+        if: success()
+        env:
+          ARTIFACT_URL: ${{ steps.windows_artifact.outputs.artifact-url }}
+        run: |
+          "Windows EXE installer, SHA256SUMS and native install smoke report: $env:ARTIFACT_URL" | Out-File $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
   android:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
       CARGO_BUILD_JOBS: '4'
       CARGO_INCREMENTAL: '0'
+      EXPECTED_SOURCE_SHA: ${{ inputs.source_sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -169,16 +181,32 @@ jobs:
           mkdir -p "$RUNNER_TEMP/deepseek-android-artifacts"
           if [ "$SIGNED" = 'true' ]; then
             python3 scripts/run_logged.py "$RUNNER_TEMP/deepseek-android-artifacts/android-build.log" sh scripts/build-android.sh
-            python3 scripts/verify_android.py --output "$RUNNER_TEMP/deepseek-android-artifacts/android-build.json"
+            variant=release
+            package_name="DeepSeek-Niang_$(python3 -c 'import json;print(json.load(open("VERSION.json"))["version"])')_android-arm64.apk"
+            verify_mode=()
           else
-            python3 scripts/run_logged.py "$RUNNER_TEMP/deepseek-android-artifacts/android-build.log" sh scripts/build-android.sh --unsigned-ci
-            python3 scripts/verify_android.py --unsigned-ci --output "$RUNNER_TEMP/deepseek-android-artifacts/android-build.json"
+            python3 scripts/run_logged.py "$RUNNER_TEMP/deepseek-android-artifacts/android-build.log" sh scripts/build-android.sh --test-package
+            variant=debug
+            package_name="DeepSeek-Niang_$(python3 -c 'import json;print(json.load(open("VERSION.json"))["version"])')_android-arm64-isolated-test.apk"
+            verify_mode=(--test-package)
           fi
-          find apps/companion/src-tauri/gen/android/app/build/outputs/apk -name '*.apk' -exec cp '{}' "$RUNNER_TEMP/deepseek-android-artifacts/" \;
+          mapfile -t packages < <(find apps/companion/src-tauri/gen/android/app/build/outputs/apk -path "*/$variant/*.apk")
+          test "${#packages[@]}" -eq 1
+          cp "${packages[0]}" "$RUNNER_TEMP/deepseek-android-artifacts/$package_name"
+          python3 scripts/verify_android.py "${verify_mode[@]}" --apk "$RUNNER_TEMP/deepseek-android-artifacts/$package_name" --output "$RUNNER_TEMP/deepseek-android-artifacts/android-build.json"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          report=json.loads((Path(os.environ['RUNNER_TEMP'])/'deepseek-android-artifacts/android-build.json').read_text())
+          assert report['source_commit']==os.environ['EXPECTED_SOURCE_SHA'], 'Android source SHA differs from requested source'
+          assert report['working_tree_clean'], 'Android build changed source files'
+          PY
+          (cd "$RUNNER_TEMP/deepseek-android-artifacts" && sha256sum "$package_name" > SHA256SUMS.txt)
       - name: Remove private signing file
         if: always()
         run: rm -f "$RUNNER_TEMP/deepseek-signing.jks"
       - if: always()
+        id: android_artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: android-package-${{ github.run_attempt }}
@@ -186,3 +214,13 @@ jobs:
           if-no-files-found: error
           retention-days: 30
           compression-level: 0
+      - name: Link Android package evidence
+        if: success()
+        env:
+          ARTIFACT_URL: ${{ steps.android_artifact.outputs.artifact-url }}
+          SIGNED: ${{ inputs.signed_android }}
+        run: |
+          echo "APK, SHA256SUMS, signature/identity report and build log: $ARTIFACT_URL" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$SIGNED" != 'true' ]; then
+            echo 'Isolated development test APK: io.local.deepseekcompanion.test. Separate data; cannot replace v0.0.1. Development signer may change between runners. Physical-device LAN acceptance is pending.' >> "$GITHUB_STEP_SUMMARY"
+          fi

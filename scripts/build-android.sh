@@ -7,27 +7,45 @@ test -n "${ANDROID_HOME:-}" && test -d "$ANDROID_HOME" || { printf '%s\n' 'Andro
 test -n "${NDK_HOME:-}" && test -d "$NDK_HOME/toolchains/llvm" || { printf '%s\n' 'Android NDK missing: install an official side-by-side NDK and set NDK_HOME to its exact directory.' >&2; exit 1; }
 if test "${1:-}" = '--check-only'; then printf '%s\n' 'Prerequisite paths exist; APK/device validation still required.'; exit 0; fi
 cd "$project_root"
-if test "${1:-}" != '--unsigned-ci'; then python3 scripts/android_signing.py; fi
+mode="${1:-signed}"
+unset VITE_COMPANION_TEST_PACKAGE
+case "$mode" in
+  signed) python3 scripts/android_signing.py ;;
+  --unsigned-ci) ;;
+  --test-package)
+    export VITE_COMPANION_TEST_PACKAGE=1
+    export CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_DEV_STRIP=debuginfo
+    ;;
+  *) printf 'Unknown build mode: %s\n' "$mode" >&2; exit 1 ;;
+esac
 node scripts/check-branding.mjs
 rustup target add aarch64-linux-android
 npm ci --ignore-scripts
 cargo test --workspace --locked
 npm run tauri -- android init --ci
 python3 scripts/prepare_android.py
-if test "${1:-}" = '--unsigned-ci'; then
+if test "$mode" = '--test-package'; then
+    python3 scripts/android_test_signing.py
+    npm run tauri -- android build --apk --debug --target aarch64
+    python3 scripts/verify_android.py --test-package
+elif test "$mode" = '--unsigned-ci'; then
     npm run tauri -- android build --apk --target aarch64
 else
     python3 scripts/android_signing.py --configure
     npm run tauri -- android build --apk --target aarch64
     python3 scripts/verify_android.py
 fi
-python3 - <<'PY'
+python3 - "$mode" <<'PY'
 from pathlib import Path
 import hashlib
-packages = list(Path('apps/companion/src-tauri/gen/android/app/build/outputs/apk').rglob('*.apk'))
-if not packages:
-    raise SystemExit('Build returned without an APK; no installation success is claimed.')
+import sys
+variant = 'debug' if sys.argv[1] == '--test-package' else 'release'
+packages = [p for p in Path('apps/companion/src-tauri/gen/android/app/build/outputs/apk').rglob('*.apk') if p.parent.name == variant]
+if len(packages) != 1:
+    raise SystemExit('Expected exactly one APK for the requested variant; no installation success is claimed.')
 for package in packages:
     print(hashlib.sha256(package.read_bytes()).hexdigest(), package)
 print('APK files exist; installation, Keystore and real API tests require a device.')
+if sys.argv[1] == '--test-package':
+    print('Isolated .test applicationId with a development signer; cannot replace the original app. Test signer continuity is not guaranteed across runners.')
 PY

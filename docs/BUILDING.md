@@ -1,4 +1,16 @@
-# 双端构建与验证范围
+# 当前独立测试包构建方式
+
+普通 CI 现在构建可安装的隔离 Android 测试包，使用 `.test` applicationId、开发测试签名和“DeepSeek娘 测试版”启动名称；下文关于 unsigned-ci 是历史检查包或显式 `--unsigned-ci` 模式，不再描述新 CI 的默认产物。Windows EXE 继续独立构建与安装 smoke。
+
+- Linux/macOS：`sh scripts/build-android.sh --test-package`。
+- Windows：`.\scripts\build-android.ps1 -TestPackage`。
+- 正式升级：原签名配置可用时，无参数脚本执行原 Keystore 校验、release 构建和原证书验签；不使用 debug 签名。
+
+Android debug 变体始终增加 `.test`，release 的固定 applicationId/namespace 不变；资源覆盖只在 debug 目录，正式图标原图和 release 名称不变。开发测试 Keystore 只生成在被忽略的 Android gen/.test-signing 中，既不是原签名，也不用于正式升级；不会进入源码、构建附件或普通文件上传。不同 Runner 不保证同一测试签名，不要求卸载正式版。
+
+只核对当前构建变体的 APK，保留另一变体已有输出，避免误把上一次 APK 当新结果。`verify_android.py --test-package` 检查真实包 ID、名称、版本、ABI 和真实签名；正式收集器同时拒绝测试包 identity/distribution，禁止进入正式 Release。详见 [交付报告](PHASE2_TEST_DELIVERY.md)。
+
+# 历史双端构建与验证范围（未签名检查包）
 
 当前开发目标 0.0.2 / Android versionCode 1002；已公开发布版本仍是 0.0.1。最新核验的 main 9cc9a16 在 CI 43555778492 中完成 Linux 测试、Windows EXE 构建/安装启动和 Android ARM64 未签名 APK 构建。普通 CI 不读取原签名，未签名 APK 不能安装或覆盖升级；它不等于独立签名测试包。
 

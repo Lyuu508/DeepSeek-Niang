@@ -1,6 +1,6 @@
 # DeepSeek娘
 
-内部英文名称：DeepSeek-Niang AI Companion。最新接管与功能/构建状态见 [项目状态报告](docs/TAKEOVER_2026-11-14.md)。
+内部英文名称：DeepSeek-Niang AI Companion。最新测试交付见 [阶段 2 测试报告](docs/PHASE2_TEST_DELIVERY.md)；接管时的状态快照见 [项目状态报告](docs/TAKEOVER_2026-11-14.md)。
 
 > 项目愿景（保留仓库初始说明）：使用GPT制作的电脑跟手机数据互通的养一只有自己生活能刷b站主动聊天还有好感度系统的大肥鱼开源软件。
 
@@ -22,7 +22,7 @@ Windows + Android 本地优先陪伴应用，当前已发布 **0.0.1 测试版**
 
 以 main `22096939c20134708c6dc1a4476468a7bbe96827` 为基线重新实现局域网同步，没有使用旧云端未提交代码。
 当前新增生产同步协议、Windows mDNS/Android NSD、一次性二维码与双方确认、TLS 1.3 与系统安全存储、来源签名、事务队列与同步页面。
-阶段 2 的 LAN 同步实现和双端 CI 已完成：最新已核验 main `9cc9a16` 的 [CI 43555778492](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43555778492) 中 Linux 测试、Windows EXE 构建/安装启动检查、Android ARM64 未签名 APK 构建全部成功。原签名升级 APK、附件独立复核、家庭局域网实机验收与发布仍未完成；**0.0.2 尚未发布**，上方 0.0.1 链接是历史包。未签名 APK 不可安装，不是独立签名测试 APK，也不能覆盖升级。
+阶段 2 的 LAN 同步实现和双端 CI 已完成：最新已核验 main `9cc9a16` 的 [CI 43555778492](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43555778492) 中 Linux 测试、Windows EXE 构建/安装启动检查、Android ARM64 未签名 APK 构建全部成功。原签名升级 APK、附件独立复核、家庭局域网实机验收与正式发布仍未完成；**0.0.2 尚未发布**，上方 0.0.1 链接是历史包。未签名 APK 不可安装，不是独立签名测试 APK，也不能覆盖升级。
 见 [阶段报告](docs/PHASE2_REPORT.md)、[实机验收](docs/PHASE2_ACCEPTANCE.md)、[迁移恢复](docs/PHASE2_MIGRATION.md)、[签名调查](docs/ANDROID_SIGNING_RECOVERY.md)、[版本规则](docs/VERSIONING.md)。
 
 ## 本地开发
@@ -70,3 +70,11 @@ Windows Enter 发送、Shift+Enter 换行；手机 Enter 换行、按钮发送�
 历史 [阶段1报告](docs/PHASE1_REPORT.md)、[dev.1安装构建](docs/INSTALL_TEST_REPORT.md)、阶段0文档保留，以各自版本为准。[数据库设计](docs/DATABASE.md)、[安全边界](SECURITY.md)、[变更记录](CHANGELOG.md) 记录限制。当前阶段 2 已实现需显式启用的 LAN 同步；多维关系和长期记忆自动引擎、虚拟生活调度、动态桌宠、Bilibili 视频理解及语音仍未实现，不能把原型或模拟状态当作已交付功能。NAS 为后续可选节点。
 
 当前已获用户授权继续阶段 2 的 v0.0.2 收尾与双端测试发布；仅在原签名、同源码双端包与必要检查全部满足后发布。不得自动开始下一阶段或下一个版本。已发布历史仍仅为 v0.0.1。
+
+## 阶段 2 独立测试包
+
+原签名恢复和 GitHub Secrets 配置现列为独立待办，不再作为日常开发/独立构建的前置条件。当前普通 CI 构建 Android 开发测试签名 APK：applicationId 为 `io.local.deepseekcompanion.test`，启动名称“DeepSeek娘 测试版”，应用内有测试标记；正式身份 `io.local.deepseekcompanion` 保持不变。测试包不能覆盖 v0.0.1，本机 SQLite 与系统凭据属于独立应用沙箱；不会自动导入旧版数据。不同 Runner 的测试签名可能不同，不保证旧测试包可以直接覆盖，不能通过卸载正式版解决。
+
+Linux/macOS：`sh scripts/build-android.sh --test-package`；Windows：`.\scripts\build-android.ps1 -TestPackage`。正式签名构建仍需独立的原签名配置；无参数构建不会擅自生成正式密钥。仅查看旧 Run 中的 unsigned-ci 成功不等于新的可安装测试包已验证。最新构建证据见 [测试交付报告](docs/PHASE2_TEST_DELIVERY.md)。
+
+Windows 和 Android 各自上传安装包、SHA256SUMS、构建报告与日志；Linux 上传自动化测试报告。它们位于 Actions Artifacts，不自动创建 v0.0.2 Release。物理双端与家庭网线+Wi-Fi 的验收按 [实机清单](docs/PHASE2_ACCEPTANCE.md) 执行，未执行的项目仍为待验收。

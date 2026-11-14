@@ -1,0 +1,22 @@
+{
+  "platform": "android",
+  "source_commit": "7acd099ecc4d0b0348c41e3c75a56d19a7e8558d",
+  "working_tree_clean": false,
+  "version": "0.0.2",
+  "version_code": 1002,
+  "application_id": "io.local.deepseekcompanion.test",
+  "abi": "arm64-v8a",
+  "file": "app-universal-debug.apk",
+  "bytes": 56616736,
+  "sha256": "b6b897798cc65c3d087671555b96bac1ccf2f17dfb1c1e368091a5fa92d35a2e",
+  "signature_verified": true,
+  "signer_certificate_sha256": "75f479d642476fa614892b3cd82e194fe074375048d3026613f00f546ee924b1",
+  "distribution": "isolated-test",
+  "upgrade_compatible": false,
+  "test_signer_persistence_guaranteed": false,
+  "automatic_backup": false,
+  "cleartext_traffic": false,
+  "shared_application_uid": false,
+  "debuggable": true,
+  "physical_device_tested": false
+}

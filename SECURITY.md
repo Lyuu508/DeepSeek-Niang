@@ -75,3 +75,7 @@ SQLite Online Backup API → 临时备份 → 完整性检查 → 加密归档 �
 ## 原签名迁移与最小权限
 
 恢复的 Keystore 只在可访问原文件、证书与实际 v0.0.1 APK 一致、alias/密码和私钥可用、GitHub 集成具有目标仓库 Secrets 写权限时直接迁移。密码和 Base64 不进入命令行参数、聊天、普通文件或构建日志；使用安全 stdin/管道和官方 gh/API 写入。不得以签名校验失败或 API 403 为由生成替代身份。仓库 push 权限和 gh auth 成功不证明具有 Secrets 写权限，Secrets 403 也不证明密钥缺失。详细状态见 docs/TAKEOVER_2026-11-14.md。
+
+## 独立 Android 测试包
+
+按用户最新授权，Android debug 构建使用 io.local.deepseekcompanion.test 和明确的测试名称/提示，开发签名只保存在被忽略的 gen/.test-signing 中，不上传、不提交。新开发签名证书必须与原升级证书不同；正式 release 的 applicationId、原签名校验和数据库路径保持不变。测试包可与旧正式版并存，不会自动迁移或清理旧版数据。手动跨设备配对仍需要双方确认，不应使用真实私人资料作为测试样本。原签名恢复与 Secrets 配置独立待办，不作为当前测试构建的前置条件。

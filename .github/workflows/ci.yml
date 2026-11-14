@@ -25,18 +25,30 @@ jobs:
           npm ci --ignore-scripts
       - name: Core, schema, policies, versions and frontend
         run: |
-          python3 scripts/version.py
-          cargo test --workspace --locked
-          cargo clippy --workspace --all-targets --locked -- -D warnings
-          python3 scripts/check_schema.py
-          python3 -m unittest discover -s tests -p 'test_*.py'
-          node --test tests/sync-model.test.mjs
-          npm run build
-          node scripts/check-branding.mjs
+          evidence="$RUNNER_TEMP/deepseek-test-evidence"
+          python3 scripts/run_logged.py "$evidence/version.txt" python3 scripts/version.py
+          python3 scripts/run_logged.py "$evidence/rust-tests.txt" cargo test --workspace --locked
+          python3 scripts/run_logged.py "$evidence/clippy.txt" cargo clippy --workspace --all-targets --locked -- -D warnings
+          python3 scripts/run_logged.py "$evidence/schema.txt" python3 scripts/check_schema.py
+          python3 scripts/run_logged.py "$evidence/python-tests.txt" python3 -m unittest discover -s tests -p 'test_*.py'
+          python3 scripts/run_logged.py "$evidence/sync-model.txt" node --test tests/sync-model.test.mjs
+          python3 scripts/run_logged.py "$evidence/frontend.txt" npm run build
+          python3 scripts/run_logged.py "$evidence/branding.txt" node scripts/check-branding.mjs
       - name: Browser regression tests (explicit fixture)
+        env:
+          COMPANION_TEST_ARTIFACT_DIR: ${{ runner.temp }}/deepseek-test-evidence/ui
         run: |
           npm exec --workspace @deepseek/companion -- playwright install --with-deps chromium
-          npm run test:ui
+          python3 scripts/run_logged.py "$RUNNER_TEMP/deepseek-test-evidence/ui-tests.txt" npm run test:ui
+          VITE_COMPANION_TEST_PACKAGE=1 COMPANION_TEST_ARTIFACT_DIR="$RUNNER_TEMP/deepseek-test-evidence/ui-isolated" python3 scripts/run_logged.py "$RUNNER_TEMP/deepseek-test-evidence/ui-isolated-tests.txt" npm run test:ui
+      - name: Retain test reports and sanitized logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: automated-test-reports-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/deepseek-test-evidence/
+          if-no-files-found: warn
+          retention-days: 30
   packages:
     uses: ./.github/workflows/native-packages.yml
     with:

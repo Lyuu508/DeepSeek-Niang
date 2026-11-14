@@ -1,5 +1,7 @@
 # 0.0.2（阶段 2，开发中，未发布）
 
+- 阶段 2 测试交付：新增 .test 独立 Android 安装身份、开发测试签名、启动名称/应用内测试标记和正式包拒收保护；Windows/Android 分别输出校验文件与构建日志，CI 保留自动化报告。原签名恢复独立待办，不生成正式替代密钥，不更改旧迁移或清理用户数据。
+
 - 接管核查：以最新 main 9cc9a16 为正式基线，重新执行常规测试，统一 README/构建/安全文档中的现有 LAN 与签名状态，保留业务代码、版本号、旧迁移及原始品牌素材。当前 API 可用；Secrets 权限、恢复文件位置和附件存储域名仍阻挡正式发布。
 
 - CI 修复：Windows accepted socket 显式切回阻塞 I/O，新增延迟 ClientHello 的真实 TLS 1.3 双证书回归；Android 固定 Command-line Tools 并验证 JDK/SDK/NDK；发布前重新验签实际 v0.0.1 APK。e65b3ed 的 Linux/Windows/Android CI 已全成功，Android 仍为未签名检查包，原签名发布未完成；完整结果见 docs/PHASE2_CI_FIX_REPORT.md。

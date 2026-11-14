@@ -34,6 +34,8 @@ for platform, extension in [('windows', '.exe'), ('android', '.apk')]:
     assert report['working_tree_clean'], 'Package build modified tracked source or included untracked source'
     assert report['sha256'] == hashlib.sha256(artifact.read_bytes()).hexdigest()
     if platform == 'android':
+        assert report['application_id'] == 'io.local.deepseekcompanion'
+        assert report['distribution'] == 'upgrade' and report['upgrade_compatible'], 'Isolated test APK cannot enter an upgrade release'
         assert report['signature_verified'] and report['signer_certificate_sha256'] == '9de96ea5fb1d0b3f91ea73d9a16c030428453b15838927a85f86773eaef208a1'
     name = f'DeepSeek-Niang_{version}_' + ('windows-x64-setup.exe' if platform == 'windows' else 'android-arm64.apk')
     shutil.copyfile(artifact, dest / name)

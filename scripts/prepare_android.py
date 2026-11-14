@@ -50,6 +50,15 @@ def prepare(project: Path, branding: Path | None = None) -> None:
         entry.text = "DeepSeek娘"
     ET.indent(strings, space="    ")
     ET.ElementTree(strings).write(strings_file, encoding="utf-8", xml_declaration=True)
+    # Debug APKs are always side-by-side test installations. The release ID,
+    # namespace, production resources and original signing identity stay intact.
+    debug_strings = project / "app/src/debug/res/values/companion_test.xml"
+    debug_strings.parent.mkdir(parents=True, exist_ok=True)
+    debug_root = ET.Element("resources")
+    for key in ["app_name", "main_activity_title"]:
+        ET.SubElement(debug_root, "string", {"name": key}).text = "DeepSeek娘 测试版"
+    ET.indent(debug_root, space="    ")
+    ET.ElementTree(debug_root).write(debug_strings, encoding="utf-8", xml_declaration=True)
     branding = branding or Path(__file__).resolve().parents[1] / "assets/branding"
     brand_manifest = branding / "manifest.json"
     if brand_manifest.is_file() and json.loads(brand_manifest.read_text(encoding="utf-8")).get("status") == "ready":
@@ -82,6 +91,19 @@ def prepare(project: Path, branding: Path | None = None) -> None:
             text, count = re.subn(rf"(?m)^(\s*{setting}\s*=\s*)\d+\s*$", rf"\g<1>36", text)
             if count != 1:
                 raise SystemExit(f"Unknown generated Gradle {setting}; refusing to guess SDK policy.")
+        marker = "// DeepSeek isolated debug installation"
+        if marker not in text:
+            text += '''
+// DeepSeek isolated debug installation
+android {
+    signingConfigs.getByName("debug") {
+        storeFile = rootProject.file(".test-signing/debug.keystore")
+    }
+    buildTypes.getByName("debug") {
+        applicationIdSuffix = ".test"
+    }
+}
+'''
         gradle.write_text(text, encoding="utf-8")
     wrapper = project / "gradle/wrapper/gradle-wrapper.properties"
     if wrapper.is_file():
