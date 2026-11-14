@@ -1,0 +1,115 @@
+name: Publish verified test installers
+on:
+  push:
+    branches: [main]
+    paths: ['.github/release-requests/v0.0.2.json']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: stage-release
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: release-tools
+          fetch-depth: 0
+          persist-credentials: false
+      - id: request
+        name: Read the explicit one-version release request
+        run: |
+          python3 - <<'PY'
+          import json,os,re
+          from pathlib import Path
+          request=json.loads(Path('release-tools/.github/release-requests/v0.0.2.json').read_text())
+          assert request['authorized_version']=='0.0.2'
+          assert request['android_distribution']=='isolated-test'
+          assert re.fullmatch('[0-9a-f]{40}',request['source_sha'])
+          assert isinstance(request['ci_run_id'],int) and request['ci_run_id']>0
+          with open(os.environ['GITHUB_OUTPUT'],'a') as output:
+              output.write('sha='+request['source_sha']+'\nrun_id='+str(request['ci_run_id'])+'\n')
+          PY
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ steps.request.outputs.sha }}
+          path: tested-source
+          fetch-depth: 0
+          persist-credentials: false
+      - id: verify
+        name: Require successful same-source CI and immutable artifacts
+        env:
+          SOURCE_SHA: ${{ steps.request.outputs.sha }}
+          CI_RUN_ID: ${{ steps.request.outputs.run_id }}
+        run: |
+          python3 - <<'PY'
+          import json,os,subprocess,sys
+          from pathlib import Path
+          repo=os.environ['GH_REPO'];sha=os.environ['SOURCE_SHA'];run=os.environ['CI_RUN_ID']
+          def api(path):return json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/'+path],text=True))
+          status=api(f'actions/runs/{run}')
+          assert status['status']=='completed' and status['conclusion']=='success'
+          assert status['head_sha']==sha and status['head_branch']=='main'
+          assert status['path']=='.github/workflows/ci.yml'
+          assert status['head_repository']['full_name']==repo
+          subprocess.run(['git','-C','tested-source','merge-base','--is-ancestor',sha,'origin/main'],check=True)
+          sys.path.insert(0,'tested-source/scripts')
+          import version
+          assert version.check()['version']=='0.0.2'
+          artifacts=api(f'actions/runs/{run}/artifacts')['artifacts']
+          wanted={'windows-package-1','android-package-1','automated-test-reports-1'}
+          chosen=[a for a in artifacts if a['name'] in wanted]
+          assert {a['name'] for a in chosen}==wanted and len(chosen)==3
+          assert all(not a['expired'] and a['workflow_run']['head_sha']==sha for a in chosen)
+          with open(os.environ['GITHUB_OUTPUT'],'a') as output:
+              output.write('ids='+','.join(str(a['id']) for a in chosen)+'\n')
+          PY
+          python3 -m unittest discover -s release-tools/tests -p 'test_*.py'
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          artifact-ids: ${{ steps.verify.outputs.ids }}
+          run-id: ${{ steps.request.outputs.run_id }}
+          github-token: ${{ github.token }}
+          path: release-artifacts
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407
+        with:
+          cmdline-tools-version: '12266719'
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+      - name: Independently reverify the signed isolated APK
+        run: |
+          sdkmanager 'build-tools;36.0.0'
+          python3 - <<'PY'
+          import json,subprocess
+          from pathlib import Path
+          root=Path('release-artifacts/android-package-1')
+          report=json.loads((root/'android-build.json').read_text())
+          assert Path(report['file']).name==report['file']
+          subprocess.run(['python3','tested-source/scripts/verify_android.py','--test-package','--apk',str((root/report['file']).resolve()),'--output',str(root/'android-reverified.json')],check=True)
+          verified=json.loads((root/'android-reverified.json').read_text())
+          for key in ['sha256','source_commit','version','version_code','application_id','signer_certificate_sha256']:
+              assert verified[key]==report[key],key
+          assert verified['working_tree_clean'] and verified['signature_verified']
+          PY
+      - name: Assemble individual installers, checksums and reports
+        working-directory: release-tools
+        run: python3 .github/scripts/collect-packages.py ../release-artifacts release-files --source-root ../tested-source --isolated-test
+      - name: Publish the authorized standalone test prerelease and verify public downloads
+        working-directory: release-tools
+        env:
+          RELEASE_SOURCE_SHA: ${{ steps.request.outputs.sha }}
+          ALLOW_ISOLATED_TEST_RELEASE: 'true'
+        run: python3 .github/scripts/publish-release.py

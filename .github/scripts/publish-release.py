@@ -6,13 +6,17 @@ from pathlib import Path
 import subprocess
 import sys
 import time
+import re
 import urllib.request
 sys.path.insert(0, 'scripts')
 from version import check
+from android_signing import EXPECTED_CERT
 
 version = check()['version']
 tag = 'v' + version
-commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+commit = os.environ.get('RELEASE_SOURCE_SHA') or subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
+assert re.fullmatch('[0-9a-f]{40}', commit)
+subprocess.run(['git', 'merge-base', '--is-ancestor', commit, 'origin/main'], check=True)
 repo = os.environ['GH_REPO']
 
 
@@ -33,10 +37,23 @@ for endpoint in [f'repos/{repo}/git/ref/tags/{tag}', f'repos/{repo}/releases/tag
     if 'HTTP 404' not in probe.stderr:
         raise SystemExit('Unable to confirm unused version; release blocked')
 assets = sorted(Path('release-files').iterdir())
+build = json.loads(Path('release-files/BUILD-RESULTS.json').read_text())
+assert build['source_commit'] == commit and build['version'] == version
+if build.get('distribution') == 'isolated-test':
+    assert os.environ.get('ALLOW_ISOLATED_TEST_RELEASE') == 'true', 'Explicit standalone test prerelease authorization required'
+    assert build['builds']['android']['application_id'] == 'io.local.deepseekcompanion.test'
+    assert build['builds']['android']['upgrade_compatible'] is False
+    assert build['builds']['android']['signature_verified']
+    assert build['builds']['android']['signer_certificate_sha256'] != EXPECTED_CERT
+else:
+    android = build['builds']['android']
+    assert android['application_id'] == 'io.local.deepseekcompanion'
+    assert android['signature_verified'] and android['signer_certificate_sha256'] == EXPECTED_CERT
+    assert android['upgrade_compatible'], 'An upgrade release requires the original signing identity'
 notes = Path(f'docs/RELEASE_{version}.md')
 # Keep the actual ID returned by our create operation for safe failed-draft cleanup.
 draft = api(f'repos/{repo}/releases', 'POST', {'tag_name': tag, 'target_commitish': commit,
-    'name': f'DeepSeek娘 {version} 测试版', 'body': notes.read_text(), 'draft': True, 'prerelease': True})
+    'name': f'{version}测试版', 'body': notes.read_text(), 'draft': True, 'prerelease': True})
 release_id = draft['id']
 try:
     subprocess.run(['gh', 'release', 'upload', tag, *map(str, assets)], check=True)
@@ -62,6 +79,8 @@ except Exception:
 # Verify public URLs by actually downloading their bytes; size/PID alone is not success.
 remote = api(f'repos/{repo}/releases/{release_id}')
 assert not remote['draft'] and remote['prerelease']
+ref = api(f'repos/{repo}/git/ref/tags/{tag}')
+assert ref['object']['type'] == 'commit' and ref['object']['sha'] == commit, 'Published tag must identify the tested source'
 for entry in remote['assets']:
     local = Path('release-files') / entry['name']
     expected = hashlib.sha256(local.read_bytes()).hexdigest()

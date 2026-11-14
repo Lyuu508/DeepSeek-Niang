@@ -79,3 +79,7 @@ SQLite Online Backup API → 临时备份 → 完整性检查 → 加密归档 �
 ## 独立 Android 测试包
 
 按用户最新授权，Android debug 构建使用 io.local.deepseekcompanion.test 和明确的测试名称/提示，开发签名只保存在被忽略的 gen/.test-signing 中，不上传、不提交。新开发签名证书必须与原升级证书不同；正式 release 的 applicationId、原签名校验和数据库路径保持不变。测试包可与旧正式版并存，不会自动迁移或清理旧版数据。手动跨设备配对仍需要双方确认，不应使用真实私人资料作为测试样本。原签名恢复与 Secrets 配置独立待办，不作为当前测试构建的前置条件。
+
+## 独立测试版的直接发布
+
+用户已明确授权公开 v0.0.2 独立测试版。publish-tested-packages.yml 只由本次 v0.0.2 请求文件变化或显式手动执行启动；核验已成功的 main CI、完整源码 SHA、独立测试身份、真实 APK 签名、Windows 安装证据及文件哈希后，才上传草稿并公开 Pre-release。原签名升级路径仍默认严格拒绝 .test 包；独立测试发布必须显式选择 --isolated-test 和独立发布授权环境标记。GitHub runner 使用正常 Actions Artifact 下载与 Release 上传能力，不改当前云环境白名单、不使用备用代理、不迁移签名 Secrets、不上传 Keystore。

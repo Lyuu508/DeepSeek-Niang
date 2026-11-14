@@ -19,3 +19,5 @@ CI 仅测试、构建和保存 Artifacts。`release.yml` 只接受手动阶段�
 本次接管核查和文档校正不启动新版本：开发目标继续为未发布的 0.0.2/1002，已发布历史仍只有 0.0.1/1001。VERSION_HISTORY.json 只在真实发布完成后更新，不因 CI 构建成功或文件缺失预先占用版本。
 
 独立 Android 测试包继续使用 0.0.2/1002，但 applicationId 为 io.local.deepseekcompanion.test，不与正式 io.local.deepseekcompanion 共用更新或数据身份。Actions 构建号/完整提交 SHA 区分测试迭代；不占用 v0.0.3、不创建或覆盖正式 v0.0.2 Tag/Release。测试签名不代表原升级签名。
+
+最新分发授权：v0.0.2 独立测试版现获用户明确授权公开为 Pre-release，直接附加 EXE、.test APK 和校验/报告文件。使用已经通过的同源 CI 产物，先核实版本未发布，不覆盖已有 Tag/Release。该版本公开后加入实际历史，不因以后恢复原签名再重复使用 v0.0.2；下一版本仍须用户明确启动。本次的一次性发布请求仅针对 v0.0.2，不自动发布未来版本。

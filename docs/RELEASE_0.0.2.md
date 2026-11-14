@@ -1,13 +1,15 @@
-# DeepSeek娘 0.0.2 测试版 · 阶段 2
+这是0.0.2测试版。
 
-本页在构建前作为发布说明准备；实际发布与包哈希以成功 Release 附件 `BUILD-RESULTS.json`、`SHA256SUMS.txt` 为准。源码准备或单端编译通过不代表已发布。
+- [直接下载 Windows EXE 安装程序](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/DeepSeek-Niang_0.0.2_windows-x64-setup.exe)
+- [直接下载 Android 独立测试 APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/DeepSeek-Niang_0.0.2_android-arm64-isolated-test.apk)
+- [SHA-256 校验文件](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/SHA256SUMS.txt)
 
-新增人工配对后的 Windows/Android 局域网双向增量同步：TLS 1.3、证书绑定、来源签名、永久人格 UUID、离线补传、删除标记、字段修订与独立同步管理页。Windows 网线与 Android Wi-Fi 可通过同一可互通家庭网络连接，无云数据库或聊天中转服务器。
+直接下载 Assets 中的 Windows EXE 或 Android APK 即可安装，不需要下载、解压 Actions 压缩包。SHA256SUMS.txt、BUILD-RESULTS.json、测试报告和完整构建日志一并提供。
 
-Windows 安装 EXE 与 Android ARM64 APK 必须来自同一个源提交。Android 保持 `io.local.deepseekcompanion`，versionCode 1002，强制核对 v0.0.1 原签名。Windows 安装器暂无 Authenticode 签名。
+**Android 为独立测试版**：applicationId 为 `io.local.deepseekcompanion.test`，启动名称“DeepSeek娘 测试版”，使用开发测试签名。它可以与 v0.0.1 同时安装，不覆盖原应用，不自动导入、删除旧版聊天或人格数据，也不是原签名连续升级 APK。原始签名恢复与 Secrets 迁移仍为独立待办。
 
-自动化范围：核心回归、两个模拟设备的真实 SQLite/TLS、签名/撤销/配对、队列/分页/去重/删除/冲突、v3→v4 备份回滚、二维码解码、TypeScript 与显式 UI Mock。具体运行结果见阶段报告与 CI；没有宣称 Windows/Android 用户设备、真实 DeepSeek 或家庭网线 + Wi-Fi 通过。
+Windows 和 Android 均来自源码 `1c86678963cb83819e7a72cada6d279fcac9736c`，版本为 0.0.2 / Android versionCode 1002。该源码的 Linux 测试、Windows 原生测试/EXE安装启动、Android ARM64构建/真实签名与身份检查均已通过；发布前再次检查同源码报告、哈希与实际 APK 签名。Windows 安装器暂无 Authenticode 签名。
 
-安装与验收见附件 INSTALL-AND-ACCEPTANCE.md。保留旧数据，直接覆盖升级前核对签名与哈希。每台设备单独配置模型 Key；不分享 API Key、私钥或账号凭据。Android 强制停止后不保证后台同步，重新打开恢复网络后补传。
+本版本实现人工配对后的局域网双向增量同步、TLS 1.3、身份验证、离线补传和冲突/删除处理。自动化测试不替代真实 Windows 网线 + Android Wi-Fi 家庭网络验收；真实双端、系统凭据/生命周期和用户旧数据验收仍由你安装后进行。使用合成资料，按 INSTALL-AND-ACCEPTANCE.md 测试；不上传真实 Key、数据库、聊天或配对码。
 
-已知范围：使用私有 IPv4，不支持公网或 IPv6 手动地址；直接配对来源，不为陌生第三设备转发授权；两端已有同名人格保留为两个 UUID，不擅自混合聊天；关系/生活/任务自主引擎仍未启用；逻辑删除不承诺清除历史日志与备份。首次配对的指纹与实际家庭网络必须由用户验证。
+本次仅公开阶段2测试版，不表示实机验收完成，也不开始阶段3。开发测试签名可能随构建环境改变，不承诺测试包未来连续覆盖升级；不要为安装测试包卸载正式应用或清理其数据。
