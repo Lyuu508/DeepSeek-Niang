@@ -8,6 +8,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import urllib.request
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -29,6 +30,41 @@ def api(path, method='GET', data=None):
 def archive_name(asset, sha):
     assert '/' not in asset['name'] and '\\' not in asset['name']
     return f'ARCHIVE-{sha[:8]}-{asset["id"]}-{asset["name"]}'
+
+
+def read_verified_asset(asset):
+    expected=asset['digest']
+    for attempt in range(5):
+        # Mutable prerelease filenames can retain a cached redirect to an old
+        # asset. Bind the check to the actual asset ID and request fresh bytes.
+        url=asset['browser_download_url']+'?verify_asset='+str(asset['id'])+'&attempt='+str(attempt)
+        request=urllib.request.Request(url,headers={'Cache-Control':'no-cache'})
+        with urllib.request.urlopen(request,timeout=120) as response:data=response.read()
+        if 'sha256:'+hashlib.sha256(data).hexdigest()==expected and len(data)==asset['size']:return data
+        if attempt<4:time.sleep(2**attempt)
+    raise RuntimeError('Public download digest mismatch: '+asset['name'])
+
+
+def finish_release(request, exe_name, apk_name):
+    sha=request['source_sha']
+    repo=os.environ['GH_REPO'];base=f'https://github.com/{repo}/releases/download/v0.0.2/'
+    body=f'''这是 0.0.2 扫码测试修订，已替换当前下载附件，无需解压。
+
+- [Windows 中文 EXE]({base}{exe_name})
+- [Android 扫码测试 APK]({base}{apk_name})
+- [SHA256SUMS.txt]({base}SHA256SUMS.txt) · [BUILD-RESULTS.json]({base}BUILD-RESULTS.json) · [签名身份]({base}SIGNING-IDENTITIES.json)
+
+电脑一个“连接手机”按钮弹出二维码；手机一个“扫一扫”调用相机，保留手动同步。手机已加入独立底部导航与原生系统栏边距。
+
+Android 使用持久保存的新测试签名与 `{APP_ID}`，独立安装、保留旧应用和聊天，不能覆盖旧 `.test` 或正式版。Windows 使用新的自签名测试证书，仍非公共 CA 信任发布者。私钥仅保存在仓库加密 Secrets；后续协作者通过同一仓库工作流复用。
+
+两端安装包源码：[`{sha}`](https://github.com/{repo}/commit/{sha})，CI {request['ci_run_id']} 全部成功。实机相机、通知栏/键盘和家庭局域网仍待用户验收。
+
+旧附件以 ARCHIVE- 开头保留原字节。原 v0.0.2 Tag 保留历史指向，页面自动 Source code 归档属于历史源码；本次安装包完整源码以上方提交链接和构建报告为准。
+'''
+    api('releases/'+str(request['release_id']),'PATCH',{'body':body,'name':'0.0.2测试版 · 扫码修订','prerelease':True})
+    assert api('git/ref/tags/v0.0.2')['object']['sha']==request['original_tag_sha']
+    print(base+exe_name);print(base+apk_name)
 
 
 def main():
@@ -166,12 +202,13 @@ Android 打开“DeepSeek娘 扫码测试版”，身份 io.local.deepseekcompan
         with urllib.request.urlopen(complete['browser_download_url'],timeout=60) as response:previous=json.load(response)
         if previous.get('source_commit')==sha and previous.get('scope')==report['scope']:
             remote={a['name']:a for a in original['assets']}
-            if all(name in remote and remote[name]['digest']=='sha256:'+value for name,value in previous['files'].items()) and all(p.name in remote for p in output.iterdir()) and APP_ID in original['body'] and sha in original['body']:
+            if all(name in remote and remote[name]['digest']=='sha256:'+value for name,value in previous['files'].items()) and all(p.name in remote for p in output.iterdir()):
                 assert previous['android']['signer_certificate_sha256']==public['android_certificate_sha256']
                 assert previous['windows']['signing']['signer_certificate_sha256']==public['windows_certificate_sha256']
-                for name,value in previous['files'].items():
-                    with urllib.request.urlopen(remote[name]['browser_download_url'],timeout=120) as response:assert hashlib.sha256(response.read()).hexdigest()==value
-                print('This same-source signed refresh is already published; existing assets were preserved.')
+                for item in original['assets']:
+                    if not item['name'].startswith('ARCHIVE-'):read_verified_asset(item)
+                finish_release(request,exe.name,signed_apk.name)
+                print('Completed this same-source refresh without reuploading verified installers.')
                 return
     # All checks and durable key storage finish BEFORE any public asset mutation.
     latest=api('releases/'+str(request['release_id']))
@@ -199,27 +236,9 @@ Android 打开“DeepSeek娘 扫码测试版”，身份 io.local.deepseekcompan
         path=output/item['name']
         if path.is_file():
             assert item['digest']=='sha256:'+digest(path)
-            with urllib.request.urlopen(item['browser_download_url'],timeout=120) as response:
-                assert hashlib.sha256(response.read()).hexdigest()==digest(path)
+            assert hashlib.sha256(read_verified_asset(item)).hexdigest()==digest(path)
     names={a['name'] for a in current['assets']};assert all(p.name in names for p in output.iterdir())
-    repo=os.environ['GH_REPO'];base=f'https://github.com/{repo}/releases/download/v0.0.2/'
-    body=f'''这是 0.0.2 扫码测试修订，已替换当前下载附件，无需解压。
-
-- [Windows 中文 EXE]({base}{exe.name})
-- [Android 扫码测试 APK]({base}{signed_apk.name})
-- [SHA256SUMS.txt]({base}SHA256SUMS.txt) · [BUILD-RESULTS.json]({base}BUILD-RESULTS.json) · [签名身份]({base}SIGNING-IDENTITIES.json)
-
-电脑一个“连接手机”按钮弹出二维码；手机一个“扫一扫”调用相机，保留手动同步。手机已加入独立底部导航与原生系统栏边距。
-
-Android 使用持久保存的新测试签名与 `{APP_ID}`，独立安装、保留旧应用和聊天，不能覆盖旧 `.test` 或正式版。Windows 使用新的自签名测试证书，仍非公共 CA 信任发布者。私钥仅保存在仓库加密 Secrets；后续协作者通过同一仓库工作流复用。
-
-两端安装包源码：[`{sha}`](https://github.com/{repo}/commit/{sha})，CI {request['ci_run_id']} 全部成功。实机相机、通知栏/键盘和家庭局域网仍待用户验收。
-
-旧附件以 ARCHIVE- 开头保留原字节。原 v0.0.2 Tag 保留历史指向，页面自动 Source code 归档属于历史源码；本次安装包完整源码以上方提交链接和构建报告为准。
-'''
-    api('releases/'+str(request['release_id']),'PATCH',{'body':body,'name':'0.0.2测试版 · 扫码修订','prerelease':True})
-    assert api('git/ref/tags/v0.0.2')['object']['sha']==request['original_tag_sha']
-    print(base+exe.name);print(base+signed_apk.name)
+    finish_release(request,exe.name,signed_apk.name)
 
 
 if __name__=='__main__':
