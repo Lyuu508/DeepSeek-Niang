@@ -33,6 +33,8 @@ Rust/SQLite 使用真实数据库与回环 TLS，不是 UI Mock；DeepSeek HTTP/
 
 提交前合成证据在 `docs/validation-phase3/`，不包含聊天库、密钥或登录凭据。GitHub `CI` 对同 SHA 独立运行 Linux 测试、Windows 原生 cargo test/EXE/中文安装启动、Android ARM64 构建；`release-companion-test.yml` 再独立签署两端、Windows 签后安装启动与 Android 官方验签。只有两端、测试、同源和持久签名全通过才发布新 v0.0.3。实际运行链接、EXE/APK 哈希、完整构建日志由 Release 报告自动记录，不在尚未运行时预填成功。
 
+首次 v3 CI `43710219702` 在干净依赖安装阶段发现内部 workspace 依赖仍引用 contracts0.0.2；已与0.0.3 manifest/lock统一，并纳入版本检查。最终源码重新完整运行同源 CI，不使用旧工作区已安装依赖掩盖问题。
+
 ## 签名与数据保护
 
 本次已对真实 v0.0.1 与现有 v0.0.2 APK 执行官方 apksigner，证书分别为：
