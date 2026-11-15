@@ -33,6 +33,8 @@ def archive_name(asset, sha):
 
 def main():
     request=json.loads((ROOT/'.github/release-requests/v0.0.2-refresh.json').read_text())
+    phase=sys.argv[4] if len(sys.argv)>4 else 'all'
+    assert phase in ['all','windows','android','install','publish']
     sha=request['source_sha'];assert re.fullmatch('[0-9a-f]{40}',sha)
     source=Path(sys.argv[1]).resolve();artifacts=Path(sys.argv[2]).resolve();smoke_root=Path(sys.argv[3]).resolve()
     assert subprocess.check_output(['git','-C',str(source),'rev-parse','HEAD'],text=True).strip()==sha
@@ -57,45 +59,59 @@ def main():
     language=json.loads((windows/'windows-installer-language.json').read_text(encoding='utf-8-sig'))
     original_exe=windows/win['file'];policy.validate_windows(win,old_smoke,language,original_exe,sha)
     assert digest(android/apk['file'])==apk['sha256']
-    exe=output/'DeepSeek-Niang_0.0.2_windows-x64-setup.exe';shutil.copyfile(original_exe,exe)
+    exe=output/'DeepSeek-Niang_0.0.2_windows-x64-setup.exe'
     context=os.environ.copy();context.update(TEST_WINDOWS_INSTALLER=str(exe),TEST_WINDOWS_PASSWORD=identity['windows_password'],
         TEST_WINDOWS_PFX=str(protected/'windows-test.pfx'),TEST_WINDOWS_CER=str(protected/'windows-test.cer'))
-    run(['pwsh','-NoProfile','-File',str(ROOT/'.github/scripts/windows-test-sign.ps1'),'-Action','Sign'],env=context)
-    print('Windows test signature verified.',flush=True)
+    if phase in ['all','windows']:
+        shutil.copyfile(original_exe,exe)
+        run(['pwsh','-NoProfile','-File',str(ROOT/'.github/scripts/windows-test-sign.ps1'),'-Action','Sign'],env=context)
+        print('Windows test signature verified.',flush=True)
+        if phase=='windows':return
+    assert exe.is_file()
     signed_apk=output/'DeepSeek-Niang_0.0.2_android-arm64-isolated-test.apk'
     context.update(TEST_ANDROID_PASSWORD=identity['android_password'])
     tools=Path(os.environ['ANDROID_HOME'])/'build-tools/36.0.0'
     aligned=Path(os.environ['RUNNER_TEMP'])/'deepseek-aligned-test.apk'
-    run(verify_android.sdk_command(tools,'zipalign','-f','-P','16','4',str(android/apk['file']),str(aligned)))
-    run(verify_android.sdk_command(tools,'apksigner','sign','--ks',str(protected/'android-test.p12'),
-        '--ks-key-alias',identity['android_alias'],'--ks-pass','env:TEST_ANDROID_PASSWORD','--key-pass','env:TEST_ANDROID_PASSWORD',
-        '--out',str(signed_apk),str(aligned)),env=context)
-    verified=verify_android.verify(signed_apk,True,True,True)
-    assert verified['source_commit']==sha and verified['working_tree_clean'] and verified['signer_certificate_sha256']==public['android_certificate_sha256']
-    verified.update(test_signer_persistence_guaranteed=True,signature_source='GitHub encrypted repository signing bundle',
-                    old_test_upgrade_compatible=False,future_test2_upgrade_identity_stable=True)
-    print('Android test signature and installation identity verified.',flush=True)
-    # Re-run the real signed Windows installer, using the exact compiled source.
-    target=Path(os.environ['RUNNER_TEMP'])/'signed-windows-smoke-target'
-    native=target/'x86_64-pc-windows-msvc/release';(native/'bundle/nsis').mkdir(parents=True,exist_ok=True)
-    shutil.copyfile(exe,native/'bundle/nsis/setup.exe')
-    shutil.copyfile(windows/'DeepSeek-Niang_0.0.2_windows-x64.exe',native/'companion-app.exe')
-    context.update(CARGO_TARGET_DIR=str(target))
-    # GUI/WebView2 descendants can retain inherited pipe handles after pwsh exits.
-    # A real file lets us wait for the smoke process without waiting for pipe EOF.
-    print('Starting signed Windows installer/language/startup check.',flush=True)
-    smoke_log=output/'signed-windows-install.log'
-    with smoke_log.open('wb') as log:
-        result=subprocess.run(['pwsh','-NoProfile','-File',str(source/'.github/scripts/windows-package-smoke.ps1')],cwd=source,env=context,stdout=log,stderr=subprocess.STDOUT,timeout=300)
-    if result.returncode:
-        text=smoke_log.read_text(errors='replace')
-        known=re.search(r'(Installer language preview exited[^\r\n]*|Native installer did not display Chinese[^\r\n]*|Installer timed out|Installer exited with \d+|Installed app never opened[^\r\n]*|Installed application not found)',text)
-        raise RuntimeError('Signed Windows installation check failed: '+(known[0] if known else 'see signed-windows-install.log'))
-    print('Signed Windows installer/language/startup check passed.',flush=True)
-    signed_smoke=json.loads((smoke_root/'BUILD-RESULTS-WINDOWS.json').read_text(encoding='utf-8-sig'))
-    assert signed_smoke['build_commit']==sha and signed_smoke['installed_process_started'] and signed_smoke['installer_sha256']==digest(exe)
-    signed_smoke.update(authenticode_signed=True,authenticode_verified_on_disposable_runner=True,
-                        publicly_trusted_publisher=False,signer_certificate_sha256=public['windows_certificate_sha256'])
+    if phase in ['all','android']:
+        run(verify_android.sdk_command(tools,'zipalign','-f','-P','16','4',str(android/apk['file']),str(aligned)))
+        run(verify_android.sdk_command(tools,'apksigner','sign','--ks',str(protected/'android-test.p12'),
+            '--ks-key-alias',identity['android_alias'],'--ks-pass','env:TEST_ANDROID_PASSWORD','--key-pass','env:TEST_ANDROID_PASSWORD',
+            '--out',str(signed_apk),str(aligned)),env=context)
+        verified=verify_android.verify(signed_apk,True,True,True)
+        assert verified['source_commit']==sha and verified['working_tree_clean'] and verified['signer_certificate_sha256']==public['android_certificate_sha256']
+        verified.update(test_signer_persistence_guaranteed=True,signature_source='GitHub encrypted repository signing bundle',
+                        old_test_upgrade_compatible=False,future_test2_upgrade_identity_stable=True)
+        print('Android test signature and installation identity verified.',flush=True)
+        (output/'android-reverified.json').write_text(json.dumps(verified,indent=2)+'\n')
+        if phase=='android':return
+    verified=json.loads((output/'android-reverified.json').read_text())
+    assert verified['source_commit']==sha and verified['sha256']==digest(signed_apk)
+    if phase in ['all','install']:
+        # Re-run the real signed Windows installer, using the exact compiled source.
+        target=Path(os.environ['RUNNER_TEMP'])/'signed-windows-smoke-target'
+        native=target/'x86_64-pc-windows-msvc/release';(native/'bundle/nsis').mkdir(parents=True,exist_ok=True)
+        shutil.copyfile(exe,native/'bundle/nsis/setup.exe')
+        shutil.copyfile(windows/'DeepSeek-Niang_0.0.2_windows-x64.exe',native/'companion-app.exe')
+        context.update(CARGO_TARGET_DIR=str(target))
+        # GUI/WebView2 descendants can retain inherited pipe handles after pwsh exits.
+        # A real file lets us wait for the smoke process without waiting for pipe EOF.
+        print('Starting signed Windows installer/language/startup check.',flush=True)
+        smoke_log=output/'signed-windows-install.log'
+        with smoke_log.open('wb') as log:
+            result=subprocess.run(['pwsh','-NoProfile','-File',str(source/'.github/scripts/windows-package-smoke.ps1')],cwd=source,env=context,stdout=log,stderr=subprocess.STDOUT,timeout=300)
+        if result.returncode:
+            text=smoke_log.read_text(errors='replace')
+            known=re.search(r'(Installer language preview exited[^\r\n]*|Native installer did not display Chinese[^\r\n]*|Installer timed out|Installer exited with \d+|Installed app never opened[^\r\n]*|Installed application not found)',text)
+            raise RuntimeError('Signed Windows installation check failed: '+(known[0] if known else 'see signed-windows-install.log'))
+        print('Signed Windows installer/language/startup check passed.',flush=True)
+        signed_smoke=json.loads((smoke_root/'BUILD-RESULTS-WINDOWS.json').read_text(encoding='utf-8-sig'))
+        assert signed_smoke['build_commit']==sha and signed_smoke['installed_process_started'] and signed_smoke['installer_sha256']==digest(exe)
+        signed_smoke.update(authenticode_signed=True,authenticode_verified_on_disposable_runner=True,
+                            publicly_trusted_publisher=False,signer_certificate_sha256=public['windows_certificate_sha256'])
+        (output/'BUILD-RESULTS-WINDOWS.json').write_text(json.dumps(signed_smoke,ensure_ascii=False,indent=2)+'\n')
+        if phase=='install':return
+    signed_smoke=json.loads((output/'BUILD-RESULTS-WINDOWS.json').read_text())
+    assert signed_smoke['build_commit']==sha and signed_smoke['installer_sha256']==digest(exe)
     shutil.copyfile(exe,output/'DeepSeek-Niang_0.0.2_windows-x64-setup-zh.exe')
     shutil.copyfile(protected/'windows-test.cer',output/'WINDOWS-TEST-SIGNER.cer')
     (output/'SIGNING-IDENTITIES.json').write_text(json.dumps(public,indent=2)+'\n')

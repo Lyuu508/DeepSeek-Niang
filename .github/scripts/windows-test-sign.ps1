@@ -25,11 +25,11 @@ try {
         Set-AuthenticodeSignature -LiteralPath $env:TEST_WINDOWS_INSTALLER -Certificate $Certificate -HashAlgorithm SHA256 | Out-Null
         # Trust only in this disposable runner to check the PE digest and chain.
         # Nothing is installed in the end user's certificate store.
-        Import-Certificate -FilePath $env:TEST_WINDOWS_CER -CertStoreLocation 'Cert:\CurrentUser\Root' | Out-Null
+        Import-Certificate -FilePath $env:TEST_WINDOWS_CER -CertStoreLocation 'Cert:\LocalMachine\Root' | Out-Null
         try {
             $Signed = Get-AuthenticodeSignature -LiteralPath $env:TEST_WINDOWS_INSTALLER
             if ($Signed.Status -ne 'Valid' -or $Signed.SignerCertificate.Thumbprint -ne $Certificate.Thumbprint) { throw 'Authenticode verification failed' }
-        } finally { Remove-Item ('Cert:\CurrentUser\Root\' + $Certificate.Thumbprint) -ErrorAction SilentlyContinue }
+        } finally { Remove-Item ('Cert:\LocalMachine\Root\' + $Certificate.Thumbprint) -ErrorAction SilentlyContinue }
     }
 } catch {
     Write-Output ('CERTIFICATE_STAGE_ERROR:' + $Action + ':' + $_.InvocationInfo.ScriptLineNumber + ':' + $_.Exception.GetType().Name)

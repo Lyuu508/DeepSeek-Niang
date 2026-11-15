@@ -16,7 +16,7 @@ BUNDLE_SECRET = 'TEST_RELEASE_SIGNING_B64'
 
 
 def run(args, env=None, value=None):
-    result = subprocess.run(args, input=value, env=env, capture_output=True)
+    result = subprocess.run(args, input=value, env=env, capture_output=True, timeout=180)
     if result.returncode:
         stage=re.search(rb'CERTIFICATE_STAGE_ERROR:(Generate|Check|Sign):(\d+):([A-Za-z.]+)',result.stdout)
         if stage:

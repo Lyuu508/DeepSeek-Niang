@@ -87,9 +87,24 @@ jobs:
         run: |
           python release-tools/scripts/test_release_identity.py
           if ($LASTEXITCODE) { throw 'Signing identities are not safely persisted; no installer will be published' }
-      - name: Sign, verify, install-test, then replace assets in the original release
+      - name: Sign and verify the Windows test installer
+        timeout-minutes: 5
         run: |
-          python release-tools/.github/scripts/refresh-test-release.py tested-source release-artifacts (Join-Path $env:RUNNER_TEMP 'deepseek-windows-artifacts')
+          python release-tools/.github/scripts/refresh-test-release.py tested-source release-artifacts (Join-Path $env:RUNNER_TEMP 'deepseek-windows-artifacts') windows
+          if ($LASTEXITCODE) { throw 'Windows signing failed' }
+      - name: Sign and verify the Android test APK
+        timeout-minutes: 5
+        run: |
+          python release-tools/.github/scripts/refresh-test-release.py tested-source release-artifacts (Join-Path $env:RUNNER_TEMP 'deepseek-windows-artifacts') android
+          if ($LASTEXITCODE) { throw 'Android signing failed' }
+      - name: Install and start the real signed Chinese Windows package
+        timeout-minutes: 7
+        run: |
+          python release-tools/.github/scripts/refresh-test-release.py tested-source release-artifacts (Join-Path $env:RUNNER_TEMP 'deepseek-windows-artifacts') install
+          if ($LASTEXITCODE) { throw 'Signed Windows installation test failed' }
+      - name: Replace the original release assets after all checks
+        run: |
+          python release-tools/.github/scripts/refresh-test-release.py tested-source release-artifacts (Join-Path $env:RUNNER_TEMP 'deepseek-windows-artifacts') publish
           if ($LASTEXITCODE) { throw 'Verified installer refresh failed' }
       - name: Remove private temporary files
         if: always()
