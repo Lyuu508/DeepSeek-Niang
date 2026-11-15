@@ -30,7 +30,7 @@
 - [x] Windows 在线虚拟生活/主动消息基础及本地每日 Token 分类统计；无额外分析模型调用。
 - [x] 桌面和手机陪伴/记忆管理入口；保留单按钮 QR 与相机流程，修复横屏底部导航即时高度回归。
 - [x] 版本、锁文件与 Android1003 一致；官方 apksigner 实测原 v1/现有 v2 证书，确认 test2 与正式不同。
-- [x] 本地 103 Rust、23 Python、5 Node、两组各26 UI通过，Clippy/类型/DDL/品牌检查记录见报告。
+- [x] 本地 103 Rust、24 Python、5 Node、两组各26 UI通过，Clippy/类型/DDL/品牌检查记录见报告。
 - [ ] 用户真实 Windows/Android 配对、覆盖升级、旧库与相机/系统栏/键盘验收。
 - [ ] 主人自己的 DeepSeek Key：回复风格、记忆命中与实际 Token 对账。
 

@@ -27,13 +27,15 @@
 
 ## 测试事实与证据
 
-本地 Linux：103 Rust（chat15/core42/原始内核21/secrets3/sync22），0 失败/0 忽略；23 Python；5 Node；普通/隔离浏览器 UI 各 26，均实际执行。Clippy `-D warnings`、前端/类型、SQLite schema/外键/中文搜索/完整性通过。优先修复的 81 项记录单独保留。最终 CI 还独立执行普通及隔离测试包两组 UI；精确最终计数由 Release `AUTOMATED-TEST-RESULTS.txt`、`UI-TEST-RESULTS.json`、`BUILD-RESULTS.json` 提供。
+本地 Linux：103 Rust（chat15/core42/原始内核21/secrets3/sync22），0 失败/0 忽略；24 Python；5 Node；普通/隔离浏览器 UI 各 26，均实际执行。Clippy `-D warnings`、前端/类型、SQLite schema/外键/中文搜索/完整性通过。优先修复的 81 项记录单独保留。最终 CI 还独立执行普通及隔离测试包两组 UI；精确最终计数由 Release `AUTOMATED-TEST-RESULTS.txt`、`UI-TEST-RESULTS.json`、`BUILD-RESULTS.json` 提供。
 
 Rust/SQLite 使用真实数据库与回环 TLS，不是 UI Mock；DeepSeek HTTP/SSE 是回环提供者夹具，不是真实 API。浏览器 UI 明确为 Mock，不能验证系统安全存储、手机相机驱动或真机扫码。Android Rust 交叉检查已通过，最终 APK 仍以 GitHub 原生构建为准。本云端 Linux GUI 检查因缺少 GTK/gobject2 开发包受阻，不虚报通过；目标 Windows/Android 在各自 Hosted 工具链构建。没有用户设备、真实 API Key，未执行家庭双端/真实 API/用户旧库验收。
 
 提交前合成证据在 `docs/validation-phase3/`，不包含聊天库、密钥或登录凭据。GitHub `CI` 对同 SHA 独立运行 Linux 测试、Windows 原生 cargo test/EXE/中文安装启动、Android ARM64 构建；`release-companion-test.yml` 再独立签署两端、Windows 签后安装启动与 Android 官方验签。只有两端、测试、同源和持久签名全通过才发布新 v0.0.3。实际运行链接、EXE/APK 哈希、完整构建日志由 Release 报告自动记录，不在尚未运行时预填成功。
 
 首次 v3 CI `43710219702` 在干净依赖安装阶段发现内部 workspace 依赖仍引用 contracts0.0.2；已与0.0.3 manifest/lock统一，并纳入版本检查。最终源码重新完整运行同源 CI，不使用旧工作区已安装依赖掩盖问题。
+
+首轮签名发布 `43711156167` 的双端签署均成功，Windows 104 项原生 Rust 测试、签后安装启动及新 APK 官方验签均通过；23 个附件已上传未公开草稿。发布脚本误用“按已发布 Tag 查 Release”接口查询无 Git Tag 的草稿，返回404，因此尚未公开。已改为认证分页列表发现草稿、固定 Release ID 查询，并新增草稿无Tag/分页回归（Python总24项）。真实草稿的 BUILD-RESULTS 已认证下载并逐字节哈希核对，不以此接口错误判断安装包失败；只清理由本任务创建且从未公开的该草稿，旧 v1/v2不动，最终源码重新运行同源 CI 和签名发布。
 
 ## 签名与数据保护
 

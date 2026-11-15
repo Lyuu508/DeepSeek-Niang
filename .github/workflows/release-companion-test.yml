@@ -70,10 +70,10 @@ jobs:
               candidates=[a for a in artifacts if re.fullmatch(re.escape(prefix)+'[0-9]+',a['name']) and not a['expired'] and a['workflow_run']['head_sha']==sha]
               assert candidates
               selected[key]=max(candidates,key=lambda a:int(a['name'].rsplit('-',1)[1]))['id']
-          release=subprocess.run(['gh','api',f'repos/{repo}/releases/tags/v0.0.3'],capture_output=True,text=True)
-          if release.returncode==0:
-              prior=json.loads(release.stdout);assert prior['draft'] and prior['target_commitish']==sha,'Published version must never be reused'
-          else:assert '404' in release.stderr
+          pages=json.loads(subprocess.check_output(['gh','api','--paginate','--slurp',f'repos/{repo}/releases?per_page=100']))
+          prior=[item for page in pages for item in page if item['tag_name']=='v0.0.3']
+          assert len(prior)<=1
+          if prior:assert prior[0]['draft'] and prior[0]['target_commitish']==sha,'Published version must never be reused'
           with open(os.environ['GITHUB_OUTPUT'],'a') as output:
               output.write('sha='+sha+'\nrun='+run+'\n')
               for key,value in selected.items():output.write(key+'='+str(value)+'\n')

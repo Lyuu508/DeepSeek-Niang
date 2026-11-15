@@ -25,6 +25,16 @@ def run(args,**kwargs):
     if result.returncode:raise RuntimeError('Release operation failed: '+Path(str(args[0])).name)
     return result.stdout
 def api(path):return json.loads(run(['gh','api',f"repos/{os.environ['GH_REPO']}/{path}"]))
+def find_release(tag):
+    # /releases/tags/{tag} only finds published releases. Drafts have no Git tag yet.
+    page=1
+    while True:
+        items=api(f'releases?per_page=100&page={page}')
+        matches=[item for item in items if item['tag_name']==tag]
+        assert len(matches)<=1,'Ambiguous release version'
+        if matches:return matches[0]
+        if len(items)<100:return None
+        page+=1
 def one(root,name):
     matches=list(root.rglob(name));assert matches,'Expected a verified '+name
     if len(matches)>1:
@@ -47,7 +57,7 @@ def automation(tests):
     assert 'test result: FAILED' not in logs['rust-tests.txt']
     rust=sum(map(int,re.findall(r'test result: ok\. (\d+) passed; 0 failed; 0 ignored;',logs['rust-tests.txt'])))
     py=re.search(r'Ran (\d+) tests',logs['python-tests.txt'])
-    assert rust>=103 and py and int(py[1])>=23 and '\nOK' in logs['python-tests.txt']
+    assert rust>=103 and py and int(py[1])>=24 and '\nOK' in logs['python-tests.txt']
     node=re.search(r'(?:# )?pass (\d+)',logs['sync-model.txt']);assert node and int(node[1])>=5
     ui={mode:read(tests/mode/'results.json') for mode in ['ui','ui-isolated']}
     assert all(item['passed']>=26 and 'Mock' in item['scope'] for item in ui.values())
@@ -122,18 +132,17 @@ Windows 已验证中文向导、签后安装及启动，沿用现有自签名测
 关系不是每条消息加分；情绪与记忆有来源，记忆冲突需确认。虚拟看视频/听音乐不代表真实媒体播放或理解。主动消息默认关闭；规则与记忆整理不额外调用模型。实机、真实 DeepSeek 和家庭网络尚待主人验收，不作为自动化通过项。完成本版本后停止，不自动开始阶段 4。
 """
     notes=Path(os.environ['RUNNER_TEMP'])/'stage3-release-notes.md';notes.write_text(body)
-    existing=subprocess.run(['gh','api',f'repos/{repo}/releases/tags/{TAG}'],capture_output=True,text=True)
-    if existing.returncode==0:
-        prior=json.loads(existing.stdout)
+    prior=find_release(TAG)
+    if prior:
         assert prior['draft'] and prior['target_commitish']==sha,'Published version already exists; never overwrite or reuse it'
         assert all(a['name'] in {p.name for p in output.iterdir()} for a in prior['assets'])
     else:
-        assert '404' in existing.stderr,'Release metadata permission failed'
         tag=subprocess.run(['gh','api',f'repos/{repo}/git/ref/tags/{TAG}'],capture_output=True,text=True)
         assert tag.returncode!=0 and '404' in tag.stderr,'Version tag already exists; never move it'
         run(['gh','release','create',TAG,'--repo',repo,'--target',sha,'--title','0.0.3测试版 · 关系与记忆','--prerelease','--draft','--notes-file',notes])
     for path in sorted(output.iterdir()):run(['gh','release','upload',TAG,path,'--repo',repo,'--clobber'])
-    release=api('releases/tags/'+TAG);assert release['draft'] and release['prerelease']
+    release=find_release(TAG);assert release and release['draft'] and release['prerelease']
+    print('Both signed packages, test reports and '+str(len(release['assets']))+' draft assets verified; checking authenticated downloads.',flush=True)
     assets={a['name']:a for a in release['assets']}
     assert set(assets)=={p.name for p in output.iterdir()}
     verification=Path(os.environ['RUNNER_TEMP'])/'stage3-download-verify';verification.mkdir(exist_ok=True)
@@ -143,7 +152,7 @@ Windows 已验证中文向导、签后安装及启动，沿用现有自签名测
             result=subprocess.run(['gh','api',f"repos/{repo}/releases/assets/{asset['id']}",'-H','Accept: application/octet-stream'],stdout=downloaded,stderr=subprocess.PIPE,timeout=180)
         assert result.returncode==0 and digest(verification/name)==digest(output/name),'Draft download verification failed'
     run(['gh','release','edit',TAG,'--repo',repo,'--draft=false','--prerelease','--notes-file',notes])
-    published=api('releases/tags/'+TAG)
+    published=api('releases/'+str(release['id']))
     assert not published['draft'] and published['prerelease']
     assert api('git/ref/tags/'+TAG)['object']['sha']==sha
     for asset in published['assets']:

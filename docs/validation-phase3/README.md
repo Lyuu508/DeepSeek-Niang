@@ -3,7 +3,7 @@
 以下全部使用合成资料，不包含用户聊天库、Keystore、密码或API Key。
 
 - priority-pairing：优先缺陷修复的81项Rust和独立SQLite，当时先通过后才开发阶段3。
-- local-rust：后续完整103项，0失败/忽略；Clippy通过，Python23、Node5。
+- local-rust：后续完整103项，0失败/忽略；Clippy通过，Python24、Node5。
 - local-schema：原33张要求表仍存在，加上生产迁移，13个companion/身份相关表检查、外键/中文搜索/完整性通过。
 - local-android-rust-check：最终Android native Rust交叉检查；不代表完整APK或手机运行。
 - local-ui/local-ui-isolated：两组各26项明确浏览器夹具，不是系统凭据/真实API/相机驱动/TLS验收。PNG只作桌面/手机布局预览，数据是夹具。

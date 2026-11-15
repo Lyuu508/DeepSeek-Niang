@@ -2,7 +2,7 @@
 
 当前阶段3报告：PHASE3_REPORT.md；扫码身份缺陷：PHASE2_PERSONA_IDENTITY_FIX.md；主人实机：PHASE3_ACCEPTANCE.md。本地合成证据：validation-phase3/README.md。原21项内核测试和全部原有用例保留。
 
-本地103 Rust、23 Python、5 Node通过，普通/隔离UI夹具各26项，Clippy/前端/SQLite检查通过。普通/隔离UI最终结果、Windows原生测试/中文安装启动、Android完整APK、签名与公开回下载结果由同源CI及Release `BUILD-RESULTS.json`、日志提供，不用UI夹具代替原生。回环TLS是实际加密套接字，但不等于用户家庭网络；HTTP/SSE提供者是夹具，没有真实DeepSeek API Key。Linux GUI检查缺GTK开发包受阻，未虚报通过。
+本地103 Rust、24 Python、5 Node通过，普通/隔离UI夹具各26项，Clippy/前端/SQLite检查通过。普通/隔离UI最终结果、Windows原生测试/中文安装启动、Android完整APK、签名与公开回下载结果由同源CI及Release `BUILD-RESULTS.json`、日志提供，不用UI夹具代替原生。回环TLS是实际加密套接字，但不等于用户家庭网络；HTTP/SSE提供者是夹具，没有真实DeepSeek API Key。Linux GUI检查缺GTK开发包受阻，未虚报通过。
 
 Secrets元数据HTTP403不表示丢失；CI只记录存在状态，签名任务必须实际恢复原test2私钥并比较官方apksigner证书。无用户数据库/设备，真实重复条数、覆盖升级、家庭网线+Wi-Fi、相机/系统栏/键盘和真实API待验收。以下为历史验证记录，不能作为当前版本全体验收完成证明。
 
