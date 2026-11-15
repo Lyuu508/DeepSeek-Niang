@@ -19,4 +19,6 @@
 
 ![右侧设置保持中央聊天，明确UI夹具](desktop-status-controls-ui-fixture.png)
 
+首轮Hosted的Node检查因把手动码协议2误断言为3而失败；修正为手动码2、新扫码码3，并保留两者与未知版本拒绝检查。本目录Node最终日志现为5通过0失败；该修正没有修改TLS或移除用例。
+
 无主人真实设备、API Key或数据库访问通道。Windows完整构建/签后中文安装启动、Android全APK和官方签名验证看同源Hosted结果；家庭网线+Wi-Fi、相机与覆盖升级、真实DeepSeek/Token节省不能由本目录宣称通过。见 [实机清单](../PHASE3_FOLLOWUP_ACCEPTANCE.md)。
