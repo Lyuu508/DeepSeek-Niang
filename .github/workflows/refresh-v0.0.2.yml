@@ -31,7 +31,11 @@ jobs:
           persist-credentials: false
       - id: verify
         name: Verify exact same-source CI and the existing release
+        env:
+          HAS_SIGNING_BUNDLE: ${{ secrets.TEST_RELEASE_SIGNING_B64 != '' }}
+          HAS_SIGNING_SETUP_TOKEN: ${{ secrets.SIGNING_SECRETS_TOKEN != '' }}
         run: |
+          Write-Output ("::notice title=Signing configuration presence::bundle=" + $env:HAS_SIGNING_BUNDLE + "; setup_token=" + $env:HAS_SIGNING_SETUP_TOKEN)
           python -c @'
           import json,os,re,subprocess
           from pathlib import Path
