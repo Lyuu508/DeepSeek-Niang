@@ -1,4 +1,4 @@
-param([ValidateSet('Generate','Check','Sign')][string]$Action)
+param([ValidateSet('Generate','Check','Sign','Verify')][string]$Action)
 $ErrorActionPreference = 'Stop'
 if ($env:GITHUB_ACTIONS -ne 'true' -or $env:RUNNER_ENVIRONMENT -ne 'github-hosted') { throw 'Test certificate operations require an ephemeral GitHub-hosted runner' }
 $Password = ConvertTo-SecureString $env:TEST_WINDOWS_PASSWORD -AsPlainText -Force
@@ -21,12 +21,12 @@ try {
         $Proof = $Private.SignData($Probe, [System.Security.Cryptography.HashAlgorithmName]::SHA256, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
         if (-not $Public.VerifyData($Probe,$Proof,[System.Security.Cryptography.HashAlgorithmName]::SHA256,[System.Security.Cryptography.RSASignaturePadding]::Pkcs1)) { throw 'Code signing private-key proof failed' }
     } finally { $Private.Dispose(); $Public.Dispose() }
-    if ($Action -eq 'Sign') {
-        Set-AuthenticodeSignature -LiteralPath $env:TEST_WINDOWS_INSTALLER -Certificate $Certificate -HashAlgorithm SHA256 | Out-Null
+    if ($Action -in @('Sign','Verify')) {
         # Trust only in this disposable runner to check the PE digest and chain.
         # Nothing is installed in the end user's certificate store.
         Import-Certificate -FilePath $env:TEST_WINDOWS_CER -CertStoreLocation 'Cert:\LocalMachine\Root' | Out-Null
         try {
+            if ($Action -eq 'Sign') { Set-AuthenticodeSignature -LiteralPath $env:TEST_WINDOWS_INSTALLER -Certificate $Certificate -HashAlgorithm SHA256 | Out-Null }
             $Signed = Get-AuthenticodeSignature -LiteralPath $env:TEST_WINDOWS_INSTALLER
             if ($Signed.Status -ne 'Valid' -or $Signed.SignerCertificate.Thumbprint -ne $Certificate.Thumbprint) { throw 'Authenticode verification failed' }
         } finally { Remove-Item ('Cert:\LocalMachine\Root\' + $Certificate.Thumbprint) -ErrorAction SilentlyContinue }

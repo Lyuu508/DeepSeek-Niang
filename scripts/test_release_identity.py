@@ -18,7 +18,7 @@ BUNDLE_SECRET = 'TEST_RELEASE_SIGNING_B64'
 def run(args, env=None, value=None):
     result = subprocess.run(args, input=value, env=env, capture_output=True, timeout=180)
     if result.returncode:
-        stage=re.search(rb'CERTIFICATE_STAGE_ERROR:(Generate|Check|Sign):(\d+):([A-Za-z.]+)',result.stdout)
+        stage=re.search(rb'CERTIFICATE_STAGE_ERROR:(Generate|Check|Sign|Verify):(\d+):([A-Za-z.]+)',result.stdout)
         if stage:
             raise RuntimeError('Windows certificate '+stage[1].decode()+' failed at line '+stage[2].decode()+' ('+stage[3].decode()+')')
         if Path(args[0]).name == 'gh' and b'403' in result.stderr:

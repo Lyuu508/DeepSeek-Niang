@@ -47,6 +47,15 @@ def main():
     identity=json.loads((protected/'runtime.json').read_text())
     assert identity['provisioning_complete'] and identity['android_application_id']==APP_ID
     public=json.loads((protected/'public.json').read_text())
+    remote={a['name']:a for a in original['assets']}
+    previous=None
+    if 'BUILD-RESULTS.json' in remote:
+        with urllib.request.urlopen(remote['BUILD-RESULTS.json']['browser_download_url'],timeout=60) as response:previous=json.load(response)
+    reuse=bool(previous and previous.get('source_commit')==sha and previous.get('scope')=='same-source newly signed standalone test refresh'
+               and all(name in remote and remote[name]['digest']=='sha256:'+value for name,value in previous['files'].items()))
+    if reuse:
+        assert previous['android']['signer_certificate_sha256']==public['android_certificate_sha256']
+        assert previous['windows']['signing']['signer_certificate_sha256']==public['windows_certificate_sha256']
     output=ROOT/'release-files';output.mkdir(exist_ok=True)
     windows=artifacts/'windows-package-1';android=artifacts/'android-package-1';tests=artifacts/'automated-test-reports-1'
     win=json.loads((windows/'windows-build.json').read_text(encoding='utf-8-sig'))
@@ -63,8 +72,11 @@ def main():
     context=os.environ.copy();context.update(TEST_WINDOWS_INSTALLER=str(exe),TEST_WINDOWS_PASSWORD=identity['windows_password'],
         TEST_WINDOWS_PFX=str(protected/'windows-test.pfx'),TEST_WINDOWS_CER=str(protected/'windows-test.cer'))
     if phase in ['all','windows']:
-        shutil.copyfile(original_exe,exe)
-        run(['pwsh','-NoProfile','-File',str(ROOT/'.github/scripts/windows-test-sign.ps1'),'-Action','Sign'],env=context)
+        if reuse:
+            with urllib.request.urlopen(remote[exe.name]['browser_download_url'],timeout=120) as response:exe.write_bytes(response.read())
+            assert digest(exe)==previous['files'][exe.name]
+        else:shutil.copyfile(original_exe,exe)
+        run(['pwsh','-NoProfile','-File',str(ROOT/'.github/scripts/windows-test-sign.ps1'),'-Action','Verify' if reuse else 'Sign'],env=context)
         print('Windows test signature verified.',flush=True)
         if phase=='windows':return
     assert exe.is_file()
@@ -73,10 +85,14 @@ def main():
     tools=Path(os.environ['ANDROID_HOME'])/'build-tools/36.0.0'
     aligned=Path(os.environ['RUNNER_TEMP'])/'deepseek-aligned-test.apk'
     if phase in ['all','android']:
-        run(verify_android.sdk_command(tools,'zipalign','-f','-P','16','4',str(android/apk['file']),str(aligned)))
-        run(verify_android.sdk_command(tools,'apksigner','sign','--ks',str(protected/'android-test.p12'),
-            '--ks-key-alias',identity['android_alias'],'--ks-pass','env:TEST_ANDROID_PASSWORD','--key-pass','env:TEST_ANDROID_PASSWORD',
-            '--out',str(signed_apk),str(aligned)),env=context)
+        if reuse:
+            with urllib.request.urlopen(remote[signed_apk.name]['browser_download_url'],timeout=120) as response:signed_apk.write_bytes(response.read())
+            assert digest(signed_apk)==previous['files'][signed_apk.name]
+        else:
+            run(verify_android.sdk_command(tools,'zipalign','-f','-P','16','4',str(android/apk['file']),str(aligned)))
+            run(verify_android.sdk_command(tools,'apksigner','sign','--ks',str(protected/'android-test.p12'),
+                '--ks-key-alias',identity['android_alias'],'--ks-pass','env:TEST_ANDROID_PASSWORD','--key-pass','env:TEST_ANDROID_PASSWORD',
+                '--v4-signing-enabled','false','--out',str(signed_apk),str(aligned)),env=context)
         verified=verify_android.verify(signed_apk,True,True,True)
         assert verified['source_commit']==sha and verified['working_tree_clean'] and verified['signer_certificate_sha256']==public['android_certificate_sha256']
         verified.update(test_signer_persistence_guaranteed=True,signature_source='GitHub encrypted repository signing bundle',
@@ -97,8 +113,9 @@ def main():
         # A real file lets us wait for the smoke process without waiting for pipe EOF.
         print('Starting signed Windows installer/language/startup check.',flush=True)
         smoke_log=output/'signed-windows-install.log'
-        with smoke_log.open('wb') as log:
-            result=subprocess.run(['pwsh','-NoProfile','-File',str(source/'.github/scripts/windows-package-smoke.ps1')],cwd=source,env=context,stdout=log,stderr=subprocess.STDOUT,timeout=300)
+        context.update(TEST_SMOKE_SCRIPT=str(source/'.github/scripts/windows-package-smoke.ps1'),TEST_SMOKE_LOG=str(smoke_log))
+        wrapper="$ErrorActionPreference='Stop'; Start-Transcript -LiteralPath $env:TEST_SMOKE_LOG | Out-Null; try { & $env:TEST_SMOKE_SCRIPT } finally { Stop-Transcript | Out-Null }"
+        result=subprocess.run(['pwsh','-NoProfile','-Command',wrapper],cwd=source,env=context,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=300)
         if result.returncode:
             text=smoke_log.read_text(errors='replace')
             known=re.search(r'(Installer language preview exited[^\r\n]*|Native installer did not display Chinese[^\r\n]*|Installer timed out|Installer exited with \d+|Installed app never opened[^\r\n]*|Installed application not found)',text)
@@ -149,7 +166,7 @@ Android 打开“DeepSeek娘 扫码测试版”，身份 io.local.deepseekcompan
         with urllib.request.urlopen(complete['browser_download_url'],timeout=60) as response:previous=json.load(response)
         if previous.get('source_commit')==sha and previous.get('scope')==report['scope']:
             remote={a['name']:a for a in original['assets']}
-            if all(name in remote and remote[name]['digest']=='sha256:'+value for name,value in previous['files'].items()):
+            if all(name in remote and remote[name]['digest']=='sha256:'+value for name,value in previous['files'].items()) and all(p.name in remote for p in output.iterdir()) and APP_ID in original['body'] and sha in original['body']:
                 assert previous['android']['signer_certificate_sha256']==public['android_certificate_sha256']
                 assert previous['windows']['signing']['signer_certificate_sha256']==public['windows_certificate_sha256']
                 for name,value in previous['files'].items():
@@ -161,13 +178,20 @@ Android 打开“DeepSeek娘 扫码测试版”，身份 io.local.deepseekcompan
     assert {(a['id'],a['name'],a['digest']) for a in latest['assets']}=={(a['id'],a['name'],a['digest']) for a in original['assets']}, 'Release changed concurrently; refusing to replace it'
     archive=[]
     for item in original['assets']:
-        if not item['name'].startswith('ARCHIVE-'):
+        keep=reuse and (output/item['name']).is_file() and item['digest']=='sha256:'+digest(output/item['name'])
+        if not item['name'].startswith('ARCHIVE-') and not keep:
             name=archive_name(item,sha)
             api('releases/assets/'+str(item['id']),'PATCH',{'name':name,'label':'历史附件 / previous build'})
             archive.append({'id':item['id'],'old_name':item['name'],'archive_name':name,'digest':item['digest']})
     archive_file='ARCHIVE-MANIFEST-'+sha[:8]+'-'+os.environ['GITHUB_RUN_ID']+'-'+os.environ.get('GITHUB_RUN_ATTEMPT','1')+'.json'
     (output/archive_file).write_text(json.dumps({'previous_release_body':original['body'],'assets':archive},ensure_ascii=False,indent=2)+'\n')
-    subprocess.run(['gh','release','upload','v0.0.2',*map(str,sorted(output.iterdir())),'--repo',os.environ['GH_REPO']],check=True)
+    current_names={a['name']:a for a in api('releases/'+str(request['release_id']))['assets']}
+    for path in sorted(output.iterdir()):
+        if path.name in current_names:
+            assert current_names[path.name]['digest']=='sha256:'+digest(path)
+            continue
+        uploaded=subprocess.run(['gh','release','upload','v0.0.2',str(path),'--repo',os.environ['GH_REPO']],capture_output=True)
+        if uploaded.returncode:raise RuntimeError('Release asset upload failed: '+path.name)
     current=api('releases/'+str(request['release_id']))
     by_id={item['id']:item for item in current['assets']}
     assert all(by_id[item['id']]['digest']==item['digest'] for item in original['assets']), 'Historical asset bytes must remain unchanged'
