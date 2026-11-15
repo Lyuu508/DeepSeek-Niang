@@ -1,3 +1,9 @@
+# 当前测试发布签名（2026-11-15）
+
+用户明确授权本次原 0.0.2 安装资产使用新测试签名。Android 为独立 `io.local.deepseekcompanion.test2`，与旧 `.test`/正式身份并存，不卸载、不清数据、不冒充原签名升级；Windows 为自签名测试代码证书，不冒充公共 CA 信任发布者。两端私钥先完整持久保存到仓库加密 `TEST_RELEASE_SIGNING_B64`，再签名、验签并更新附件；多个全新 Hosted runner 已成功恢复同一签名。兼容单项 Secrets 一并保存，原正式签名 Secrets 不覆盖。公开附件只有证书/指纹/报告，不含私钥、密码或签名 bundle。见 [签名管理](docs/TEST_SIGNING_SETUP.md) 与 [实际交付结果](docs/RELEASE_0.0.2_REFRESH.md)。
+
+临时 Windows 证书信任验证只允许在一次性的 GitHub-hosted runner 中进行并清理，不改变用户电脑证书信任。未来必须复用已公开指纹对应的私钥；完整 bundle 缺失时拒绝重新生成身份。一次性配置 Token 已完成用途，可撤销并删除该 Token Secret，保留七项持久签名 Secrets。
+
 # 阶段 2 新增安全边界
 
 当前生产 LAN adapter 位于 companion-sync，使用标准 TLS 1.3 与 rustls WebPKI 验证，后续同步要求双方证书绑定；首次匿名 TLS 引导仅允许显式开启的短期配对入口，服务端证书来自用户选定二维码/完整高熵码，客户端以签名证明持钥，双方确认后建立信任。

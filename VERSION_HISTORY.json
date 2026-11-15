@@ -21,8 +21,26 @@
           "ciRun": 43580981180,
           "publishRun": 43581796297,
           "file": "DeepSeek-Niang_0.0.2_windows-x64-setup-zh.exe",
+          "archivedFile": "ARCHIVE-9bc43c4d-747009186-DeepSeek-Niang_0.0.2_windows-x64-setup-zh.exe",
           "sha256": "c20e8de48c0636bf1b29b7c7a6a68a2c1ddd8635c347fcaebcb2d80a10fdaaf0",
           "androidReplaced": false
+        },
+        {
+          "scope": "same-source newly signed standalone test refresh",
+          "commit": "9bc43c4dde86a92153273be8df048b10624475ae",
+          "ciRun": 43693955496,
+          "publishRun": 43697671242,
+          "androidApplicationId": "io.local.deepseekcompanion.test2",
+          "androidFile": "DeepSeek-Niang_0.0.2_android-arm64-isolated-test.apk",
+          "androidSha256": "2da68eee6e3d784a44dd4a12aef51e74d56cc4b6d822d17f629514bd48bb06e3",
+          "androidCertificateSha256": "fefb57342751c7bd5ef8271e4a8b09f8702c0285e0120e8407b557d20dbbf153",
+          "windowsFile": "DeepSeek-Niang_0.0.2_windows-x64-setup.exe",
+          "windowsSha256": "3e9edfe37a28415d24c59e43b3c1a951447a79a9b4ca7bdb6d72d68abb686bfb",
+          "windowsCertificateSha256": "069f0150a9698a8178bdaf7dfea13f5509185aa69b9ba940f5473edbafa8af62",
+          "windowsPubliclyTrustedPublisher": false,
+          "persistentSigningSecretsConfigured": true,
+          "oldAssetsArchived": true,
+          "physicalWindowsAndroidTested": false
         }
       ]
     }

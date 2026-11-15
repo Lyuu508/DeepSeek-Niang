@@ -1,0 +1,17 @@
+Verifies
+Verified using v1 scheme (JAR signing): false
+Verified using v2 scheme (APK Signature Scheme v2): false
+Verified using v3 scheme (APK Signature Scheme v3): true
+Verified using v3.1 scheme (APK Signature Scheme v3.1): false
+Verified using v4 scheme (APK Signature Scheme v4): false
+Verified for SourceStamp: false
+Number of signers: 1
+Signer #1 certificate DN: CN=DeepSeek Niang QR Test, O=Development Test
+Signer #1 certificate SHA-256 digest: fefb57342751c7bd5ef8271e4a8b09f8702c0285e0120e8407b557d20dbbf153
+Signer #1 certificate SHA-1 digest: 3c6168101265d6d739625e22b6598b22eff533e8
+Signer #1 certificate MD5 digest: 1f52d0f00c15553cbe57a6e31dcfbabc
+Signer #1 key algorithm: RSA
+Signer #1 key size (bits): 3072
+Signer #1 public key SHA-256 digest: f8261931cbf49d86647097607c44e902334b0342c662efaaa31b06af86d74783
+Signer #1 public key SHA-1 digest: 63567cdd61f32e266b38eeebcaf24f4953c17856
+Signer #1 public key MD5 digest: 27fa34a24682aa66cbad3bf025513c78

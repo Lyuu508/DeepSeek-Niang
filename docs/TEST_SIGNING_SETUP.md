@@ -2,9 +2,15 @@
 
 用户已授权新 0.0.2 测试签名，替代此前等待旧测试私钥的选择。新 Android 安装身份为 `io.local.deepseekcompanion.test2`、名称“DeepSeek娘 扫码测试版”，保留旧应用及其聊天；不能覆盖旧 `.test` 或正式版。Windows 使用独立、自签名的测试代码证书，不是公共 CA 信任发布者，系统安全提示可能仍存在。
 
-## 当前管理员步骤
+## 已完成状态
 
-当前连接拥有仓库 push 权限，但 Secrets 公钥/列表 API 实际返回 HTTP 403，无法安全持久保存新私钥。代码、构建与发布工作流继续准备；在持久保存可用前不生成并发布会丢失的临时签名。
+2026-11-15，管理员已配置一次性 `SIGNING_SECRETS_TOKEN`。两端私钥已完整写入下方七项仓库加密 Secrets，并在多个新的 GitHub-hosted Windows runner 中成功恢复、完成真实私钥证明、签名和验签。原 0.0.2 下载资产已更新；[发布运行 43697671242](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43697671242) 成功，[公开证书指纹](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/SIGNING-IDENTITIES.json) 可核验。这里不展示任何秘密值。
+
+一次性 PAT 现在可在账号的 Developer settings 撤销，并在仓库 Actions Secrets 中删除 **仅 `SIGNING_SECRETS_TOKEN`**；保留下方七项持久签名配置。不要删除/重建签名 bundle。其他协作者更新同一仓库时不需要再生成或传递私钥。
+
+## 首次管理员配置（历史步骤，已完成）
+
+本任务初始连接拥有仓库 push 权限，但 Secrets 公钥/列表 API 实际返回 HTTP 403，不能直接保存私钥。以下最小权限步骤已通过管理员配置与工作流执行完成，不需要再次配置 Token。
 
 1. 由 `Lyuu508/DeepSeek-Niang` 仓库管理员在 GitHub 创建短期 Fine-grained personal access token：Resource owner 选择仓库拥有者，仅选择本仓库，Repository permissions 只授予 **Secrets: Read and write**（Metadata 为默认读取），建议有效期一天。
 2. 在仓库 [Settings → Secrets and variables → Actions](https://github.com/Lyuu508/DeepSeek-Niang/settings/secrets/actions) 新建 Repository secret：`SIGNING_SECRETS_TOKEN`。值仅填到 GitHub 的 Secret 输入框，不发聊天、代码、Issue 或日志。

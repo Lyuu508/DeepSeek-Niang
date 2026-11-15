@@ -1,0 +1,23 @@
+{
+  "platform": "android",
+  "source_commit": "9bc43c4dde86a92153273be8df048b10624475ae",
+  "working_tree_clean": true,
+  "version": "0.0.2",
+  "version_code": 1002,
+  "application_id": "io.local.deepseekcompanion.test2",
+  "abi": "arm64-v8a",
+  "file": "DeepSeek-Niang_0.0.2_android-arm64-isolated-test.apk",
+  "bytes": 56678703,
+  "sha256": "2da68eee6e3d784a44dd4a12aef51e74d56cc4b6d822d17f629514bd48bb06e3",
+  "signature_verified": true,
+  "signer_certificate_sha256": "fefb57342751c7bd5ef8271e4a8b09f8702c0285e0120e8407b557d20dbbf153",
+  "signature_absence_checked": false,
+  "distribution": "isolated-test",
+  "upgrade_compatible": false,
+  "test_signer_persistence_guaranteed": false,
+  "automatic_backup": false,
+  "cleartext_traffic": false,
+  "shared_application_uid": false,
+  "debuggable": true,
+  "physical_device_tested": false
+}

@@ -1,23 +1,23 @@
 # DeepSeek娘
 
-最新授权：0.0.2 将使用持久保存的新测试签名更新 EXE/APK。Android 新包名 `.test2`、启动名称“DeepSeek娘 扫码测试版”，与旧版并存以保留聊天。Windows 使用独立自签名测试证书。签名先写入 GitHub 加密 Secrets，再签名、验签并替换现有下载资产；[管理员一次性配置与其他账号后续更新说明](docs/TEST_SIGNING_SETUP.md)。下列链接在新签名流程完成前仍是旧安装包，不能视作本次手机修订交付。
+0.0.2 扫码修订已替换原 Release 的 EXE/APK，直接下载即可安装。两端来自同一源码 `9bc43c4d`，使用已持久保存到 GitHub 加密 Secrets 的新测试签名。[完整交付与验收报告](docs/RELEASE_0.0.2_REFRESH.md) · [其他账号后续复用签名](docs/TEST_SIGNING_SETUP.md)。
 
 ## 0.0.2 测试版直接下载
 
-- [Windows 中文 EXE 安装程序](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/DeepSeek-Niang_0.0.2_windows-x64-setup-zh.exe)
-- [中文 Windows 修订校验](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/WINDOWS-ZH-SHA256SUMS.txt) · [构建/安装报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/WINDOWS-ZH-BUILD-RESULTS.json)
-- [Android 独立测试 APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/DeepSeek-Niang_0.0.2_android-arm64-isolated-test.apk)
-- [初始成套包 SHA256SUMS.txt](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/SHA256SUMS.txt) · [初始 BUILD-RESULTS.json](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/BUILD-RESULTS.json) · [GitHub Release](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.0.2)
+- [Windows 中文 EXE 安装程序](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/DeepSeek-Niang_0.0.2_windows-x64-setup.exe)
+- [Android 扫码测试 APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/DeepSeek-Niang_0.0.2_android-arm64-isolated-test.apk)
+- [SHA256SUMS.txt](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/SHA256SUMS.txt) · [BUILD-RESULTS.json](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/BUILD-RESULTS.json) · [GitHub Release](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.0.2)
+- [公开签名身份](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/SIGNING-IDENTITIES.json) · [安装与验收](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/INSTALL-AND-ACCEPTANCE.md)
 
-直接下载安装，不需要解压。Android 测试包为 `io.local.deepseekcompanion.test`，可与 v0.0.1 并存，不能覆盖旧正式身份。真实双端与家庭局域网验收仍待用户进行；原签名升级保持独立待办。以后已授权版本均直接提供 Release 安装包附件，Actions 仅保留构建证据，不作为唯一交付。
+电脑关闭旧程序后运行新版 EXE，再重新打开。手机安装后请打开 **“DeepSeek娘 扫码测试版”**；其 applicationId 为 `io.local.deepseekcompanion.test2`，与旧 `.test` 和正式版并存，旧应用不会自动变成新版。不要卸载旧应用或清数据，旧手机未同步的聊天不会自动导入新身份；新手机端可扫码同步电脑数据。Windows 使用自签名测试证书，尚非公共 CA 信任发布者。真实双端与家庭局域网仍待用户验收；原正式签名升级保持独立待办。
 
 以下保留项目与历史版本说明；最新公开版本为 0.0.2 测试版。
 
-目前公开的中文 Windows 包来自 `7e1d1ce`，手机包仍来自 `1c86678`，各自使用对应报告与校验清单。本次新源码已改为电脑一个按钮弹出二维码、手机一个“扫一扫”，移除旧版/文件/手动输入入口，并重做手机导航与系统栏适配。**手机更新继续等待当前测试包的相同签名**，新双端替换尚未发布；不能把现有公开 APK 当作新版扫码手机端。[最新手机修订报告](docs/PHASE2_MOBILE_QR_REPORT.md) · [上次 Windows 修订历史](docs/PHASE2_SCAN_ZH_REPORT.md)。
+新版为电脑一个“连接手机”按钮弹出二维码、手机一个“扫一扫”直接调用相机，移除旧版/文件/手动输入入口，保留手动同步，本机信息放在底部。手机使用独立底部导航、紧凑聊天及原生系统栏/刘海/键盘边距。源码 [`9bc43c4d`](https://github.com/Lyuu508/DeepSeek-Niang/commit/9bc43c4dde86a92153273be8df048b10624475ae) 的 [同源 CI](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43693955496) 与 [签名发布](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43697671242) 已全部成功，16 项当前附件已实际回下载 HTTP 200/哈希校验，APK 另经官方 apksigner 复验。实机相机与系统栏效果尚未验收。[界面预览（UI 夹具）](docs/validation-phase2-mobile-qr/README.md)。
 
-最新修订源码 [`c609b8b`](https://github.com/Lyuu508/DeepSeek-Niang/commit/c609b8ba366139956aa91562259bdc3e06d459a6) 的 [同源 CI](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43597948623) 已全部通过，包含 Windows EXE/安装启动与 Android `.test` 未签名更新候选；它不等于可安装手机更新。[新手机布局预览（UI 夹具）](docs/validation-phase2-mobile-qr/README.md)。
+旧附件已改为 `ARCHIVE-` 开头保留原字节，v0.0.2 Tag 没有改写。GitHub 自动生成的 Source code ZIP 属于历史 Tag；本次安装包源码以上方完整提交与构建报告为准。[早期手机修订记录](docs/PHASE2_MOBILE_QR_REPORT.md) · [早期 Windows 修订记录](docs/PHASE2_SCAN_ZH_REPORT.md)。
 
-内部英文名称：DeepSeek-Niang AI Companion。最新测试交付见 [阶段 2 测试报告](docs/PHASE2_TEST_DELIVERY.md)；接管时的状态快照见 [项目状态报告](docs/TAKEOVER_2026-11-14.md)。
+内部英文名称：DeepSeek-Niang AI Companion。初次阶段 2 测试交付见 [历史测试报告](docs/PHASE2_TEST_DELIVERY.md)；接管时的状态快照见 [项目状态报告](docs/TAKEOVER_2026-11-14.md)。
 
 > 项目愿景（保留仓库初始说明）：使用GPT制作的电脑跟手机数据互通的养一只有自己生活能刷b站主动聊天还有好感度系统的大肥鱼开源软件。
 
@@ -38,7 +38,7 @@ Windows + Android 本地优先陪伴应用，0.0.1 历史测试版已发布，�
 ## 阶段 2 开发状态（目标 0.0.2）
 
 以 main `22096939c20134708c6dc1a4476468a7bbe96827` 为基线重新实现局域网同步，没有使用旧云端未提交代码。
-已实现生产同步协议、Windows mDNS/Android NSD、一次性二维码、TLS 1.3 与系统安全存储、来源签名、事务队列与同步页面。原成套测试包源码 `1c86678` 已公开并验证下载；本次源码 `7e1d1ce` 的 [CI 43580981180](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43580981180) 三端成功，新增扫码授权、实时识码和中文安装。中文 Windows 包已独立发布，手机新代码等待已发布测试包的同一签名；当前旧手机仍用兼容双方确认流程。原身份升级和家庭实机验收保持待办。
+已实现生产同步协议、Windows mDNS/Android NSD、一次性二维码、TLS 1.3 与系统安全存储、来源签名、事务队列与同步页面。当前同源 `9bc43c4d` 双端包已公开：电脑出码授权，手机相机识码后自动配对、双向增量同步，Windows 中文安装。签名、原生构建与 Hosted Windows 安装启动已验证；原正式身份升级和家庭实机验收保持待办。
 见 [阶段报告](docs/PHASE2_REPORT.md)、[实机验收](docs/PHASE2_ACCEPTANCE.md)、[迁移恢复](docs/PHASE2_MIGRATION.md)、[签名调查](docs/ANDROID_SIGNING_RECOVERY.md)、[版本规则](docs/VERSIONING.md)。
 
 ## 本地开发
@@ -85,12 +85,12 @@ Windows Enter 发送、Shift+Enter 换行；手机 Enter 换行、按钮发送�
 
 历史 [阶段1报告](docs/PHASE1_REPORT.md)、[dev.1安装构建](docs/INSTALL_TEST_REPORT.md)、阶段0文档保留，以各自版本为准。[数据库设计](docs/DATABASE.md)、[安全边界](SECURITY.md)、[变更记录](CHANGELOG.md) 记录限制。当前阶段 2 已实现需显式启用的 LAN 同步；多维关系和长期记忆自动引擎、虚拟生活调度、动态桌宠、Bilibili 视频理解及语音仍未实现，不能把原型或模拟状态当作已交付功能。NAS 为后续可选节点。
 
-当前已获用户授权继续阶段 2 的 v0.0.2 收尾与双端测试发布；仅在原签名、同源码双端包与必要检查全部满足后发布。不得自动开始下一阶段或下一个版本。已发布历史为 v0.0.1 与 v0.0.2 独立测试版。
+阶段 2 的 v0.0.2 同源双端测试修订已按用户授权发布并验证下载；本次使用持久新测试签名，未发布原正式身份升级包。等待用户验收，不自动开始下一阶段或下一个版本。已发布历史为 v0.0.1 与 v0.0.2 独立测试版。
 
 ## 阶段 2 独立测试包
 
-原签名恢复和 GitHub Secrets 配置现列为独立待办，不再作为日常开发/独立构建的前置条件。当前普通 CI 构建 Android 开发测试签名 APK：applicationId 为 `io.local.deepseekcompanion.test`，启动名称“DeepSeek娘 测试版”，应用内有测试标记；正式身份 `io.local.deepseekcompanion` 保持不变。测试包不能覆盖 v0.0.1，本机 SQLite 与系统凭据属于独立应用沙箱；不会自动导入旧版数据。不同 Runner 的测试签名可能不同，不保证旧测试包可以直接覆盖，不能通过卸载正式版解决。
+原正式签名恢复保持独立待办。普通 CI 只编译、验证未签名测试候选；当前发布请求明确选择 `.test2`，发布流程从 `TEST_RELEASE_SIGNING_B64` 恢复持久私钥后签名。正式身份 `io.local.deepseekcompanion` 保持不变。当前可安装测试包不能覆盖 v0.0.1 或旧 `.test`，本机 SQLite 与系统凭据属于独立应用沙箱；不会自动导入旧版数据。未来 `.test2` 更新必须复用本次签名，保持身份和数据兼容。
 
-Linux/macOS：`sh scripts/build-android.sh --test-package`；Windows：`.\scripts\build-android.ps1 -TestPackage`。正式签名构建仍需独立的原签名配置；无参数构建不会擅自生成正式密钥。仅查看旧 Run 中的 unsigned-ci 成功不等于新的可安装测试包已验证。最新构建证据见 [测试交付报告](docs/PHASE2_TEST_DELIVERY.md)。
+本地测试入口：Linux/macOS `sh scripts/build-android.sh --test-package`；Windows `.\scripts\build-android.ps1 -TestPackage`。它们不替代仓库持久签名发布流程，不能用本地临时签名覆盖公开 `.test2`。正式签名构建仍需独立的原签名配置；无参数构建不会擅自生成正式密钥。仅有 unsigned-ci 成功不等于可安装包交付。最新证据见 [扫码签名交付报告](docs/RELEASE_0.0.2_REFRESH.md)。
 
 Windows 和 Android 各自上传安装包、SHA256SUMS、构建报告与日志；Linux 上传自动化测试报告。构建证据保留在 Actions Artifacts；按用户最新授权，安装包已作为独立文件公开到 v0.0.2 Release，不需要解压后安装。物理双端与家庭网线+Wi-Fi 的验收按 [实机清单](docs/PHASE2_ACCEPTANCE.md) 执行，未执行的项目仍为待验收。

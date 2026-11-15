@@ -1,3 +1,7 @@
+当前 0.0.2 扫码修订已替换同一 Release 的直接下载附件：双端源码 `9bc43c4d`、Android `.test2` 与持久新测试签名、Windows 中文自签名 EXE。请以 [最新交付报告](RELEASE_0.0.2_REFRESH.md) 和当前 BUILD-RESULTS/SHA256SUMS 为准。下文保留初次发布历史，不表示当前附件仍使用旧 `.test` 身份或旧源码。
+
+## 初次发布记录（历史）
+
 这是0.0.2测试版。
 
 - [直接下载 Windows EXE 安装程序](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/DeepSeek-Niang_0.0.2_windows-x64-setup.exe)

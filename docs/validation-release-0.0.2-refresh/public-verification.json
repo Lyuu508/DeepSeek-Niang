@@ -1,0 +1,164 @@
+{
+  "verified_at_utc": "2026-11-15T09:10:32Z",
+  "release_id": 445111880,
+  "release_url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.0.2",
+  "release_name": "0.0.2测试版 · 扫码修订",
+  "prerelease": true,
+  "source_sha": "9bc43c4dde86a92153273be8df048b10624475ae",
+  "ci_run_id": 43693955496,
+  "publish_run_id": 43697671242,
+  "historical_tag_unchanged": true,
+  "tag_sha": "1c86678963cb83819e7a72cada6d279fcac9736c",
+  "checksum_file_verified": true,
+  "installer_checksums": {
+    "DeepSeek-Niang_0.0.2_android-arm64-isolated-test.apk": "2da68eee6e3d784a44dd4a12aef51e74d56cc4b6d822d17f629514bd48bb06e3",
+    "DeepSeek-Niang_0.0.2_windows-x64-setup-zh.exe": "3e9edfe37a28415d24c59e43b3c1a951447a79a9b4ca7bdb6d72d68abb686bfb",
+    "DeepSeek-Niang_0.0.2_windows-x64-setup.exe": "3e9edfe37a28415d24c59e43b3c1a951447a79a9b4ca7bdb6d72d68abb686bfb"
+  },
+  "assets": [
+    {
+      "name": "android-build.log",
+      "asset_id": 750394323,
+      "http_status": 200,
+      "size": 60596,
+      "sha256": "3989de4e4412909fefd204822c2f7ef95d2ad0c73a010c5fe000e350ae434b15",
+      "api_digest_matches": true,
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/android-build.log"
+    },
+    {
+      "name": "android-reverified.json",
+      "asset_id": 750394327,
+      "http_status": 200,
+      "size": 1024,
+      "sha256": "b428b608ca85ca07a3ca9591908fef8967dc1995a1e4baa9fb857e11d73ed077",
+      "api_digest_matches": true,
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/android-reverified.json"
+    },
+    {
+      "name": "android-toolchain.log",
+      "asset_id": 750394326,
+      "http_status": 200,
+      "size": 13179,
+      "sha256": "5e9a2e3c8bed782bcd9e83d5610803e20ce21db4db445c90b4f5b56ccf343b85",
+      "api_digest_matches": true,
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/android-toolchain.log"
+    },
+    {
+      "name": "AUTOMATED-TEST-RESULTS.txt",
+      "asset_id": 750394321,
+      "http_status": 200,
+      "size": 28898,
+      "sha256": "44fbcfce23c29adf754aff29fcb6e89a496d60b619fa28e498a4de391d770d79",
+      "api_digest_matches": true,
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/AUTOMATED-TEST-RESULTS.txt"
+    },
+    {
+      "name": "BUILD-RESULTS-WINDOWS.json",
+      "asset_id": 750418727,
+      "http_status": 200,
+      "size": 969,
+      "sha256": "d2c4e334ce1a742f05bcbcbbb621082ca9ff1864e85469285e5564cc4a1c897c",
+      "api_digest_matches": true,
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/BUILD-RESULTS-WINDOWS.json"
+    },
+    {
+      "name": "BUILD-RESULTS.json",
+      "asset_id": 750418758,
+      "http_status": 200,
+      "size": 3505,
+      "sha256": "13693f61a4ae4f0c915f4f19e350658231dd8363ca8e0190334c7eb9f54385f5",
+      "api_digest_matches": true,
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/BUILD-RESULTS.json"
+    },
+    {
+      "name": "DeepSeek-Niang_0.0.2_android-arm64-isolated-test.apk",
+      "asset_id": 750394347,
+      "http_status": 200,
+      "size": 56678703,
+      "sha256": "2da68eee6e3d784a44dd4a12aef51e74d56cc4b6d822d17f629514bd48bb06e3",
+      "api_digest_matches": true,
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/DeepSeek-Niang_0.0.2_android-arm64-isolated-test.apk"
+    },
+    {
+      "name": "DeepSeek-Niang_0.0.2_windows-x64-setup-zh.exe",
+      "asset_id": 750394357,
+      "http_status": 200,
+      "size": 6491616,
+      "sha256": "3e9edfe37a28415d24c59e43b3c1a951447a79a9b4ca7bdb6d72d68abb686bfb",
+      "api_digest_matches": true,
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/DeepSeek-Niang_0.0.2_windows-x64-setup-zh.exe"
+    },
+    {
+      "name": "DeepSeek-Niang_0.0.2_windows-x64-setup.exe",
+      "asset_id": 750394377,
+      "http_status": 200,
+      "size": 6491616,
+      "sha256": "3e9edfe37a28415d24c59e43b3c1a951447a79a9b4ca7bdb6d72d68abb686bfb",
+      "api_digest_matches": true,
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/DeepSeek-Niang_0.0.2_windows-x64-setup.exe"
+    },
+    {
+      "name": "INSTALL-AND-ACCEPTANCE.md",
+      "asset_id": 750394380,
+      "http_status": 200,
+      "size": 935,
+      "sha256": "3a21d7921ae796fcb4ce3d8473fb58f88cbb46fbf1a70637cbb7fc8b03601b1f",
+      "api_digest_matches": true,
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/INSTALL-AND-ACCEPTANCE.md"
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "asset_id": 750394379,
+      "http_status": 200,
+      "size": 343,
+      "sha256": "4a37d08906805d368891829994108a19c4f2c9f503cc1562edb88d76d46c0f3f",
+      "api_digest_matches": true,
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/SHA256SUMS.txt"
+    },
+    {
+      "name": "signed-windows-install.log",
+      "asset_id": 750418812,
+      "http_status": 200,
+      "size": 882,
+      "sha256": "b0a4d5f277e3b7f809dee3ee47b64bfb2e345e41184ac7aaeae88a93793ed278",
+      "api_digest_matches": true,
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/signed-windows-install.log"
+    },
+    {
+      "name": "SIGNING-IDENTITIES.json",
+      "asset_id": 750418860,
+      "http_status": 200,
+      "size": 563,
+      "sha256": "4215415d79e386a7b5fd4bda6909e51087da52ccf4fc289fab3bcadc0f799768",
+      "api_digest_matches": true,
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/SIGNING-IDENTITIES.json"
+    },
+    {
+      "name": "SIGNING-SETUP.md",
+      "asset_id": 750418888,
+      "http_status": 200,
+      "size": 3566,
+      "sha256": "97e10560bf4e81213d1f4740bd5d673f32b62f2edc311f000a2b17effaea9383",
+      "api_digest_matches": true,
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/SIGNING-SETUP.md"
+    },
+    {
+      "name": "windows-build.log",
+      "asset_id": 750418924,
+      "http_status": 200,
+      "size": 37760,
+      "sha256": "a6315618d8906cb4c3866e42fd117b1c38b6ea77ac7d989ec653a3a3a8450398",
+      "api_digest_matches": true,
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/windows-build.log"
+    },
+    {
+      "name": "WINDOWS-TEST-SIGNER.cer",
+      "asset_id": 750418959,
+      "http_status": 200,
+      "size": 1064,
+      "sha256": "069f0150a9698a8178bdaf7dfea13f5509185aa69b9ba940f5473edbafa8af62",
+      "api_digest_matches": true,
+      "url": "https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/WINDOWS-TEST-SIGNER.cer"
+    }
+  ]
+}
