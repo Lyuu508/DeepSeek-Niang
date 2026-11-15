@@ -1,6 +1,8 @@
 //! Shared local-first domain kernel. No network listener, UI, or cloud database.
 pub mod chat;
+pub mod companion;
 pub mod event;
+pub mod pairing;
 pub mod persona;
 pub mod ports;
 pub mod relationship;

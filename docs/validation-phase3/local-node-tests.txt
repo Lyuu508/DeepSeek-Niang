@@ -1,0 +1,13 @@
+✔ manual endpoint accepts private IPv4 only, never DNS/public/loopback (1.034849ms)
+✔ scan payload requires an explicit quick invitation and validates every private endpoint (0.390799ms)
+✔ stale success and pending work cannot be displayed as synchronized (0.124017ms)
+✔ generated native pairing QR decodes to the exact one-time invitation (66.446843ms)
+✔ native quick QR decodes Chinese device identity and includes an address without private keys (50.38438ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 234.07057

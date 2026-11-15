@@ -1,0 +1,14 @@
+{
+  "sqlite_version": "3.53.1",
+  "required_tables": 33,
+  "all_required_tables_exist": true,
+  "chat_tables": 4,
+  "persona_tables": 5,
+  "companion_tables": 13,
+  "persona_scoped_tables": 13,
+  "persona_constraints": "passed",
+  "foreign_keys": "passed",
+  "bounds": "passed",
+  "chinese_trigram_search": "passed",
+  "integrity": "ok"
+}

@@ -1,3 +1,4 @@
+mod companion;
 mod sync;
 use companion_chat::{
     ChatFailure,
@@ -258,13 +259,30 @@ pub fn run() {
         .setup(|app| {
             let directory = app.path().app_data_dir()?;
             std::fs::create_dir_all(&directory)?;
-            let store = Store::open(directory.join("companion.sqlite3"))?;
+            let mut store = Store::open(directory.join("companion.sqlite3"))?;
+            store.set_device_platform(std::env::consts::OS)?;
             let credentials = vault(app.handle(), &store.profile_id)?;
             let service = Arc::new(ChatService::new(
                 Arc::new(Mutex::new(store)),
                 credentials,
                 DeepSeekClient::official()?,
             ));
+            let weak = Arc::downgrade(&service.store);
+            std::thread::spawn(move || {
+                loop {
+                    let Some(store) = weak.upgrade() else {
+                        break;
+                    };
+                    if let Ok(mut store) = store.lock() {
+                        let _ = store.companion_worker_tick(
+                            companion_core::chat::now_ms(),
+                            cfg!(target_os = "windows"),
+                        );
+                    }
+                    drop(store);
+                    std::thread::sleep(std::time::Duration::from_secs(30));
+                }
+            });
             // Separate secure-storage slot from the local DeepSeek API key.
             let mut slot =
                 *Uuid::parse_str(&service.store.lock().map_err(|_| "storage lock")?.device_id)?
@@ -299,7 +317,11 @@ pub fn run() {
             diagnostics,
             list_memories,
             save_memory,
-            delete_memory
+            delete_memory,
+            companion::companion_snapshot,
+            companion::save_companion_preferences,
+            companion::edit_companion_memory,
+            companion::resolve_memory_candidate
         ])
         .run(tauri::generate_context!())
         .expect("native application startup failed");

@@ -1,3 +1,15 @@
+# v0.0.3 当前构建与发布流程
+
+目标版本 0.0.3 / Android1003。先运行 `CI`：Linux 全量检查，Windows 原生 cargo test、真实中文 NSIS EXE 与安装启动，Android JDK21、Command-line Tools、Platform36、Build-Tools36.0.0、NDK28.2.13676358 和 ARM64 APK。两端 jobs 独立，不因另一端失败取消成功产物；普通 CI 的 unsigned-ci APK 仅编译检查，不可安装且不能冒充签名升级包。
+
+通过后执行已授权的 `release-companion-test.yml`，输入 `source_sha`（main 当前完整 SHA）、`ci_run_id`（该 SHA 的成功 CI）、`authorized_version=0.0.3`。它拒绝已公开版本复用和 main 漂移，恢复既有 `TEST_RELEASE_SIGNING_B64`，**不生成新私钥**。Windows/Android 独立签署与验证，再统一生成 SHA256SUMS/BUILD-RESULTS、测试和构建日志，draft 附件回下载校验后公开新 Pre-release，随后复验实际公开链接。保留原 v1/v2 Release 及 Tag。
+
+Android 正式配置仍为 `io.local.deepseekcompanion`；本次测试包保持现有 `io.local.deepseekcompanion.test2` 与已发布0.0.2证书。工作流使用 protected bundle 内的 Android PKCS12 与 Windows PFX；兼容单项 Secret 名称见 TEST_SIGNING_SETUP.md。CI 仅输出存在布尔值，不输出密码/Base64。实际旧v1/v2APK由官方apksigner对比后再签新APK，当前test2与正式v1不同，不能宣称正式升级。签后Windows临时证书信任只发生在可销毁Hosted runner，不操作用户机器信任库；自签名不是公共CA。
+
+完整本地/Hosted/实机范围与依赖限制见 PHASE3_REPORT.md；用户验收见 PHASE3_ACCEPTANCE.md。以下是历史构建命令与阶段1说明，当时“未签名/双端不互通/尚未发布”等状态不能作为当前状态。
+
+---
+
 # 当前独立测试包构建方式
 
 最新 CI 的 `android_compile_only` 现在构建 **`.test` 未签名更新候选**：`sh scripts/build-android.sh --unsigned-test-ci`，Windows 对应 `-UnsignedTestCI`。它沿用已发布测试包的 applicationId、0.0.2/1002 与测试标记，通过 Gradle 显式 `signingConfig = null`，不创建任何密钥；实际 apksigner 必须确认没有可验证签名。该候选不可安装，等待相同 `.test` 私钥签署才可替换现有 APK。普通 `--unsigned-ci` 仍是原身份 release 编译模式，两者不能混淆。

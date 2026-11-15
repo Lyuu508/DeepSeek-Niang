@@ -531,3 +531,90 @@ async fn missing_key_has_explicit_failure_and_still_keeps_sent_user_text() {
             .contains(&"保留用户消息".into())
     );
 }
+
+#[tokio::test]
+async fn companion_context_reaches_the_actual_request_without_extra_analysis_calls() {
+    let (endpoint, requests, task) = server(vec![success("只有这一条聊天模型请求")]).await;
+    let (service, c) = service(endpoint);
+    let persona = service.store.lock().unwrap().profile_id.clone();
+    service
+        .store
+        .lock()
+        .unwrap()
+        .edit_companion_memory(
+            &persona,
+            &companion_core::companion::memory::MemoryEdit {
+                id: None,
+                expected_version: None,
+                expected_revision: None,
+                text: "我喜欢去海边看星星".into(),
+                kind: "semantic".into(),
+                importance_milli: 900,
+                pinned: true,
+                api_allowed: true,
+            },
+        )
+        .unwrap();
+    let (observe, mut events) = observer();
+    service
+        .start(input(&c, "星星适合什么时候看？谢谢你一直陪着我"), observe)
+        .unwrap();
+    assert_eq!(final_event(&mut events).await.state, "complete");
+    idle(&service).await;
+    task.await.unwrap();
+    let captured = requests.lock().unwrap();
+    assert_eq!(captured.len(), 1);
+    let system = captured[0].body["messages"][0]["content"].as_str().unwrap();
+    assert!(system.contains("初次相识"));
+    assert!(system.contains("我喜欢去海边看星星"));
+    assert!(system.contains("仅虚拟安排"));
+    assert!(!system.contains(FIXTURE_KEY));
+    let store = service.store.lock().unwrap();
+    assert_eq!(store.bond_snapshot(&persona).unwrap().applied_events, 1);
+    assert_eq!(store.usage_summary().unwrap().measured_requests, 1);
+}
+
+#[tokio::test]
+async fn context_budget_rejection_keeps_input_and_closes_the_generation_without_network() {
+    let (endpoint, requests, task) = server(vec![]).await;
+    let (service, c) = service(endpoint);
+    let persona = service.store.lock().unwrap().profile_id.clone();
+    let settings = ChatSettings {
+        personality: "甲".repeat(3000),
+        ..Default::default()
+    };
+    service
+        .store
+        .lock()
+        .unwrap()
+        .save_persona_settings(&persona, &settings)
+        .unwrap();
+    let prefs = companion_core::companion::CompanionPreferences {
+        context_budget_bytes: 8000,
+        ..Default::default()
+    };
+    service
+        .store
+        .lock()
+        .unwrap()
+        .save_companion_preferences(&persona, &prefs)
+        .unwrap();
+    let (observe, _) = observer();
+    let error = service
+        .start(input(&c, "本次输入必须保留"), observe)
+        .unwrap_err();
+    assert_eq!(error.code, "CONTEXT_BUDGET_EXCEEDED");
+    assert!(service.active_request().is_none());
+    task.await.unwrap();
+    assert!(requests.lock().unwrap().is_empty());
+    assert!(
+        service
+            .store
+            .lock()
+            .unwrap()
+            .chat_messages(&c)
+            .unwrap()
+            .iter()
+            .any(|m| m.role == "user" && m.content == "本次输入必须保留")
+    );
+}

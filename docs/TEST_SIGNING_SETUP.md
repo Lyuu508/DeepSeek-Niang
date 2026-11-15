@@ -1,3 +1,13 @@
+# v0.0.3 与后续协作者复用
+
+本版 `release-companion-test.yml` 仅恢复**既有**完整 `TEST_RELEASE_SIGNING_B64`，签名配置缺失/不完整/证书不符时失败，禁止生成替代私钥。无需一次性 `SIGNING_SECRETS_TOKEN`，不再执行首次初始化。具有同仓库Actions权限的其他账号直接运行授权版本工作流，Secret归仓库而非ChatGPT账号；无需在聊天传递任何值。
+
+当前身份：Android `io.local.deepseekcompanion.test2`，证书 `fefb57342751c7bd5ef8271e4a8b09f8702c0285e0120e8407b557d20dbbf153`；Windows自签名测试证书SHA256 `069f0150a9698a8178bdaf7dfea13f5509185aa69b9ba940f5473edbafa8af62`。v3保持它们，Android1003可满足现有test2v2的版本升级条件，实际手机升级待验收。工作流必须真实私钥证明、旧APK官方验签、新APK再验签，不仅检查Secret名称。
+
+原v1正式证书 `9de96ea5fb1d0b3f91ea73d9a16c030428453b15838927a85f86773eaef208a1` 与test2不同。本次不改变原正式applicationId/Secrets，不从旧任务找文件，不声称升级正式版；跨身份备份/迁移边界见 PHASE3_ACCEPTANCE.md。不要卸载或清除旧版数据。下面首次初始化内容是已完成的历史步骤，不应为后续版本重新生成签名。
+
+---
+
 # 新测试签名的一次性安全配置
 
 用户已授权新 0.0.2 测试签名，替代此前等待旧测试私钥的选择。新 Android 安装身份为 `io.local.deepseekcompanion.test2`、名称“DeepSeek娘 扫码测试版”，保留旧应用及其聊天；不能覆盖旧 `.test` 或正式版。Windows 使用独立、自签名的测试代码证书，不是公共 CA 信任发布者，系统安全提示可能仍存在。

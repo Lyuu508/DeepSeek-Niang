@@ -1,3 +1,15 @@
+# 当前 schema 6 / v0.0.3
+
+生产顺序为 0001～0006，user_version=6。0001～0004 字节原样保留。新增 `0005_pairing_persona_identity.sql` 的 `lan_host_binding`、不可变 `persona_links` 和头像资源；`0006_companion_foundation.sql` 的关系证据、记忆元数据/冲突候选、主机/活动/生活台账、情绪、主动消息、偏好以及仅本机的处理/worker状态。API用量新增purpose分类。原型表保留，不以删除旧模块代替迁移。
+
+升级前 Online Backup 保存 `.pre-v6-UUID.bak`（包含WAL一致状态），全部迁移在同一事务验证外键/行数/约束，失败回滚。真实旧v4合成库及注入失败验证通过；未取得主人实际数据库。成功升级后新写入不能靠旧备份自动恢复，禁止擅自卸载/删库/降级，恢复流程见 PHASE2_PERSONA_IDENTITY_FIX.md。
+
+人格ID不因设备配对新生成；自动默认记录通过 alias → 已认证Windows主机 canonical ID 关联，原行和消息ID不改写，手动人格独立。新数据使用canonical ID；历史聊天/记忆/关系在canonical范围聚合。关系事件按证据去重重算，记忆逻辑修订/候选用完整版本元组，墓碑防复活。生产同步schema=6，旧schema明确拒绝混用。
+
+以下保留v3/v4历史结构说明；其中旧迁移版本/发布状态为当时记录。新表的约束以增量SQL、replication映射与schema检查为准。
+
+---
+
 当前开发迁移版本为 v4（0.0.2 尚未发布）。新增生产 LAN 日志、待发队列、字段寄存器、冲突、墓碑、可信证书与共享档案；五张原型表扩展人格自然键。独占迁移连接按 SQLite 重建流程处理外键，提交前检查所有约束与行数、恢复 FK 强制执行，失败整体回滚并保留 Online Backup。详细说明见 [PHASE2_MIGRATION](PHASE2_MIGRATION.md)。下面保留历史版本表结构说明。
 
 # SQLite 数据与迁移设计

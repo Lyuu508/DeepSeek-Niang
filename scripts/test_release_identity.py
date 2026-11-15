@@ -34,6 +34,13 @@ def load_bundle(value):
     return bundle
 
 
+def existing_bundle(value):
+    assert value, 'Existing signing bundle is required; never generate a replacement key'
+    bundle=load_bundle(value)
+    assert bundle.get('provisioning_complete'), 'Existing signing bundle is incomplete'
+    return bundle
+
+
 def store_secret(name, value, token, repo):
     context = os.environ.copy()
     context['GH_TOKEN'] = token
@@ -56,6 +63,8 @@ def main():
             published = json.load(response)
     raw = os.environ.get(BUNDLE_SECRET,'')
     bundle = load_bundle(raw) if raw else None
+    if '--restore-only' in sys.argv:
+        bundle=existing_bundle(raw)
     token = os.environ.get('SIGNING_SECRETS_TOKEN','')
     if not bundle:
         assert published is None, 'Published signing identity exists; never regenerate a missing key'

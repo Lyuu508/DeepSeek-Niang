@@ -279,7 +279,7 @@ fn v2_backup_merges_legacy_views_without_touching_ids_events_or_timestamps() {
     let (profile, device, ids, events) = old_v2(&f.db());
     {
         let s = Store::open(f.db()).unwrap();
-        assert_eq!(s.diagnostics().unwrap().schema_version, 4);
+        assert_eq!(s.diagnostics().unwrap().schema_version, 6);
         assert_eq!(s.profile_id, profile);
         assert_eq!(s.device_id, device);
         let rows = s.chat_messages(&profile).unwrap();

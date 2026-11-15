@@ -1,5 +1,6 @@
 import {Channel,invoke,isTauri} from '@tauri-apps/api/core';
 import type {Bootstrap,ChatEvent,ChatFailure,ChatMessage,ChatSettings,Persona,Diagnostics,KeyStatus,MemoryRecord,PreparedChat,StartChat} from '@deepseek/contracts';
+import type {CompanionSnapshot,CompanionPreferences,MemoryEdit} from '@deepseek/contracts';
 export const runtimeMode:'native'|'mock'|'preview'=isTauri()?'native':import.meta.env.DEV&&new URLSearchParams(location.search).get('test')==='mock'?'mock':'preview';
 export const nativeAvailable=runtimeMode!=='preview';
 
@@ -8,6 +9,10 @@ export function failure(error:unknown):ChatFailure {
  return {code:'OPERATION_FAILED',message:'操作未能完成，请检查本机运行状态和输入。',retryable:false};
 }
 export interface RuntimeAPI {
+ companion(personaId:string):Promise<CompanionSnapshot>;
+ saveCompanionPreferences(personaId:string,preferences:CompanionPreferences):Promise<void>;
+ editMemory(personaId:string,edit:MemoryEdit):Promise<string>;
+ resolveMemoryCandidate(personaId:string,id:string,accept:boolean):Promise<void>;
  bootstrap():Promise<Bootstrap>;messages(id:string):Promise<ChatMessage[]>;
  createPersona(name:string,personality:string):Promise<Persona>;selectPersona(id:string):Promise<void>;
  saveSettings(personaId:string,settings:ChatSettings):Promise<void>;setKey(key:string):Promise<KeyStatus>;deleteKey():Promise<KeyStatus>;selfTestVault():Promise<string>;
@@ -20,6 +25,10 @@ async function call<T>(command:string,args?:Record<string,unknown>):Promise<T>{
 }
 const channels=new Map<string,Channel<ChatEvent>>();
 const nativeApi:RuntimeAPI={
+ companion:personaId=>call('companion_snapshot',{personaId}),
+ saveCompanionPreferences:(personaId,preferences)=>call('save_companion_preferences',{personaId,preferences}),
+ editMemory:(personaId,edit)=>call('edit_companion_memory',{personaId,edit}),
+ resolveMemoryCandidate:(personaId,id,accept)=>call('resolve_memory_candidate',{personaId,id,accept}),
  bootstrap:()=>call('bootstrap'),messages:conversationId=>call('list_messages',{conversationId}),
  createPersona:(name,personality)=>call('create_persona',{name,personality}),selectPersona:id=>call('select_persona',{id}),
  saveSettings:(personaId,settings)=>call('save_chat_settings',{personaId,settings}),setKey:key=>call('set_api_key',{key}),deleteKey:()=>call('delete_api_key'),selfTestVault:()=>call('vault_self_test'),

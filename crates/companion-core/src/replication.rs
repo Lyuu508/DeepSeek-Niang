@@ -39,6 +39,16 @@ const TABLES: &[(&str, &str)] = &[
     ("proactive_messages", "id"),
     ("api_usage_records", "id"),
     ("application_settings", "profile_id,key,device_id"),
+    ("persona_links", "alias_id"),
+    ("companion_preferences", "persona_id"),
+    ("companion_memory_meta", "memory_id"),
+    ("companion_memory_candidates", "id"),
+    ("companion_hosts", "persona_id"),
+    ("companion_activities", "id"),
+    ("companion_life_events", "id"),
+    ("companion_bond_events", "id"),
+    ("companion_mood_events", "id"),
+    ("companion_proactive", "id"),
 ];
 fn key_fields(table: &str) -> Result<Vec<&str>> {
     Ok(TABLES
@@ -518,6 +528,7 @@ impl Store {
             return Err(Error::Schema);
         }
         tx.commit()?;
+        self.reconcile_paired_persona()?;
         Ok(count)
     }
     pub fn lan_conflicts(&self) -> Result<Vec<Value>> {
@@ -623,6 +634,12 @@ fn validate_row(db: &Connection, e: &Change, local: &str) -> Result<()> {
     if e.table == "devices" && e.row["id"] == local {
         return Err(Error::Untrusted);
     }
+    if e.table == "persona_links"
+        && e.row["host_device_id"] != e.origin
+        && e.row["source_device_id"] != e.origin
+    {
+        return Err(Error::Untrusted);
+    }
     if e.table == "sync_events" {
         let event: crate::event::Event = serde_json::from_str(
             e.row["envelope_json"]
@@ -658,6 +675,103 @@ fn validate_row(db: &Connection, e: &Change, local: &str) -> Result<()> {
                 .ok_or(Error::Invalid("preferences"))?,
         )?;
         settings.validate()?;
+    }
+    if e.table == "companion_preferences" {
+        let settings: crate::companion::CompanionPreferences = serde_json::from_str(
+            e.row["config_json"]
+                .as_str()
+                .ok_or(Error::Invalid("companion config"))?,
+        )?;
+        settings.validate()?;
+    }
+    if e.table == "companion_hosts" {
+        let previous: Option<String> = db
+            .query_row(
+                "SELECT device_id FROM companion_hosts WHERE persona_id=?1",
+                [to_sql(&e.row["persona_id"])],
+                |r| r.get(0),
+            )
+            .optional()?;
+        if previous.is_some_and(|v| Some(v.as_str()) != e.row["device_id"].as_str()) {
+            return Err(Error::Conflict);
+        }
+
+        if e.row["device_id"] != e.origin {
+            return Err(Error::Untrusted);
+        }
+        let platform: String = db.query_row(
+            "SELECT platform FROM devices WHERE id=?1",
+            [&e.origin],
+            |r| r.get(0),
+        )?;
+        if platform != "windows" {
+            return Err(Error::Untrusted);
+        }
+    }
+    if matches!(
+        e.table.as_str(),
+        "companion_activities" | "companion_life_events" | "companion_proactive"
+    ) {
+        let host: String = db.query_row(
+            "SELECT device_id FROM companion_hosts WHERE persona_id=?1",
+            [to_sql(&e.row["persona_id"])],
+            |r| r.get(0),
+        )?;
+        if e.row["host_device_id"] != e.origin || host != e.origin {
+            return Err(Error::Untrusted);
+        }
+    }
+    if matches!(
+        e.table.as_str(),
+        "companion_bond_events"
+            | "companion_mood_events"
+            | "companion_memory_candidates"
+            | "companion_memory_meta"
+    ) && e.row.get("source_message_id").is_some_and(|v| !v.is_null())
+    {
+        let (owner,origin,role,text,at,clock):(String,String,String,String,i64,i64)=db.query_row("SELECT c.persona_id,m.origin_device_id,m.role,m.content,coalesce(m.created_at_ms,0),m.created_lamport FROM messages m JOIN conversation_personas c ON c.conversation_id=m.conversation_id WHERE m.id=?1",[to_sql(&e.row["source_message_id"])],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?,r.get(5)?)))?;
+        if role != "user"
+            || crate::pairing::resolve(db, &owner)?
+                != crate::pairing::resolve(
+                    db,
+                    e.row["persona_id"]
+                        .as_str()
+                        .ok_or(Error::Invalid("evidence persona"))?,
+                )?
+        {
+            return Err(Error::Untrusted);
+        }
+        if e.table == "companion_bond_events" {
+            if origin != e.origin
+                || e.row["origin_device_id"] != origin
+                || e.row["occurred_at_ms"] != at
+                || e.row["lamport"] != clock
+            {
+                return Err(Error::Untrusted);
+            }
+            if crate::companion::bond::evidence_kind(&text) != e.row["kind"].as_str() {
+                return Err(Error::Untrusted);
+            }
+        }
+        if e.table == "companion_mood_events"
+            && (origin != e.origin
+                || e.row["origin_device_id"] != origin
+                || e.row["started_at_ms"] != at
+                || e.row["lamport"] != clock
+                || crate::companion::bond::inferred_mood(&text) != e.row["mood"].as_str())
+        {
+            return Err(Error::Untrusted);
+        }
+    }
+    if e.table == "companion_mood_events" && !e.row["activity_id"].is_null() {
+        let (host, persona): (String, String) = db.query_row(
+            "SELECT host_device_id,persona_id FROM companion_activities WHERE id=?1",
+            [to_sql(&e.row["activity_id"])],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )?;
+        if host != e.origin || e.row["origin_device_id"] != host || e.row["persona_id"] != persona {
+            return Err(Error::Untrusted);
+        }
     }
     if e.table == "application_settings"
         && (e.row["scope"] != "profile"
@@ -713,6 +827,9 @@ fn validate_row(db: &Connection, e: &Change, local: &str) -> Result<()> {
                 "origin_device_id",
                 "source_event_id",
                 "authority_device_id",
+                "host_device_id",
+                "source_device_id",
+                "canonical_id",
             ]
             .contains(&f.as_str())
     }) {
@@ -801,6 +918,10 @@ fn project(db: &Connection, e: &Change) -> Result<()> {
             "devices",
             "conversation_personas",
             "api_usage_records",
+            "persona_links",
+            "companion_bond_events",
+            "companion_mood_events",
+            "companion_life_events",
         ]
         .contains(&e.table.as_str())
     {
@@ -1186,7 +1307,7 @@ mod migration_tests {
             assert_eq!(s.device_id, device);
             assert_eq!(s.profile_id, profile);
             assert_eq!(s.personas().unwrap()[0].id, profile);
-            assert_eq!(s.diagnostics().unwrap().schema_version, 4);
+            assert_eq!(s.diagnostics().unwrap().schema_version, 6);
             assert_eq!(
                 s.conn
                     .query_row(

@@ -100,6 +100,17 @@ impl Event {
                 return Err(Error::Invalid("delete payload must be null"));
             }
         } else {
+            if self.entity == Entity::Memory
+                && (self
+                    .payload
+                    .get("importance_milli")
+                    .is_some_and(|v| v.as_i64().is_none_or(|n| !(0..=1000).contains(&n)))
+                    || self.payload.get("sensitivity").is_some_and(|v| {
+                        !matches!(v.as_str(), Some("private" | "api_allowed" | "blocked"))
+                    }))
+            {
+                return Err(Error::Invalid("memory metadata"));
+            }
             if let Some(owner) = self.payload.get("persona_id")
                 && owner.as_str().is_none_or(|id| Uuid::parse_str(id).is_err())
             {

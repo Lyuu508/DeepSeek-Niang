@@ -17,3 +17,5 @@ export function quickInvitation(value:string):boolean {
 }
 export const syncErrors:Record<string,string>={LAN_PRIVATE_IP_REQUIRED:'未找到可用的局域网地址。请先让电脑连接路由器，再重新显示二维码。',PEER_UNREACHABLE:'设备暂时无法连接，将自动重试。请检查应用是否打开、路由器隔离和专用网络防火墙。',PAIR_TOKEN_EXPIRED_OR_INVALID:'二维码已过期或不可用。请在电脑重新点击“连接手机”后再扫。',PEER_AUTHENTICATION_FAILED:'连接身份不匹配。请在电脑重新显示二维码后再扫，不要信任来源不明的二维码。',SECURE_STORAGE_UNAVAILABLE:'系统安全存储不可用。聊天数据保留在本机，同步未启动。',DISCOVERY_UNAVAILABLE:'自动发现暂不可用。请检查本地网络权限并重新扫码，二维码中已包含电脑的连接地址。'};
 Object.assign(syncErrors,{INVALID_SYNC_INPUT:'配对码无法识别，请重新扫描电脑上的连接码。',WAITING_FOR_BOTH_CONFIRMATIONS:'电脑尚未授权本次连接。请在电脑重新点击“连接手机”，扫描新的二维码。',CRYPTOGRAPHY_UNAVAILABLE:'系统加密组件暂时不可用，请重启应用后再试。'});
+
+Object.assign(syncErrors,{SYNC_VERSION_MISMATCH:'两端数据库版本不一致。请同时安装本次 Windows 和 Android 版本；原有数据仍保留。'});

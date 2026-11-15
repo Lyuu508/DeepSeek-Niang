@@ -128,5 +128,26 @@ async function configure(page){await settings(page);await page.getByLabel('API K
   await phone.screenshot({path:path.join(artifact,'phone-scan-redesign-mock.png'),fullPage:true,animations:'disabled'});
   assert.deepEqual(mobileErrors,[]);
  });
+ await check('companion controls show five dimensions and preserve explicit proactive opt in',async()=>{
+  await page.getByRole('button',{name:'关系与日常',exact:true}).click();await page.getByRole('heading',{name:'我们的关系',exact:true}).waitFor();
+  assert.equal(await page.getByRole('progressbar').count(),5);assert.equal(await page.getByLabel('开启主动消息',{exact:true}).isChecked(),false);
+  await page.getByLabel('开启主动消息',{exact:true}).check();await page.getByLabel('主动消息最小间隔').fill('180');await page.getByLabel('主动消息每日上限').fill('1');
+  await page.getByRole('button',{name:'保存陪伴设置',exact:true}).click();await page.getByText('陪伴设置已保存，配对设备同步后生效。',{exact:true}).waitFor();
+  await chat(page);await page.getByRole('button',{name:'关系与日常',exact:true}).click();assert(await page.getByLabel('开启主动消息',{exact:true}).isChecked());
+  assert.equal(await page.getByLabel('主动消息每日上限').inputValue(),'1');assert.match(await page.locator('.companion-content').innerText(),/虚拟看视频、听音乐不代表实际播放/);
+  await page.locator('.page-scroll').evaluate(el=>{el.scrollTop=0;});await page.screenshot({path:path.join(artifact,'phase3-companion-desktop-ui-fixture.png'),animations:'disabled'});
+ });
+ await check('memory editor retains the record and exposes importance privacy and provenance',async()=>{
+  await page.getByRole('button',{name:'本地数据',exact:true}).click();const row=page.locator('.memory').filter({hasText:'人格A的独立记忆'});await row.getByRole('button',{name:'编辑',exact:true}).click();
+  await page.getByLabel('记忆内容').fill('人格A已修订的重要记忆');await page.getByLabel('标记重要记忆',{exact:true}).check();await page.getByLabel('允许与当前话题相关时用于 DeepSeek 聊天',{exact:true}).check();
+  await page.getByRole('button',{name:'保存记忆修订',exact:true}).click();const edited=page.locator('.memory').filter({hasText:'人格A已修订的重要记忆'});await edited.waitFor();
+  assert.equal(await page.locator('.memory').count(),1);await edited.getByText('来源与时间',{exact:true}).click();assert.match(await edited.innerText(),/主人手动保存/);assert.match(await edited.innerText(),/允许相关检索后用于聊天/);
+  await switchTo(page,'测试角色B');await page.getByRole('button',{name:'本地数据',exact:true}).click();assert.equal(await page.getByText('人格A已修订的重要记忆',{exact:true}).count(),0);
+ });
+ await check('phone companion page stays inside the viewport and retains its chat identity',async()=>{
+  await phone.getByRole('button',{name:'手机陪伴',exact:true}).click();await phone.getByRole('heading',{name:'我们的关系',exact:true}).waitFor();assert.equal(await phone.getByRole('progressbar').count(),5);
+  assert(await phone.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await phone.screenshot({path:path.join(artifact,'phase3-companion-phone-ui-fixture.png'),animations:'disabled'});
+  await phone.getByRole('button',{name:'手机聊天',exact:true}).click();assert.equal(await phone.locator('.message.user').count(),1);assert.deepEqual(mobileErrors,[]);
+ });
  fs.writeFileSync(path.join(artifact,'results.json'),JSON.stringify({scope:'Explicit UI Mock; no real API, SQLite, file migration or OS credentials; camera lifecycle uses a synthetic browser stream',passed:checks.length,checks,browser:browser.version()},null,2)+'\n');console.log(JSON.stringify({scope:'explicit UI Mock',passed:checks.length,checks}));
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{await browser?.close();server?.kill('SIGTERM');});

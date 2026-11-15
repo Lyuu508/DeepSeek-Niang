@@ -14,6 +14,15 @@ refresh=importlib.util.module_from_spec(spec);spec.loader.exec_module(refresh)
 
 
 class PersistedSigning(unittest.TestCase):
+    def test_restore_only_requires_complete_existing_bundle(self):
+        data={'format':1,'android_application_id':identity.APP_ID,'android_keystore':'synthetic-fixture',
+              'android_password':'synthetic-fixture','android_alias':'synthetic-fixture',
+              'windows_pfx':'synthetic-fixture','windows_password':'synthetic-fixture','provisioning_complete':False}
+        encode=lambda d:base64.b64encode(json.dumps(d).encode()).decode()
+        with self.assertRaises(AssertionError):identity.existing_bundle('')
+        with self.assertRaises(AssertionError):identity.existing_bundle(encode(data))
+        data['provisioning_complete']=True
+        self.assertTrue(identity.existing_bundle(encode(data))['provisioning_complete'])
     def test_complete_bundle_keeps_a_separate_test_identity(self):
         data={'format':1,'android_application_id':identity.APP_ID,'android_keystore':'synthetic-fixture',
               'android_password':'synthetic-fixture','android_alias':'synthetic-fixture',

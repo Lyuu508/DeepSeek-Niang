@@ -1,0 +1,29 @@
+import {useCallback,useEffect,useState} from 'react';
+import type {ChatFailure,CompanionSnapshot,ManagedMemory,MemoryEdit} from '@deepseek/contracts';
+import {native,nativeAvailable,failure} from './native';
+import {dateTime} from './CompanionPanel';
+const kinds:Record<string,string>={episodic:'情景记忆',semantic:'语义记忆',relationship:'关系记忆',knowledge:'知识记忆'};
+const empty:MemoryEdit={id:null,expected_version:null,expected_revision:null,text:'',kind:'semantic',importance_milli:700,pinned:false,api_allowed:false};
+export function MemoryPanel({personaId,onError,onRefresh}:{personaId:string;onError:(error:ChatFailure|null)=>void;onRefresh:()=>Promise<void>}){
+ const [data,setData]=useState<CompanionSnapshot|null>(null);const [edit,setEdit]=useState<MemoryEdit>({...empty});const [filter,setFilter]=useState('all');const [busy,setBusy]=useState(false);const [notice,setNotice]=useState('');
+ const refresh=useCallback(async()=>{if(!nativeAvailable||!personaId)return;setData(await native.companion(personaId));},[personaId]);
+ useEffect(()=>{let current=true;if(nativeAvailable&&personaId)void native.companion(personaId).then(data=>{if(current)setData(data);}).catch(e=>onError(failure(e)));return()=>{current=false;};},[personaId,onError]);
+ async function perform(work:()=>Promise<unknown>){setBusy(true);setNotice('');onError(null);try{await work();await refresh();await onRefresh();}catch(e){onError(failure(e));await refresh().catch(()=>{});}finally{setBusy(false);}}
+ function startEdit(memory:ManagedMemory){setEdit({id:memory.id,expected_version:memory.version,expected_revision:memory.revision,text:memory.text,kind:memory.kind,importance_milli:memory.importance_milli,pinned:memory.pinned,api_allowed:memory.api_allowed});setNotice('正在编辑已有记忆，保存时会核对版本。');document.getElementById('memory')?.focus();}
+ return <section className="settings-card memory-panel"><div className="card-heading"><div><h2>分层长期记忆</h2><p>短期上下文使用有限近期聊天；重要内容分层保存，不把全部闲聊变成记忆。</p></div><button disabled={!nativeAvailable||busy} onClick={()=>void refresh().catch(e=>onError(failure(e)))}>刷新记忆</button></div>
+  {notice&&<p className="notice" role="status">{notice}</p>}
+  <form onSubmit={e=>{e.preventDefault();void perform(async()=>{await native.editMemory(personaId,edit);setEdit({...empty});setNotice('记忆已保存。');});}}>
+   <label htmlFor="memory">记忆内容</label><textarea id="memory" value={edit.text} disabled={!nativeAvailable||busy} onChange={e=>setEdit(old=>({...old,text:e.target.value}))} maxLength={2500}/>
+   <div className="two-fields"><label>记忆类别<select aria-label="记忆类别" value={edit.kind} onChange={e=>setEdit(old=>({...old,kind:e.target.value}))}>{Object.entries(kinds).map(([kind,label])=><option value={kind} key={kind}>{label}</option>)}</select></label><label>重要性 · {edit.importance_milli/10}%<input aria-label="记忆重要性" type="range" min={0} max={1000} step={50} value={edit.importance_milli} onChange={e=>setEdit(old=>({...old,importance_milli:Number(e.target.value)}))}/></label></div>
+   <label className="check-row"><input type="checkbox" checked={edit.pinned} onChange={e=>setEdit(old=>({...old,pinned:e.target.checked}))}/>标记重要记忆</label>
+   <label className="check-row"><input type="checkbox" checked={edit.api_allowed} onChange={e=>setEdit(old=>({...old,api_allowed:e.target.checked}))}/>允许与当前话题相关时用于 DeepSeek 聊天</label>
+   <p className="field-help">手动记忆受保护，自动抽取不能直接覆盖；模型不直接修改数据库。允许发送的内容仍受检索和预算限制。</p>
+   <div className="button-row"><button className="primary" disabled={!nativeAvailable||busy||!edit.text.trim()}>{edit.id?'保存记忆修订':'保存记忆'}</button>{edit.id&&<button type="button" onClick={()=>setEdit({...empty})}>取消编辑</button>}</div>
+  </form>
+  {!!data?.memory_candidates.length&&<div className="memory-candidates"><h3>待确认的记忆冲突</h3><p>旧值尚未被覆盖，请核对来源后选择。</p>{data.memory_candidates.map(candidate=><article className="memory-candidate" key={candidate.id}><p>当前：{data.memories.find(m=>m.id===candidate.conflicting_memory_id)?.text??'需重新核对'}</p><strong>新候选：{candidate.content}</strong><small>来源消息：{candidate.source_message_id} · {dateTime(candidate.created_at_ms)}</small><div className="button-row"><button disabled={busy} onClick={()=>void perform(()=>native.resolveMemoryCandidate(personaId,candidate.id,true))}>确认采用修订</button><button disabled={busy} onClick={()=>void perform(()=>native.resolveMemoryCandidate(personaId,candidate.id,false))}>保留旧值</button></div></article>)}</div>}
+  <label className="memory-filter">查看类别<select aria-label="查看记忆类别" value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">全部类别</option>{Object.entries(kinds).map(([kind,label])=><option value={kind} key={kind}>{label}</option>)}</select></label>
+  {data?.memories.filter(m=>filter==='all'||m.kind===filter).map(memory=><article className="memory" key={memory.id}><div className="memory-tags"><span className="badge">{kinds[memory.kind]??memory.kind}</span>{memory.pinned&&<span className="badge">重要</span>}{memory.owner_locked&&<span className="badge">手动保护</span>}</div><p>{memory.text}</p><details><summary>来源与时间</summary><p>{memory.source_kind==='chat'?'从明确聊天整理':memory.source_kind==='legacy'?'旧版保留记忆':'主人手动保存'}{memory.source_message_id?' · 消息 '+memory.source_message_id:''}</p>{memory.source_excerpt&&<blockquote>{memory.source_excerpt}</blockquote>}<p>创建/登记：{dateTime(memory.created_at_ms)}<br/>更新：{dateTime(memory.updated_at_ms)}</p><p>{memory.api_allowed?'允许相关检索后用于聊天':'不发送给模型'} · 重要性 {memory.importance_milli/10}%</p></details><div className="button-row"><button disabled={busy} onClick={()=>startEdit(memory)}>编辑</button><button disabled={busy} onClick={()=>void perform(()=>native.deleteMemory(personaId,memory.id))}>删除</button></div></article>)}
+  {data&&!data.memories.length&&<p>当前人格还没有长期记忆。</p>}
+  <p className="field-help">当前列表最多显示最近 500 条。删除后停止检索并传播删除标记；历史事件和独立备份仍可能保留原文。</p>
+ </section>;
+}

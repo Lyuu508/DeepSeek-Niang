@@ -1,0 +1,7 @@
+   Compiling tauri-plugin-companion-keystore v0.0.3 (/workspace/DeepSeek-Niang/plugins/companion-keystore)
+    Checking companion-core v0.0.3 (/workspace/DeepSeek-Niang/crates/companion-core)
+    Checking companion-secrets v0.0.3 (/workspace/DeepSeek-Niang/crates/companion-secrets)
+   Compiling companion-app v0.0.3 (/workspace/DeepSeek-Niang/apps/companion/src-tauri)
+    Checking companion-sync v0.0.3 (/workspace/DeepSeek-Niang/crates/companion-sync)
+    Checking companion-chat v0.0.3 (/workspace/DeepSeek-Niang/crates/companion-chat)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.77s

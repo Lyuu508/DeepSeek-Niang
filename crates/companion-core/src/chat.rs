@@ -396,12 +396,15 @@ impl Store {
         tx.execute("UPDATE chat_requests SET state=?1,finished_at_ms=?2,error_code=?3,finish_reason=?4 WHERE id=?5",params![state,now,error_code,finish_reason,request])?;
         tx.execute("UPDATE chat_generations SET content=?1,state=?2,revision=revision+1,finished_at_ms=?3,error_code=?4,finish_reason=?5 WHERE request_id=?6",params![content,state,now,error_code,finish_reason,request])?;
         tx.execute("INSERT INTO lan_outbox(table_name,after_json) SELECT 'chat_turn_choices',json_object('user_message_id',user_message_id,'selected_generation_id',selected_generation_id) FROM chat_turn_choices WHERE user_message_id=?1",[&user_id])?;
-        tx.execute("INSERT OR IGNORE INTO api_usage_records(id,profile_id,request_key,provider,model_id,input_tokens,output_tokens,currency,usage_state,created_at_ms,price_snapshot_json,persona_id) VALUES(?1,?2,?3,'deepseek',?4,?5,?6,'USD',?7,?8,'{}',?9)",params![Uuid::new_v4().to_string(),tx.query_row("SELECT profile_id FROM conversations WHERE id=?1",[&conversation],|r|r.get::<_,String>(0))?,request,model,usage.map(|u|u.prompt_tokens),usage.map(|u|u.completion_tokens),if usage.is_some(){"measured"}else{"unknown"},now,crate::persona::owner_of_thread(&tx,&conversation,&self.profile_id)?])?;
+        tx.execute("INSERT OR IGNORE INTO api_usage_records(id,profile_id,request_key,provider,model_id,input_tokens,output_tokens,currency,usage_state,created_at_ms,price_snapshot_json,persona_id) VALUES(?1,?2,?3,'deepseek',?4,?5,?6,'USD',?7,?8,'{}',?9)",params![Uuid::new_v4().to_string(),tx.query_row("SELECT profile_id FROM conversations WHERE id=?1",[&conversation],|r|r.get::<_,String>(0))?,request,model,usage.map(|u|u.prompt_tokens),usage.map(|u|u.completion_tokens),if usage.is_some(){"measured"}else{"unknown"},now,tx.query_row("SELECT persona_id FROM conversation_personas WHERE conversation_id=?1",[&conversation],|r|r.get::<_,String>(0))?])?;
         tx.execute(
             "UPDATE conversations SET updated_at_ms=?1 WHERE id=?2",
             params![now, conversation],
         )?;
         tx.commit()?;
+        if state == "complete" && self.process_companion_batch().is_err() {
+            self.conn.execute("UPDATE companion_worker_status SET error_code='COMPANION_PROCESSING_RETRY',failures=failures+1 WHERE id=1",[])?;
+        }
         Ok(true)
     }
     pub(crate) fn recover_chat_requests(&mut self) -> Result<()> {

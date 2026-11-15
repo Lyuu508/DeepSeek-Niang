@@ -21,6 +21,9 @@ chat_tables = {"chat_requests", "chat_generations", "chat_turn_choices", "chat_p
 assert chat_tables <= tables
 persona_tables = {"personas", "conversation_personas", "persona_chat_preferences", "persona_states", "persona_selection"}
 assert persona_tables <= tables
+companion_tables=set('persona_links lan_host_binding companion_preferences companion_bond_events companion_mood_events companion_memory_meta companion_memory_candidates companion_hosts companion_activities companion_life_events companion_proactive companion_processed_sources companion_worker_status'.split())
+assert companion_tables <= tables
+
 db.execute("INSERT INTO local_profiles(id,display_name) VALUES('lab','schema fixture')")
 try:
     db.execute("INSERT INTO devices(id,profile_id,name,trust_state) VALUES('bad','missing','x','trusted')")
@@ -68,6 +71,6 @@ assert db.execute("SELECT count(*) FROM memory_fts WHERE memory_fts MATCH ?", ('
 assert db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
 assert list(db.execute("PRAGMA foreign_key_check")) == []
 print(json.dumps({"sqlite_version": sqlite3.sqlite_version, "required_tables": len(required),
-    "all_required_tables_exist": True, "chat_tables": len(chat_tables), "persona_tables": len(persona_tables),
+    "all_required_tables_exist": True, "chat_tables": len(chat_tables), "persona_tables": len(persona_tables), "companion_tables": len(companion_tables),
     "persona_scoped_tables": len(scoped_tables), "persona_constraints": "passed", "foreign_keys": "passed", "bounds": "passed",
     "chinese_trigram_search": "passed", "integrity": "ok"}, ensure_ascii=False, indent=2))

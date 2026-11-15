@@ -40,9 +40,17 @@ impl ChatFailure {
             "OUTPUT_LIMIT" => ("回复达到本地长度限制，已保留当前内容。", false),
             "CANCELLED" => ("生成已停止。", false),
             "BUSY" => ("已有回复正在生成，请先停止或等待完成。", false),
+            "DATA_VERSION_CONFLICT" => (
+                "这条数据已更新。请刷新后核对；当前内容和待确认修订均已保留。",
+                false,
+            ),
             "APP_RESTARTED" => ("上次生成因应用退出而中断。", true),
             "STORAGE_ERROR" => ("本地数据库写入失败，请检查存储空间。", false),
             "DATABASE_IN_USE" => ("本地档案已由另一个应用实例打开，请先关闭该实例。", false),
+            "CONTEXT_BUDGET_EXCEEDED" => (
+                "本次输入与人设超过上下文预算。消息已保留，请缩短输入或在陪伴设置提高预算。",
+                false,
+            ),
             _ => ("操作未能完成，请检查输入或稍后重试。", false),
         };
         Self {
@@ -60,6 +68,9 @@ impl From<companion_secrets::VaultError> for ChatFailure {
 impl From<companion_core::Error> for ChatFailure {
     fn from(e: companion_core::Error) -> Self {
         match e {
+            companion_core::Error::Invalid("CONTEXT_BUDGET_EXCEEDED") => {
+                Self::new("CONTEXT_BUDGET_EXCEEDED")
+            }
             companion_core::Error::Invalid(_) | companion_core::Error::Conflict => {
                 Self::new("INVALID_INPUT")
             }

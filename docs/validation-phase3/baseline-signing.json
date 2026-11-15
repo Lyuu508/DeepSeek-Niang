@@ -1,0 +1,33 @@
+{
+  "baseline_main": "3704780c59ada319282a2809e7ba93876fdb720f",
+  "gh_auth_active": true,
+  "account": "x1770203628-prog",
+  "repository_permissions": {
+    "admin": false,
+    "maintain": false,
+    "pull": true,
+    "push": true,
+    "triage": true
+  },
+  "secrets_metadata": {
+    "metadata_api_readable": false,
+    "metadata_status": "HTTP 403; cannot infer absence",
+    "values_read_or_printed": false
+  },
+  "actual_apksigner_checks": [
+    {
+      "version": "0.0.1",
+      "apk_sha256": "5100cdd29b6751e3ffd1d6536f5c125af6888f679dc524cdfbb6048afe3195d8",
+      "certificate_sha256": "9de96ea5fb1d0b3f91ea73d9a16c030428453b15838927a85f86773eaef208a1",
+      "apksigner_verified": true
+    },
+    {
+      "version": "0.0.2",
+      "apk_sha256": "2da68eee6e3d784a44dd4a12aef51e74d56cc4b6d822d17f629514bd48bb06e3",
+      "certificate_sha256": "fefb57342751c7bd5ef8271e4a8b09f8702c0285e0120e8407b557d20dbbf153",
+      "apksigner_verified": true
+    }
+  ],
+  "new_version_must_reuse_test2_signature": true,
+  "production_upgrade_compatible": false
+}

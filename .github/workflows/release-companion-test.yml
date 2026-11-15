@@ -1,0 +1,221 @@
+name: Release companion v0.0.3 test
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Full tested main SHA for both platforms
+        required: true
+        type: string
+      ci_run_id:
+        description: Successful same-source CI run
+        required: true
+        type: string
+      authorized_version:
+        description: Explicitly authorized version only
+        required: true
+        type: choice
+        options: ['0.0.3']
+permissions:
+  contents: read
+concurrency:
+  group: stage-release
+  cancel-in-progress: false
+jobs:
+  authorize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      sha: ${{ steps.verify.outputs.sha }}
+      run: ${{ steps.verify.outputs.run }}
+      windows: ${{ steps.verify.outputs.windows }}
+      android: ${{ steps.verify.outputs.android }}
+      tests: ${{ steps.verify.outputs.tests }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      REQUEST_SHA: ${{ inputs.source_sha }}
+      REQUEST_CI: ${{ inputs.ci_run_id }}
+      REQUEST_VERSION: ${{ inputs.authorized_version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: verify
+        name: Require latest main, same-source CI and unused authorized version
+        run: |
+          python3 - <<'PY'
+          import json,os,re,subprocess
+          repo=os.environ['GH_REPO'];sha=os.environ['REQUEST_SHA'];run=os.environ['REQUEST_CI']
+          assert os.environ['GITHUB_REF']=='refs/heads/main'
+          assert repo=='Lyuu508/DeepSeek-Niang' and os.environ['REQUEST_VERSION']=='0.0.3'
+          assert re.fullmatch('[0-9a-f]{40}',sha) and re.fullmatch('[0-9]+',run)
+          def api(path):return json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/'+path],text=True))
+          assert subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()==sha
+          assert api('commits/main')['sha']==sha
+          subprocess.run(['git','merge-base','--is-ancestor',sha,'origin/main'],check=True)
+          config=json.loads(subprocess.check_output(['git','show',sha+':VERSION.json']))
+          assert config=={'version':'0.0.3','androidVersionCode':1003}
+          status=api('actions/runs/'+run)
+          assert status['conclusion']=='success' and status['head_sha']==sha and status['head_branch']=='main'
+          assert status['path']=='.github/workflows/ci.yml' and status['head_repository']['full_name']==repo
+          jobs=api('actions/runs/'+run+'/jobs?per_page=100')['jobs']
+          for name in ['test','packages / windows','packages / android']:assert any(j['name']==name and j['conclusion']=='success' for j in jobs),name
+          artifacts=api('actions/runs/'+run+'/artifacts?per_page=100')['artifacts']
+          selected={}
+          for key,prefix in [('windows','windows-package-'),('android','android-package-'),('tests','automated-test-reports-')]:
+              candidates=[a for a in artifacts if re.fullmatch(re.escape(prefix)+'[0-9]+',a['name']) and not a['expired'] and a['workflow_run']['head_sha']==sha]
+              assert candidates
+              selected[key]=max(candidates,key=lambda a:int(a['name'].rsplit('-',1)[1]))['id']
+          release=subprocess.run(['gh','api',f'repos/{repo}/releases/tags/v0.0.3'],capture_output=True,text=True)
+          if release.returncode==0:
+              prior=json.loads(release.stdout);assert prior['draft'] and prior['target_commitish']==sha,'Published version must never be reused'
+          else:assert '404' in release.stderr
+          with open(os.environ['GITHUB_OUTPUT'],'a') as output:
+              output.write('sha='+sha+'\nrun='+run+'\n')
+              for key,value in selected.items():output.write(key+'='+str(value)+'\n')
+          print('Main/source/version and independent native CI verified. No secret values accessed.')
+          PY
+  windows:
+    needs: authorize
+    runs-on: windows-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      EXPECTED_SOURCE_SHA: ${{ needs.authorize.outputs.sha }}
+      PYTHONUTF8: '1'
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.authorize.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          artifact-ids: ${{ needs.authorize.outputs.windows }}
+          run-id: ${{ needs.authorize.outputs.run }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/unsigned-windows
+          merge-multiple: true
+      - name: Restore existing identities only; forbid key generation
+        env:
+          TEST_RELEASE_SIGNING_B64: ${{ secrets.TEST_RELEASE_SIGNING_B64 }}
+        run: |
+          python scripts/test_release_identity.py --restore-only
+          if ($LASTEXITCODE) { throw 'Existing test signing bundle unavailable or certificate mismatch' }
+      - name: Sign and verify real Windows package, then install and launch it
+        timeout-minutes: 8
+        run: |
+          python .github/scripts/sign-test-package.py windows (Join-Path $env:RUNNER_TEMP 'unsigned-windows') (Join-Path $env:RUNNER_TEMP 'signed-windows')
+          if ($LASTEXITCODE) { throw 'Signed Windows package verification failed' }
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: signed-windows-0.0.3-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/signed-windows
+          if-no-files-found: warn
+          retention-days: 30
+          compression-level: 0
+      - if: always()
+        name: Remove temporary private material
+        run: Remove-Item -LiteralPath (Join-Path $env:RUNNER_TEMP 'deepseek-protected-signing') -Recurse -Force -ErrorAction SilentlyContinue
+  android:
+    needs: authorize
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      EXPECTED_SOURCE_SHA: ${{ needs.authorize.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.authorize.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407
+        with:
+          cmdline-tools-version: '12266719'
+          packages: 'build-tools;36.0.0'
+          log-accepted-android-sdk-licenses: false
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          artifact-ids: ${{ needs.authorize.outputs.android }}
+          run-id: ${{ needs.authorize.outputs.run }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/unsigned-android
+          merge-multiple: true
+      - name: Prove existing private key, verify actual old APKs, sign ARM64 APK
+        env:
+          TEST_RELEASE_SIGNING_B64: ${{ secrets.TEST_RELEASE_SIGNING_B64 }}
+        run: |
+          python3 .github/scripts/sign-test-package.py android "$RUNNER_TEMP/unsigned-android" "$RUNNER_TEMP/signed-android"
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: signed-android-0.0.3-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/signed-android
+          if-no-files-found: warn
+          retention-days: 30
+          compression-level: 0
+      - if: always()
+        name: Remove temporary private material
+        run: rm -rf "$RUNNER_TEMP/stage3-android-signing"
+  publish:
+    needs: [authorize, windows, android]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      EXPECTED_SOURCE_SHA: ${{ needs.authorize.outputs.sha }}
+      CI_RUN_ID: ${{ needs.authorize.outputs.run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ needs.authorize.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          pattern: signed-*-0.0.3-*
+          path: ${{ runner.temp }}/signed-artifacts
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          artifact-ids: ${{ needs.authorize.outputs.tests }}
+          run-id: ${{ needs.authorize.outputs.run }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/test-reports
+          merge-multiple: true
+      - name: Verify both signatures and tests, download draft assets, then publish
+        run: |
+          python3 .github/scripts/publish-companion-test.py "$RUNNER_TEMP/signed-artifacts" "$RUNNER_TEMP/test-reports" "$RUNNER_TEMP/release-files" --ci-run "$CI_RUN_ID"
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: release-0.0.3-evidence
+          path: ${{ runner.temp }}/release-files
+          if-no-files-found: warn
+          retention-days: 30
+          compression-level: 0

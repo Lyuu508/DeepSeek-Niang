@@ -21,6 +21,7 @@ pub struct Persona {
     pub is_builtin: bool,
     pub created_at_ms: i64,
     pub revision: i64,
+    pub avatar_resource: String,
 }
 #[derive(Debug, Serialize)]
 pub struct PersonaSummary {
@@ -49,7 +50,8 @@ pub(crate) fn owner_of_thread(
     conversation: &str,
     profile: &str,
 ) -> Result<String> {
-    db.query_row("SELECT p.id FROM conversation_personas c JOIN personas p ON p.id=c.persona_id WHERE c.conversation_id=?1 AND (p.profile_id=?2 OR p.profile_id IN (SELECT profile_id FROM lan_profiles))",params![conversation,profile],|r|r.get(0)).optional()?.ok_or(Error::Untrusted)
+    let id: String=db.query_row("SELECT p.id FROM conversation_personas c JOIN personas p ON p.id=c.persona_id WHERE c.conversation_id=?1 AND (p.profile_id=?2 OR p.profile_id IN (SELECT profile_id FROM lan_profiles))",params![conversation,profile],|r|r.get(0)).optional()?.ok_or(Error::Untrusted)?;
+    crate::pairing::resolve(db, &id)
 }
 pub(crate) fn owner_exists(db: &Connection, persona: &str, profile: &str) -> Result<()> {
     Uuid::parse_str(persona).map_err(|_| Error::Invalid("persona UUID"))?;
@@ -64,7 +66,7 @@ pub(crate) fn owner_exists(db: &Connection, persona: &str, profile: &str) -> Res
 }
 impl Store {
     pub fn personas(&self) -> Result<Vec<Persona>> {
-        let mut s=self.conn.prepare("SELECT id,name,main_conversation_id,is_builtin,created_at_ms,revision FROM personas WHERE (profile_id=?1 OR profile_id IN (SELECT profile_id FROM lan_profiles)) ORDER BY is_builtin DESC,created_at_ms,id")?;
+        let mut s=self.conn.prepare("SELECT id,name,main_conversation_id,is_builtin,created_at_ms,revision,avatar_resource FROM personas WHERE (profile_id=?1 OR profile_id IN (SELECT profile_id FROM lan_profiles)) AND NOT EXISTS(SELECT 1 FROM persona_links WHERE alias_id=personas.id) ORDER BY is_builtin DESC,created_at_ms,id")?;
         Ok(s.query_map([&self.profile_id], |r| {
             Ok(Persona {
                 id: r.get(0)?,
@@ -73,6 +75,7 @@ impl Store {
                 is_builtin: r.get(3)?,
                 created_at_ms: r.get(4)?,
                 revision: r.get(5)?,
+                avatar_resource: r.get(6)?,
             })
         })?
         .collect::<std::result::Result<_, _>>()?)
@@ -84,6 +87,7 @@ impl Store {
             .ok_or(Error::Untrusted)
     }
     pub fn persona(&self, id: &str) -> Result<Persona> {
+        let id = crate::pairing::resolve(&self.conn, id)?;
         self.personas()?
             .into_iter()
             .find(|p| p.id == id)
@@ -127,6 +131,8 @@ impl Store {
         self.persona(&id)
     }
     pub fn persona_settings(&self, id: &str) -> Result<ChatSettings> {
+        let resolved = crate::pairing::resolve(&self.conn, id)?;
+        let id = resolved.as_str();
         let persona = self.persona(id)?;
         let raw: Option<String> = self
             .conn
@@ -173,7 +179,8 @@ impl Store {
             )
             .optional()?;
         if let Some(persona) = main {
-            let mut s=self.conn.prepare("SELECT conversation_id FROM conversation_personas WHERE persona_id=?1 ORDER BY conversation_id")?;
+            let persona = crate::pairing::resolve(&self.conn, &persona)?;
+            let mut s=self.conn.prepare("SELECT conversation_id FROM conversation_personas WHERE persona_id IN (SELECT alias_id FROM persona_links WHERE canonical_id=?1 UNION SELECT ?1) ORDER BY conversation_id")?;
             return Ok(s
                 .query_map([persona], |r| r.get(0))?
                 .collect::<std::result::Result<_, _>>()?);
@@ -191,7 +198,7 @@ impl Store {
     }
     pub fn usage_for_persona(&self, id: &str) -> Result<UsageSummary> {
         owner_exists(&self.conn, id, &self.profile_id)?;
-        Ok(self.conn.query_row("SELECT count(*),coalesce(sum(usage_state='measured'),0),coalesce(sum(input_tokens),0),coalesce(sum(output_tokens),0) FROM api_usage_records WHERE (profile_id=?1 OR profile_id IN (SELECT profile_id FROM lan_profiles)) AND persona_id=?2 AND provider='deepseek'",params![self.profile_id,id],|r|Ok(UsageSummary{requests:r.get(0)?,measured_requests:r.get(1)?,prompt_tokens:r.get(2)?,completion_tokens:r.get(3)?}))?)
+        Ok(self.conn.query_row("SELECT count(*),coalesce(sum(usage_state='measured'),0),coalesce(sum(input_tokens),0),coalesce(sum(output_tokens),0) FROM api_usage_records WHERE (profile_id=?1 OR profile_id IN (SELECT profile_id FROM lan_profiles)) AND persona_id IN (SELECT alias_id FROM persona_links WHERE canonical_id=?2 UNION SELECT ?2) AND provider='deepseek'",params![self.profile_id,id],|r|Ok(UsageSummary{requests:r.get(0)?,measured_requests:r.get(1)?,prompt_tokens:r.get(2)?,completion_tokens:r.get(3)?}))?)
     }
     pub fn persona_summary(&self, id: &str) -> Result<PersonaSummary> {
         owner_exists(&self.conn, id, &self.profile_id)?;
@@ -208,7 +215,7 @@ impl Store {
             )?)
         };
         Ok(PersonaSummary {
-            memory_count: self.conn.query_row("SELECT count(*) FROM memories WHERE (profile_id=?1 OR profile_id IN (SELECT profile_id FROM lan_profiles)) AND persona_id=?2 AND is_deleted=0",params![self.profile_id,id],|r|r.get(0))?,
+            memory_count: self.conn.query_row("SELECT count(*) FROM memories WHERE (profile_id=?1 OR profile_id IN (SELECT profile_id FROM lan_profiles)) AND persona_id IN (SELECT alias_id FROM persona_links WHERE canonical_id=?2 UNION SELECT ?2) AND is_deleted=0",params![self.profile_id,id],|r|r.get(0))?,
             activity_count: count("daily_activities")?,
             interest_count: count("character_interests")?,
             relationship: serde_json::from_str(&r)?,
@@ -218,7 +225,7 @@ impl Store {
     }
     pub fn memories_for_persona(&self, id: &str) -> Result<Vec<MemoryRecord>> {
         owner_exists(&self.conn, id, &self.profile_id)?;
-        let mut s=self.conn.prepare("SELECT id,text,version_lamport FROM memories WHERE (profile_id=?1 OR profile_id IN (SELECT profile_id FROM lan_profiles)) AND persona_id=?2 AND is_deleted=0 ORDER BY version_lamport DESC,id LIMIT 100")?;
+        let mut s=self.conn.prepare("SELECT id,text,version_lamport FROM memories WHERE (profile_id=?1 OR profile_id IN (SELECT profile_id FROM lan_profiles)) AND persona_id IN (SELECT alias_id FROM persona_links WHERE canonical_id=?2 UNION SELECT ?2) AND is_deleted=0 ORDER BY version_lamport DESC,id LIMIT 100")?;
         Ok(s.query_map(params![self.profile_id, id], |r| {
             Ok(MemoryRecord {
                 id: r.get(0)?,
@@ -230,10 +237,22 @@ impl Store {
     }
     pub fn put_persona_memory(&mut self, persona: &str, id: &str, text: &str) -> Result<()> {
         owner_exists(&self.conn, persona, &self.profile_id)?;
+        let old: Option<String> = self
+            .conn
+            .query_row("SELECT persona_id FROM memories WHERE id=?1", [id], |r| {
+                r.get(0)
+            })
+            .optional()?;
+        let owner = old.as_deref().unwrap_or(persona);
+        if crate::pairing::resolve(&self.conn, owner)?
+            != crate::pairing::resolve(&self.conn, persona)?
+        {
+            return Err(Error::Untrusted);
+        }
         self.put(
             crate::event::Entity::Memory,
             id,
-            json!({"text":text,"persona_id":persona}),
+            json!({"text":text,"persona_id":owner}),
         )?;
         Ok(())
     }
@@ -247,7 +266,11 @@ impl Store {
                 |r| r.get(0),
             )
             .optional()?;
-        if owner.as_deref() != Some(persona) {
+        if owner
+            .map(|p| crate::pairing::resolve(&self.conn, &p))
+            .transpose()?
+            != Some(crate::pairing::resolve(&self.conn, persona)?)
+        {
             return Err(Error::Untrusted);
         }
         self.delete_unscoped(crate::event::Entity::Memory, id)?;

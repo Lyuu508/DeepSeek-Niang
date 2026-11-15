@@ -3,6 +3,7 @@ pub mod discovery;
 pub mod identity;
 pub mod transport;
 use companion_core::{
+    pairing::HostAuthority,
     replication::{Change, Peer},
     storage::Store,
 };
@@ -40,6 +41,8 @@ pub enum Error {
     Discovery,
     #[error("STORAGE_ERROR")]
     Storage,
+    #[error("SYNC_VERSION_MISMATCH")]
+    Version,
     #[error("PAIR_TOKEN_EXPIRED_OR_INVALID")]
     Pair,
     #[error("WAITING_FOR_BOTH_CONFIRMATIONS")]
@@ -67,6 +70,7 @@ pub struct PairCode {
     pub expires_in_seconds: u32,
 }
 struct PairWindow {
+    authority: Option<HostAuthority>,
     session: String,
     token_hash: Vec<u8>,
     expires: Instant,
@@ -135,6 +139,8 @@ enum Request {
         confirm: bool,
     },
     Exchange {
+        #[serde(default = "legacy_schema")]
+        schema: u32,
         id: String,
         cursor: i64,
         events: Vec<Change>,
@@ -144,9 +150,23 @@ enum Request {
 #[serde(tag = "kind", deny_unknown_fields)]
 enum Reply {
     Waiting,
-    Paired { identity: PublicIdentity },
-    Batch { ack: i64, events: Vec<Change> },
-    Failure { code: String },
+    Paired {
+        identity: PublicIdentity,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        authority: Option<HostAuthority>,
+    },
+    Batch {
+        ack: i64,
+        events: Vec<Change>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        authority: Option<HostAuthority>,
+    },
+    Failure {
+        code: String,
+    },
+}
+fn legacy_schema() -> u32 {
+    4
 }
 fn pair_bytes(
     session: &str,
@@ -192,6 +212,8 @@ fn local_endpoints(port: u16) -> Vec<String> {
     addresses
 }
 pub struct SyncService {
+    windows_host: AtomicBool,
+    android_phone: AtomicBool,
     store: Arc<Mutex<Store>>,
     identity: Identity,
     discovery: Arc<dyn Discovery>,
@@ -204,6 +226,10 @@ pub struct SyncService {
     wake: AtomicBool,
 }
 impl SyncService {
+    pub fn configure_platform(&self, windows_host: bool, android_phone: bool) {
+        self.windows_host.store(windows_host, Ordering::Release);
+        self.android_phone.store(android_phone, Ordering::Release);
+    }
     pub fn start(
         store: Arc<Mutex<Store>>,
         vault: Arc<dyn SecretStore>,
@@ -225,6 +251,8 @@ impl SyncService {
         listener.set_nonblocking(true).map_err(|_| Error::Offline)?;
         let port = listener.local_addr().map_err(|_| Error::Offline)?.port();
         let service = Arc::new(Self {
+            windows_host: AtomicBool::new(false),
+            android_phone: AtomicBool::new(false),
             store,
             identity,
             discovery,
@@ -424,6 +452,16 @@ impl SyncService {
         }
         svg.push_str("\"/></svg>");
         *self.window.lock().map_err(|_| Error::Storage)? = Some(PairWindow {
+            authority: if quick {
+                Some(
+                    self.store
+                        .lock()
+                        .map_err(|_| Error::Storage)?
+                        .local_host_authority()?,
+                )
+            } else {
+                None
+            },
             session: invite.session.clone(),
             token_hash: {
                 use sha2::Digest;
@@ -543,14 +581,21 @@ impl SyncService {
                 &request,
             );
             match reply {
-                Ok(Reply::Paired { identity }) => {
+                Ok(Reply::Paired {
+                    identity,
+                    authority,
+                }) => {
                     if identity != invite.identity {
                         return Err(Error::Authentication);
                     }
-                    self.store
-                        .lock()
-                        .map_err(|_| Error::Storage)?
-                        .lan_trust(&peer(&identity, Some(endpoint.clone())))?;
+                    let authority = authority.ok_or(Error::Invalid)?;
+                    if authority.device_id != identity.id {
+                        return Err(Error::Authentication);
+                    }
+                    let mut store = self.store.lock().map_err(|_| Error::Storage)?;
+                    store.lan_trust(&peer(&identity, Some(endpoint.clone())))?;
+                    store.bind_paired_host(&authority)?;
+                    drop(store);
                     self.set_progress(&identity.id, "syncing", None, 0);
                     self.wake();
                     return Ok(());
@@ -760,9 +805,18 @@ impl SyncService {
                 }
                 Ok(Reply::Paired {
                     identity: self.identity.public.clone(),
+                    authority: w.authority.clone(),
                 })
             }
-            Request::Exchange { id, cursor, events } => {
+            Request::Exchange {
+                id,
+                cursor,
+                events,
+                schema,
+            } => {
+                if schema != companion_core::storage::SCHEMA_VERSION {
+                    return Err(Error::Version);
+                }
                 let p = self
                     .store
                     .lock()
@@ -800,6 +854,11 @@ impl SyncService {
                 Ok(Reply::Batch {
                     ack,
                     events: outgoing,
+                    authority: if self.windows_host.load(Ordering::Acquire) {
+                        Some(store.local_host_authority()?)
+                    } else {
+                        None
+                    },
                 })
             }
         }
@@ -849,7 +908,7 @@ impl SyncService {
                     confirm: true,
                 },
             );
-            if let Ok(Reply::Paired { identity }) = result {
+            if let Ok(Reply::Paired { identity, .. }) = result {
                 if identity != invite.identity {
                     return Err(Error::Authentication);
                 }
@@ -914,13 +973,29 @@ impl SyncService {
                 &p.certificate,
                 true,
                 &Request::Exchange {
+                    schema: companion_core::storage::SCHEMA_VERSION,
                     id: self.identity.public.id.clone(),
                     cursor,
                     events,
                 },
             )?;
             match reply {
-                Reply::Batch { ack, events } => {
+                Reply::Batch {
+                    ack,
+                    events,
+                    authority,
+                } => {
+                    if self.android_phone.load(Ordering::Acquire)
+                        && let Some(authority) = authority
+                    {
+                        if authority.device_id != p.id {
+                            return Err(Error::Authentication);
+                        }
+                        self.store
+                            .lock()
+                            .map_err(|_| Error::Storage)?
+                            .bind_paired_host(&authority)?;
+                    }
                     let received = events.len();
                     self.import(&p.id, &events)?;
                     let mut s = self.store.lock().map_err(|_| Error::Storage)?;
@@ -937,6 +1012,9 @@ impl SyncService {
                         return Ok(());
                     }
                     self.set_progress(&p.id, "syncing", None, sent);
+                }
+                Reply::Failure { code } if code == "SYNC_VERSION_MISMATCH" => {
+                    return Err(Error::Version);
                 }
                 Reply::Failure { .. } => return Err(Error::Authentication),
                 _ => return Err(Error::Invalid),

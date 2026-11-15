@@ -14,6 +14,10 @@ const MIGRATION: &str = include_str!("../../../db/migrations/0001_initial.sql");
 const CHAT_MIGRATION: &str = include_str!("../../../db/migrations/0002_chat.sql");
 const LAN_MIGRATION: &str = include_str!("../../../db/migrations/0004_lan_sync.sql");
 const PERSONA_MIGRATION: &str = include_str!("../../../db/migrations/0003_personas.sql");
+const PAIRING_MIGRATION: &str =
+    include_str!("../../../db/migrations/0005_pairing_persona_identity.sql");
+const COMPANION_MIGRATION: &str =
+    include_str!("../../../db/migrations/0006_companion_foundation.sql");
 
 pub struct Store {
     pub(crate) conn: Connection,
@@ -22,6 +26,7 @@ pub struct Store {
     pub(crate) boot_id: String,
     _file_lock: Option<std::fs::File>,
 }
+pub const SCHEMA_VERSION: u32 = 6;
 #[derive(Debug, Serialize)]
 pub struct MemoryRecord {
     pub id: String,
@@ -86,7 +91,7 @@ impl Store {
         conn.pragma_update(None, "journal_mode", "WAL")?;
         conn.pragma_update(None, "synchronous", "FULL")?;
         let version: u32 = conn.pragma_query_value(None, "user_version", |r| r.get(0))?;
-        if version > 4 {
+        if version > 6 {
             return Err(Error::Schema);
         }
         let migrations = [
@@ -94,6 +99,8 @@ impl Store {
             (2, CHAT_MIGRATION),
             (3, PERSONA_MIGRATION),
             (4, LAN_MIGRATION),
+            (5, PAIRING_MIGRATION),
+            (6, COMPANION_MIGRATION),
         ];
         for (number, sql) in migrations {
             let digest = sha256_hex(sql.as_bytes());
@@ -110,11 +117,11 @@ impl Store {
         }
         // A consistent SQLite backup, including committed WAL, before upgrading old data.
         let path = path.as_ref();
-        if (1..4).contains(&version) && path != Path::new(":memory:") {
-            let backup = path.with_extension(format!("pre-v4-{}.bak", Uuid::new_v4()));
+        if (1..6).contains(&version) && path != Path::new(":memory:") {
+            let backup = path.with_extension(format!("pre-v6-{}.bak", Uuid::new_v4()));
             conn.backup("main", backup, rusqlite::backup::NO_PROGRESS)?;
         }
-        if version < 4 {
+        if version < 6 {
             let preserved = if version > 0 {
                 [
                     "messages",
@@ -498,7 +505,7 @@ impl Store {
                 if old_owner.as_deref().is_some_and(|p| p != persona) {
                     return Err(Error::Untrusted);
                 }
-                tx.execute("INSERT INTO memories(id,profile_id,persona_id,text,version_lamport,version_origin,version_event_id) VALUES(?1,?2,?3,?4,?5,?6,?7) ON CONFLICT(id) DO UPDATE SET text=excluded.text,version_lamport=excluded.version_lamport,version_origin=excluded.version_origin,version_event_id=excluded.version_event_id WHERE (excluded.version_lamport,excluded.version_origin,excluded.version_event_id)>(memories.version_lamport,memories.version_origin,memories.version_event_id)",params![e.entity_id,e.profile_id,persona,e.payload["text"].as_str(),e.lamport,e.origin_device_id,e.event_id])?;
+                tx.execute("INSERT INTO memories(id,profile_id,persona_id,text,version_lamport,version_origin,version_event_id,importance_milli,sensitivity) VALUES(?1,?2,?3,?4,?5,?6,?7,coalesce(?8,500),coalesce(?9,'private')) ON CONFLICT(id) DO UPDATE SET text=excluded.text,version_lamport=excluded.version_lamport,version_origin=excluded.version_origin,version_event_id=excluded.version_event_id,importance_milli=coalesce(?8,memories.importance_milli),sensitivity=coalesce(?9,memories.sensitivity) WHERE (excluded.version_lamport,excluded.version_origin,excluded.version_event_id)>(memories.version_lamport,memories.version_origin,memories.version_event_id)",params![e.entity_id,e.profile_id,persona,e.payload["text"].as_str(),e.lamport,e.origin_device_id,e.event_id,e.payload.get("importance_milli").and_then(Value::as_i64),e.payload.get("sensitivity").and_then(Value::as_str)])?;
             }
         }
         Ok(true)

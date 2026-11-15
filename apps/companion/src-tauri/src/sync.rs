@@ -34,6 +34,7 @@ impl SyncHost {
             self.discovery.clone(),
         )
         .map_err(|e| e.to_string())?;
+        started.configure_platform(cfg!(target_os = "windows"), cfg!(target_os = "android"));
         *service = Some(started.clone());
         Ok(started)
     }

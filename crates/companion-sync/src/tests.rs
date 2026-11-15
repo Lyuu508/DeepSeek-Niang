@@ -397,6 +397,7 @@ fn accepted_nonblocking_socket_waits_for_real_tls_client() {
     transport::write(
         &mut tls,
         &Request::Exchange {
+            schema: companion_core::storage::SCHEMA_VERSION,
             id: client.identity.public.id.clone(),
             cursor: 0,
             events: vec![],
@@ -442,6 +443,7 @@ fn real_tls13_mutual_auth_pinning_and_reconnect() {
         &foreign.identity.public.certificate,
         true,
         &Request::Exchange {
+            schema: companion_core::storage::SCHEMA_VERSION,
             id: b.identity.public.id.clone(),
             cursor: 0,
             events: vec![],
@@ -454,6 +456,7 @@ fn real_tls13_mutual_auth_pinning_and_reconnect() {
         &a.identity.public.certificate,
         false,
         &Request::Exchange {
+            schema: companion_core::storage::SCHEMA_VERSION,
             id: b.identity.public.id.clone(),
             cursor: 0,
             events: vec![],
@@ -795,4 +798,432 @@ fn quick_qr_expiry_cancellation_and_attempt_limit_are_enforced() {
     assert!(phone.pair_scanned(&code.text).is_err());
     pc.stop();
     phone.stop();
+}
+
+fn synthetic_chat(service: &SyncService, conversation: &str, text: &str) -> String {
+    let mut store = service.store.lock().unwrap();
+    let request = StartChat {
+        request_id: uuid::Uuid::new_v4().to_string(),
+        conversation_id: conversation.into(),
+        text: Some(text.into()),
+        regenerate_user_id: None,
+    };
+    let prepared = store
+        .begin_chat(&request, &ChatSettings::default())
+        .unwrap();
+    store
+        .finish_chat(
+            &request.request_id,
+            "合成测试回复",
+            "complete",
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+    prepared.user_message_id
+}
+
+#[test]
+fn qr_pairing_uses_one_host_persona_and_preserves_ids_across_repeat_scan_and_offline_resume() {
+    // Real pinned TLS + mutual TLS sockets and real independent SQLite databases.
+    // Discovery/vault are isolated test adapters; no physical phone or model is claimed.
+    let pc = service_named("Windows 电脑");
+    let phone = service_named("Android 手机");
+    let host = pc.store.lock().unwrap().profile_id.clone();
+    let initial_phone = phone.store.lock().unwrap().profile_id.clone();
+    let old_phone_message = synthetic_chat(&phone, &initial_phone, "配对前的手机聊天");
+    let old_pc_message = synthetic_chat(&pc, &host, "配对前的电脑聊天");
+    let memory = uuid::Uuid::new_v4().to_string();
+    phone
+        .store
+        .lock()
+        .unwrap()
+        .put_persona_memory(&initial_phone, &memory, "配对前手机记忆")
+        .unwrap();
+    let mut settings = pc.store.lock().unwrap().persona_settings(&host).unwrap();
+    settings.character_name = "电脑端原人格".into();
+    settings.personality = "合成测试：喜欢海边，保持独立性".into();
+    pc.store
+        .lock()
+        .unwrap()
+        .save_persona_settings(&host, &settings)
+        .unwrap();
+    let code = pc
+        .make_invite(vec![format!("127.0.0.1:{}", pc.port)], true)
+        .unwrap();
+    phone.pair_scanned(&code.text).unwrap();
+    for _ in 0..3 {
+        phone.tick().unwrap();
+    }
+    {
+        let a = pc.store.lock().unwrap();
+        let b = phone.store.lock().unwrap();
+        assert_eq!(a.personas().unwrap().len(), 1);
+        assert_eq!(b.personas().unwrap().len(), 1); // 1
+        assert_eq!(b.active_persona_id().unwrap(), host); // 2
+        assert_eq!(
+            b.persona(&host).unwrap().name,
+            a.persona(&host).unwrap().name
+        ); // 3
+        assert_eq!(
+            b.persona(&host).unwrap().avatar_resource,
+            a.persona(&host).unwrap().avatar_resource
+        ); // 4
+        assert_eq!(b.persona_settings(&host).unwrap(), settings);
+        assert_eq!(
+            b.persona_settings(&host)
+                .unwrap()
+                .system_prompt(&Default::default()),
+            settings.system_prompt(&Default::default())
+        ); // 5
+        assert_eq!(
+            b.persona_summary(&host).unwrap().relationship,
+            a.persona_summary(&host).unwrap().relationship
+        ); // 6
+        assert_eq!(b.memories_for_persona(&host).unwrap()[0].id, memory);
+        assert_eq!(
+            a.memories_for_persona(&host).unwrap()[0].text,
+            "配对前手机记忆"
+        ); // 7
+        for s in [&a, &b] {
+            let ids = s
+                .chat_messages(&host)
+                .unwrap()
+                .into_iter()
+                .map(|m| m.id)
+                .collect::<Vec<_>>();
+            assert!(ids.contains(&old_phone_message) && ids.contains(&old_pc_message));
+        } // 12
+    }
+    let mobile_id = synthetic_chat(&phone, &host, "手机到电脑");
+    phone.tick().unwrap();
+    assert!(
+        pc.store
+            .lock()
+            .unwrap()
+            .chat_messages(&host)
+            .unwrap()
+            .iter()
+            .any(|m| m.id == mobile_id)
+    ); // 8
+    let pc_id = synthetic_chat(&pc, &host, "电脑到手机");
+    phone.tick().unwrap();
+    assert!(
+        phone
+            .store
+            .lock()
+            .unwrap()
+            .chat_messages(&host)
+            .unwrap()
+            .iter()
+            .any(|m| m.id == pc_id)
+    ); // 9
+    phone.pair_scanned(&code.text).unwrap();
+    phone.tick().unwrap();
+    assert_eq!(phone.store.lock().unwrap().personas().unwrap().len(), 1);
+    assert_eq!(phone.store.lock().unwrap().lan_peers().unwrap().len(), 1); // 10
+    // Local writes happen without a transfer; reconnect reuses the same identity/cursor.
+    let offline_id = synthetic_chat(&phone, &host, "离线增量");
+    phone.tick().unwrap();
+    phone.tick().unwrap();
+    let a = pc.store.lock().unwrap();
+    let b = phone.store.lock().unwrap();
+    assert_eq!(b.personas().unwrap().len(), 1);
+    assert_eq!(a.personas().unwrap().len(), 1);
+    assert_eq!(
+        a.chat_messages(&host)
+            .unwrap()
+            .iter()
+            .filter(|m| m.id == offline_id)
+            .count(),
+        1
+    ); // 11
+    drop(a);
+    drop(b);
+    pc.stop();
+    phone.stop();
+}
+
+#[test]
+fn pairing_never_merges_user_created_same_name_personas() {
+    let pc = service();
+    let phone = service();
+    let custom = phone
+        .store
+        .lock()
+        .unwrap()
+        .create_persona("DeepSeek娘", "主人手动创建的人格")
+        .unwrap();
+    let code = pc
+        .make_invite(vec![format!("127.0.0.1:{}", pc.port)], true)
+        .unwrap();
+    phone.pair_scanned(&code.text).unwrap();
+    phone.tick().unwrap();
+    phone.tick().unwrap();
+    assert_eq!(phone.store.lock().unwrap().personas().unwrap().len(), 2);
+    assert_eq!(
+        phone.store.lock().unwrap().persona(&custom.id).unwrap().id,
+        custom.id
+    );
+    assert_eq!(
+        phone
+            .store
+            .lock()
+            .unwrap()
+            .persona_settings(&custom.id)
+            .unwrap()
+            .personality,
+        "主人手动创建的人格"
+    );
+    pc.stop();
+    phone.stop();
+}
+
+#[test]
+fn paired_canonical_persona_survives_actual_host_disconnect_and_restart() {
+    let store = Arc::new(Mutex::new(Store::open(":memory:").unwrap()));
+    let vault: Arc<dyn SecretStore> = Arc::new(MemoryVault(Mutex::new(None)));
+    let pc = SyncService::start(
+        store.clone(),
+        vault.clone(),
+        "Windows 电脑",
+        Arc::new(NoDiscovery),
+    )
+    .unwrap();
+    let phone = service_named("Android 手机");
+    let host = store.lock().unwrap().profile_id.clone();
+    let identity = pc.identity.public.clone();
+    let address = format!("127.0.0.1:{}", pc.port);
+    let code = pc.make_invite(vec![address.clone()], true).unwrap();
+    phone.pair_scanned(&code.text).unwrap();
+    phone.tick().unwrap();
+    phone.tick().unwrap();
+    pc.stop();
+    std::thread::sleep(Duration::from_millis(250));
+    assert!(phone.exchange(&peer(&identity, None), &address).is_err());
+    let id = synthetic_chat(&phone, &host, "主机真实断线期间的消息");
+    let restarted =
+        SyncService::start(store, vault, "Windows 电脑", Arc::new(NoDiscovery)).unwrap();
+    assert_eq!(restarted.identity.public, identity);
+    let address = format!("127.0.0.1:{}", restarted.port);
+    phone.reconnect(&identity.id, &address).unwrap();
+    phone.tick().unwrap();
+    phone.tick().unwrap();
+    assert_eq!(
+        phone.store.lock().unwrap().active_persona_id().unwrap(),
+        host
+    );
+    for service in [&restarted, &phone] {
+        let store = service.store.lock().unwrap();
+        assert_eq!(store.personas().unwrap().len(), 1);
+        assert_eq!(
+            store
+                .chat_messages(&host)
+                .unwrap()
+                .iter()
+                .filter(|m| m.id == id)
+                .count(),
+            1
+        );
+    }
+    restarted.stop();
+    phone.stop();
+}
+
+#[test]
+fn real_tls_sync_converges_bond_mood_memory_preferences_and_virtual_life() {
+    let pc = service_named("Windows 电脑");
+    let phone = service_named("Android 手机");
+    pc.store
+        .lock()
+        .unwrap()
+        .set_device_platform("windows")
+        .unwrap();
+    pc.capture().unwrap();
+    phone.capture().unwrap();
+    let host = pc.store.lock().unwrap().profile_id.clone();
+    let code = pc
+        .make_invite(vec![format!("127.0.0.1:{}", pc.port)], true)
+        .unwrap();
+    phone.pair_scanned(&code.text).unwrap();
+    phone.tick().unwrap();
+    phone.tick().unwrap();
+    synthetic_chat(&pc, &host, "请记住：我最喜欢的饮料是咖啡");
+    synthetic_chat(&phone, &host, "谢谢你一直陪着我");
+    let now = companion_core::chat::now_ms();
+    pc.store
+        .lock()
+        .unwrap()
+        .advance_companion_life(now, true)
+        .unwrap();
+    for _ in 0..3 {
+        phone.tick().unwrap();
+    }
+    {
+        let a = pc.store.lock().unwrap();
+        let b = phone.store.lock().unwrap();
+        assert_eq!(
+            serde_json::to_value(a.bond_snapshot(&host).unwrap()).unwrap(),
+            serde_json::to_value(b.bond_snapshot(&host).unwrap()).unwrap()
+        );
+        assert_eq!(
+            serde_json::to_value(a.current_mood(&host, now + 1000).unwrap()).unwrap(),
+            serde_json::to_value(b.current_mood(&host, now + 1000).unwrap()).unwrap()
+        );
+        assert_eq!(
+            a.life_snapshot(&host, now + 1000).unwrap(),
+            b.life_snapshot(&host, now + 1000).unwrap()
+        );
+        assert_eq!(
+            a.managed_memories(&host).unwrap()[0].id,
+            b.managed_memories(&host).unwrap()[0].id
+        );
+    }
+    let memory = phone
+        .store
+        .lock()
+        .unwrap()
+        .managed_memories(&host)
+        .unwrap()
+        .remove(0);
+    phone
+        .store
+        .lock()
+        .unwrap()
+        .edit_companion_memory(
+            &host,
+            &companion_core::companion::memory::MemoryEdit {
+                id: Some(memory.id.clone()),
+                expected_version: Some(memory.version),
+                expected_revision: Some(memory.revision.clone()),
+                text: "我最喜欢的饮料是红茶".into(),
+                kind: "semantic".into(),
+                importance_milli: 900,
+                pinned: true,
+                api_allowed: true,
+            },
+        )
+        .unwrap();
+    let mut prefs = phone
+        .store
+        .lock()
+        .unwrap()
+        .companion_preferences(&host)
+        .unwrap();
+    prefs.memory_context = false;
+    phone
+        .store
+        .lock()
+        .unwrap()
+        .save_companion_preferences(&host, &prefs)
+        .unwrap();
+    phone.tick().unwrap();
+    phone.tick().unwrap();
+    assert_eq!(
+        pc.store.lock().unwrap().managed_memories(&host).unwrap()[0].text,
+        "我最喜欢的饮料是红茶"
+    );
+    assert!(
+        !pc.store
+            .lock()
+            .unwrap()
+            .companion_preferences(&host)
+            .unwrap()
+            .memory_context
+    );
+    phone
+        .store
+        .lock()
+        .unwrap()
+        .delete_persona_memory(&host, &memory.id)
+        .unwrap();
+    phone.tick().unwrap();
+    phone.tick().unwrap();
+    assert!(
+        pc.store
+            .lock()
+            .unwrap()
+            .managed_memories(&host)
+            .unwrap()
+            .is_empty()
+    );
+    pc.stop();
+    phone.stop();
+}
+
+#[test]
+fn existing_paired_android_adopts_authenticated_windows_authority_without_new_persona() {
+    let pc = service_named("Windows 电脑");
+    let phone = service_named("Android 手机");
+    trust(&pc, &phone);
+    trust(&phone, &pc);
+    transfer(&pc, &phone).unwrap();
+    transfer(&phone, &pc).unwrap();
+    assert_eq!(phone.store.lock().unwrap().personas().unwrap().len(), 2);
+    pc.configure_platform(true, false);
+    phone.configure_platform(false, true);
+    let address = format!("127.0.0.1:{}", pc.port);
+    phone.reconnect(&pc.identity.public.id, &address).unwrap();
+    phone.tick().unwrap();
+    phone.tick().unwrap();
+    assert_eq!(phone.store.lock().unwrap().personas().unwrap().len(), 1);
+    assert_eq!(
+        phone.store.lock().unwrap().active_persona_id().unwrap(),
+        pc.store.lock().unwrap().profile_id
+    );
+    assert_eq!(pc.store.lock().unwrap().personas().unwrap().len(), 1);
+    pc.stop();
+    phone.stop();
+}
+
+#[test]
+fn signed_but_false_relationship_evidence_is_rejected_atomically() {
+    let a = service();
+    let b = service();
+    trust(&a, &b);
+    trust(&b, &a);
+    transfer(&a, &b).unwrap();
+    transfer(&b, &a).unwrap();
+    let p = a.store.lock().unwrap().profile_id.clone();
+    synthetic_chat(&a, &p, "谢谢你一直陪着我");
+    a.capture().unwrap();
+    let cursor = b
+        .store
+        .lock()
+        .unwrap()
+        .lan_cursor(&a.identity.public.id)
+        .unwrap();
+    let original = a.store.lock().unwrap().lan_export(cursor).unwrap();
+    let mut forged = original.clone();
+    let event = forged
+        .iter_mut()
+        .find(|e| e.table == "companion_bond_events")
+        .unwrap();
+    event.row["kind"] = serde_json::json!("promise_kept");
+    event
+        .fields
+        .insert("kind".into(), serde_json::json!("promise_kept"));
+    event.signature = a.identity.sign(&event.signing_bytes().unwrap());
+    assert!(b.import(&a.identity.public.id, &forged).is_err());
+    assert_eq!(
+        b.store
+            .lock()
+            .unwrap()
+            .lan_cursor(&a.identity.public.id)
+            .unwrap(),
+        cursor
+    );
+    b.import(&a.identity.public.id, &original).unwrap();
+    assert_eq!(
+        b.store
+            .lock()
+            .unwrap()
+            .bond_snapshot(&p)
+            .unwrap()
+            .applied_events,
+        1
+    );
+    a.stop();
+    b.stop();
 }

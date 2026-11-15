@@ -18,11 +18,18 @@ jobs:
           HAS_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD != '' }}
           HAS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS != '' }}
           HAS_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD != '' }}
+          HAS_TEST_BUNDLE: ${{ secrets.TEST_RELEASE_SIGNING_B64 != '' }}
+          HAS_TEST_KEYSTORE: ${{ secrets.ANDROID_TEST_KEYSTORE_B64 != '' }}
+          HAS_TEST_STORE_PASSWORD: ${{ secrets.ANDROID_TEST_KEYSTORE_PASSWORD != '' }}
+          HAS_TEST_ALIAS: ${{ secrets.ANDROID_TEST_KEY_ALIAS != '' }}
+          HAS_TEST_KEY_PASSWORD: ${{ secrets.ANDROID_TEST_KEY_PASSWORD != '' }}
+          HAS_WINDOWS_PFX: ${{ secrets.WINDOWS_TEST_PFX_B64 != '' }}
+          HAS_WINDOWS_PFX_PASSWORD: ${{ secrets.WINDOWS_TEST_PFX_PASSWORD != '' }}
         run: |
           python3 - <<'PY'
           import json,os
           from pathlib import Path
-          names={'ANDROID_KEYSTORE_B64':'HAS_KEYSTORE','ANDROID_KEYSTORE_PASSWORD':'HAS_STORE_PASSWORD','ANDROID_KEY_ALIAS':'HAS_ALIAS','ANDROID_KEY_PASSWORD':'HAS_KEY_PASSWORD'}
+          names={'ANDROID_KEYSTORE_B64':'HAS_KEYSTORE','ANDROID_KEYSTORE_PASSWORD':'HAS_STORE_PASSWORD','ANDROID_KEY_ALIAS':'HAS_ALIAS','ANDROID_KEY_PASSWORD':'HAS_KEY_PASSWORD','TEST_RELEASE_SIGNING_B64':'HAS_TEST_BUNDLE','ANDROID_TEST_KEYSTORE_B64':'HAS_TEST_KEYSTORE','ANDROID_TEST_KEYSTORE_PASSWORD':'HAS_TEST_STORE_PASSWORD','ANDROID_TEST_KEY_ALIAS':'HAS_TEST_ALIAS','ANDROID_TEST_KEY_PASSWORD':'HAS_TEST_KEY_PASSWORD','WINDOWS_TEST_PFX_B64':'HAS_WINDOWS_PFX','WINDOWS_TEST_PFX_PASSWORD':'HAS_WINDOWS_PFX_PASSWORD'}
           data={'source_commit':os.environ['GITHUB_SHA'],'secrets':{name:os.environ[var]=='true' for name,var in names.items()},'values_read_or_printed':False,'certificate_match_verified':False}
           path=Path(os.environ['RUNNER_TEMP'])/'signing-readiness.json';path.write_text(json.dumps(data,indent=2)+'\n')
           summary=['Android signing configuration presence only; names do not prove certificate continuity.']

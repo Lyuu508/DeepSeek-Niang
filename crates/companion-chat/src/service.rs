@@ -1,6 +1,6 @@
 use crate::{ChatFailure, deepseek::DeepSeekClient};
 use companion_core::{
-    chat::{ChatMessage, ChatSettings, ContextInjection, PreparedChat, StartChat, TokenUsage},
+    chat::{ChatMessage, ChatSettings, PreparedChat, StartChat, TokenUsage},
     storage::Store,
 };
 use companion_secrets::{Secret, SecretStore};
@@ -86,11 +86,20 @@ impl ChatService {
                 .map_err(|_| ChatFailure::new("STORAGE_ERROR"))?;
             let settings = store.settings_for_conversation(&input.conversation_id)?;
             let prepared = store.begin_chat(&input, &settings)?;
-            let prompt = store.chat_context(
-                &prepared.conversation_id,
-                &settings,
-                &ContextInjection::default(),
-            )?;
+            let prompt = match store.companion_context(&prepared.conversation_id, &settings) {
+                Ok(prompt) => prompt,
+                Err(error) => {
+                    store.finish_chat(
+                        &prepared.request_id,
+                        "",
+                        "failed",
+                        Some("CONTEXT_BUDGET_EXCEEDED"),
+                        None,
+                        None,
+                    )?;
+                    return Err(error.into());
+                }
+            };
             let message = store.generation(&prepared.assistant_id)?;
             let user = store
                 .chat_messages(&prepared.conversation_id)?

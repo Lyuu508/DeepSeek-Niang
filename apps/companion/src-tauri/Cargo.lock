@@ -429,7 +429,7 @@ dependencies = [
 
 [[package]]
 name = "companion-app"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "companion-chat",
  "companion-core",
@@ -445,7 +445,7 @@ dependencies = [
 
 [[package]]
 name = "companion-chat"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "companion-core",
  "companion-secrets",
@@ -460,7 +460,7 @@ dependencies = [
 
 [[package]]
 name = "companion-core"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "rusqlite",
  "serde",
@@ -473,7 +473,7 @@ dependencies = [
 
 [[package]]
 name = "companion-secrets"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "thiserror 2.0.21",
  "uuid",
@@ -483,7 +483,7 @@ dependencies = [
 
 [[package]]
 name = "companion-sync"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "companion-core",
  "companion-secrets",
@@ -3978,7 +3978,7 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-companion-keystore"
-version = "0.0.2"
+version = "0.0.3"
 dependencies = [
  "companion-secrets",
  "companion-sync",
