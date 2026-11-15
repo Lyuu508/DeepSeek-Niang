@@ -61,6 +61,7 @@ def main():
     context=os.environ.copy();context.update(TEST_WINDOWS_INSTALLER=str(exe),TEST_WINDOWS_PASSWORD=identity['windows_password'],
         TEST_WINDOWS_PFX=str(protected/'windows-test.pfx'),TEST_WINDOWS_CER=str(protected/'windows-test.cer'))
     run(['pwsh','-NoProfile','-File',str(ROOT/'.github/scripts/windows-test-sign.ps1'),'-Action','Sign'],env=context)
+    print('Windows test signature verified.',flush=True)
     signed_apk=output/'DeepSeek-Niang_0.0.2_android-arm64-isolated-test.apk'
     context.update(TEST_ANDROID_PASSWORD=identity['android_password'])
     tools=Path(os.environ['ANDROID_HOME'])/'build-tools/36.0.0'
@@ -73,15 +74,24 @@ def main():
     assert verified['source_commit']==sha and verified['working_tree_clean'] and verified['signer_certificate_sha256']==public['android_certificate_sha256']
     verified.update(test_signer_persistence_guaranteed=True,signature_source='GitHub encrypted repository signing bundle',
                     old_test_upgrade_compatible=False,future_test2_upgrade_identity_stable=True)
+    print('Android test signature and installation identity verified.',flush=True)
     # Re-run the real signed Windows installer, using the exact compiled source.
     target=Path(os.environ['RUNNER_TEMP'])/'signed-windows-smoke-target'
     native=target/'x86_64-pc-windows-msvc/release';(native/'bundle/nsis').mkdir(parents=True,exist_ok=True)
     shutil.copyfile(exe,native/'bundle/nsis/setup.exe')
     shutil.copyfile(windows/'DeepSeek-Niang_0.0.2_windows-x64.exe',native/'companion-app.exe')
     context.update(CARGO_TARGET_DIR=str(target))
-    result=subprocess.run(['pwsh','-NoProfile','-File',str(source/'.github/scripts/windows-package-smoke.ps1')],cwd=source,env=context,capture_output=True)
-    if result.returncode:raise RuntimeError('Signed Windows native installation/language smoke failed')
-    (output/'signed-windows-install.log').write_bytes(result.stdout+result.stderr)
+    # GUI/WebView2 descendants can retain inherited pipe handles after pwsh exits.
+    # A real file lets us wait for the smoke process without waiting for pipe EOF.
+    print('Starting signed Windows installer/language/startup check.',flush=True)
+    smoke_log=output/'signed-windows-install.log'
+    with smoke_log.open('wb') as log:
+        result=subprocess.run(['pwsh','-NoProfile','-File',str(source/'.github/scripts/windows-package-smoke.ps1')],cwd=source,env=context,stdout=log,stderr=subprocess.STDOUT,timeout=300)
+    if result.returncode:
+        text=smoke_log.read_text(errors='replace')
+        known=re.search(r'(Installer language preview exited[^\r\n]*|Native installer did not display Chinese[^\r\n]*|Installer timed out|Installer exited with \d+|Installed app never opened[^\r\n]*|Installed application not found)',text)
+        raise RuntimeError('Signed Windows installation check failed: '+(known[0] if known else 'see signed-windows-install.log'))
+    print('Signed Windows installer/language/startup check passed.',flush=True)
     signed_smoke=json.loads((smoke_root/'BUILD-RESULTS-WINDOWS.json').read_text(encoding='utf-8-sig'))
     assert signed_smoke['build_commit']==sha and signed_smoke['installed_process_started'] and signed_smoke['installer_sha256']==digest(exe)
     signed_smoke.update(authenticode_signed=True,authenticode_verified_on_disposable_runner=True,
