@@ -8,6 +8,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import urllib.request
 
 ROOT=Path(__file__).resolve().parents[2]
@@ -17,6 +18,11 @@ import version
 VERSION='0.0.3'
 TAG='v'+VERSION
 APP_ID='io.local.deepseekcompanion.test2'
+STAGE='source and test validation'
+def mark(value):
+    global STAGE
+    STAGE=value
+    print('::notice title=Release validation::'+value,flush=True)
 def digest(path):return hashlib.sha256(path.read_bytes()).hexdigest()
 def read(path):return json.loads(path.read_text(encoding='utf-8-sig'))
 def write(path,value):path.write_text(json.dumps(value,ensure_ascii=False,indent=2)+'\n')
@@ -24,7 +30,7 @@ def run(args,**kwargs):
     result=subprocess.run(list(map(str,args)),capture_output=True,timeout=300,**kwargs)
     if result.returncode:raise RuntimeError('Release operation failed: '+Path(str(args[0])).name)
     return result.stdout
-def api(path):return json.loads(run(['gh','api',f"repos/{os.environ['GH_REPO']}/{path}"]))
+def api(path):return json.loads(run(['gh','api',f"repos/{os.environ['GH_REPO']}/{path}",'-H','Cache-Control: no-cache']))
 def find_release(tag):
     # /releases/tags/{tag} only finds published releases. Drafts have no Git tag yet.
     page=1
@@ -139,27 +145,63 @@ Windows 已验证中文向导、签后安装及启动，沿用现有自签名测
     else:
         tag=subprocess.run(['gh','api',f'repos/{repo}/git/ref/tags/{TAG}'],capture_output=True,text=True)
         assert tag.returncode!=0 and '404' in tag.stderr,'Version tag already exists; never move it'
-        run(['gh','release','create',TAG,'--repo',repo,'--target',sha,'--title','0.0.3测试版 · 关系与记忆','--prerelease','--draft','--notes-file',notes])
-    for path in sorted(output.iterdir()):run(['gh','release','upload',TAG,path,'--repo',repo,'--clobber'])
-    release=find_release(TAG);assert release and release['draft'] and release['prerelease']
+        mark('create unpublished release by official REST API')
+        payload=Path(os.environ['RUNNER_TEMP'])/'stage3-draft.json'
+        write(payload,{'tag_name':TAG,'target_commitish':sha,'name':'0.0.3测试版 · 关系与记忆','draft':True,'prerelease':True,'body':body})
+        prior=json.loads(run(['gh','api','--method','POST',f'repos/{repo}/releases','--input',payload]))
+    release_id=prior['id']
+    existing_assets={a['name']:a for a in prior['assets']}
+    for path in sorted(output.iterdir()):
+        mark('upload '+path.name)
+        old=existing_assets.get(path.name)
+        if old and old.get('digest')=='sha256:'+digest(path) and old['size']==path.stat().st_size:continue
+        run(['gh','release','upload',TAG,path,'--repo',repo,'--clobber'])
+    mark('verify canonical release metadata and all asset digests')
+    for attempt in range(5):
+        release=api(f'releases/{release_id}?verification={time.time_ns()}')
+        assets={a['name']:a for a in release['assets']}
+        complete=set(assets)=={p.name for p in output.iterdir()} and all(a.get('digest')=='sha256:'+digest(output/name) and a['size']==(output/name).stat().st_size for name,a in assets.items())
+        if complete:break
+        if attempt<4:time.sleep(2)
+    assert release['draft'] and release['prerelease'] and release['target_commitish']==sha and complete
     print('Both signed packages, test reports and '+str(len(release['assets']))+' draft assets verified; checking authenticated downloads.',flush=True)
     assets={a['name']:a for a in release['assets']}
     assert set(assets)=={p.name for p in output.iterdir()}
     verification=Path(os.environ['RUNNER_TEMP'])/'stage3-download-verify';verification.mkdir(exist_ok=True)
     for name,asset in assets.items():
+        mark('verify authenticated draft download '+name)
         assert asset['digest']=='sha256:'+digest(output/name) and asset['size']==(output/name).stat().st_size
-        with (verification/name).open('wb') as downloaded:
-            result=subprocess.run(['gh','api',f"repos/{repo}/releases/assets/{asset['id']}",'-H','Accept: application/octet-stream'],stdout=downloaded,stderr=subprocess.PIPE,timeout=180)
+        for attempt in range(3):
+            with (verification/name).open('wb') as downloaded:
+                result=subprocess.run(['gh','api',f"repos/{repo}/releases/assets/{asset['id']}?verification={time.time_ns()}",'-H','Accept: application/octet-stream','-H','Cache-Control: no-cache'],stdout=downloaded,stderr=subprocess.PIPE,timeout=180)
+            if result.returncode==0 and digest(verification/name)==digest(output/name):break
+            if attempt<2:time.sleep(2)
         assert result.returncode==0 and digest(verification/name)==digest(output/name),'Draft download verification failed'
-    run(['gh','release','edit',TAG,'--repo',repo,'--draft=false','--prerelease','--notes-file',notes])
+    mark('create verified version tag without moving an existing tag')
+    tag=subprocess.run(['gh','api',f'repos/{repo}/git/ref/tags/{TAG}'],capture_output=True,text=True)
+    if tag.returncode==0:assert json.loads(tag.stdout)['object']['sha']==sha
+    else:
+        assert '404' in tag.stderr
+        payload=Path(os.environ['RUNNER_TEMP'])/'stage3-tag.json';write(payload,{'ref':'refs/tags/'+TAG,'sha':sha})
+        run(['gh','api','--method','POST',f'repos/{repo}/git/refs','--input',payload])
+    mark('publish verified draft by fixed release ID')
+    payload=Path(os.environ['RUNNER_TEMP'])/'stage3-publish.json';write(payload,{'draft':False,'prerelease':True,'body':body})
+    run(['gh','api','--method','PATCH',f'repos/{repo}/releases/{release_id}','--input',payload])
     published=api('releases/'+str(release['id']))
     assert not published['draft'] and published['prerelease']
     assert api('git/ref/tags/'+TAG)['object']['sha']==sha
     for asset in published['assets']:
+        mark('verify public HTTP download '+asset['name'])
         request=urllib.request.Request(asset['browser_download_url']+'?verified_asset='+str(asset['id']),headers={'Cache-Control':'no-cache'})
         with urllib.request.urlopen(request,timeout=180) as response:
             assert response.status==200;data=response.read()
         assert 'sha256:'+hashlib.sha256(data).hexdigest()==asset['digest'] and len(data)==asset['size']
     print(json.dumps({'release_url':published['html_url'],'source_commit':sha,'download_verified_assets':len(published['assets']),'status':'published and verified'},ensure_ascii=False))
 
-if __name__=='__main__':main()
+if __name__=='__main__':
+    try:main()
+    except Exception as error:
+        import traceback
+        frame=traceback.extract_tb(error.__traceback__)[-1]
+        print('::error title=Release validation::'+STAGE+'; '+type(error).__name__+' at '+Path(frame.filename).name+':'+str(frame.lineno)+'. No private output disclosed.',flush=True)
+        raise SystemExit(1)
