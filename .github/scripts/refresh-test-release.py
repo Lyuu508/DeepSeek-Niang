@@ -173,4 +173,11 @@ Android 使用持久保存的新测试签名与 `{APP_ID}`，独立安装、保�
 
 
 if __name__=='__main__':
-    main()
+    try:
+        main()
+    except Exception as error:
+        import traceback
+        frame=traceback.extract_tb(error.__traceback__)[-1]
+        detail=str(error) if isinstance(error,RuntimeError) else type(error).__name__
+        print(f'::error title=Signed installer refresh::Line {frame.lineno}: {detail}',flush=True)
+        raise

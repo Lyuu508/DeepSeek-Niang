@@ -31,6 +31,9 @@ try {
             if ($Signed.Status -ne 'Valid' -or $Signed.SignerCertificate.Thumbprint -ne $Certificate.Thumbprint) { throw 'Authenticode verification failed' }
         } finally { Remove-Item ('Cert:\CurrentUser\Root\' + $Certificate.Thumbprint) -ErrorAction SilentlyContinue }
     }
+} catch {
+    Write-Output ('CERTIFICATE_STAGE_ERROR:' + $Action + ':' + $_.InvocationInfo.ScriptLineNumber + ':' + $_.Exception.GetType().Name)
+    throw
 } finally {
     if ($Certificate) { Remove-Item ('Cert:\CurrentUser\My\' + $Certificate.Thumbprint) -ErrorAction SilentlyContinue }
 }

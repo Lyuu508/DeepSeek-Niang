@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import secrets
+import re
 import subprocess
 import sys
 import urllib.request
@@ -17,6 +18,9 @@ BUNDLE_SECRET = 'TEST_RELEASE_SIGNING_B64'
 def run(args, env=None, value=None):
     result = subprocess.run(args, input=value, env=env, capture_output=True)
     if result.returncode:
+        stage=re.search(rb'CERTIFICATE_STAGE_ERROR:(Generate|Check|Sign):(\d+):([A-Za-z.]+)',result.stdout)
+        if stage:
+            raise RuntimeError('Windows certificate '+stage[1].decode()+' failed at line '+stage[2].decode()+' ('+stage[3].decode()+')')
         if Path(args[0]).name == 'gh' and b'403' in result.stderr:
             raise RuntimeError('GitHub denied the requested repository Secrets operation; no private output was logged')
         raise RuntimeError('Signing operation failed: ' + Path(args[0]).name)
@@ -105,4 +109,11 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as error:
+        import traceback
+        frame=traceback.extract_tb(error.__traceback__)[-1]
+        detail=str(error) if isinstance(error,RuntimeError) else type(error).__name__
+        print(f'::error title=Signing identity setup::Line {frame.lineno}: {detail}',flush=True)
+        raise
