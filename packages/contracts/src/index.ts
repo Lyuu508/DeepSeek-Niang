@@ -60,4 +60,4 @@ export interface LifeSnapshot {
  day_start_ms:number;execution_kind:'virtual';external_media_executed:false;
 }
 export interface DailyUsage {day_start_ms:number;timezone_offset_minutes:number;by_purpose:Record<'chat'|'memory'|'life',{requests:number;measured_requests:number;unknown_requests:number;prompt_tokens:number;completion_tokens:number}>;memory_and_life_provider:string}
-export interface CompanionSnapshot {worker?:{error_code:string|null;failures:number};persona_id:string;relationship:BondSnapshot;mood:MoodSnapshot;memories:ManagedMemory[];memory_candidates:MemoryCandidate[];preferences:CompanionPreferences;life:LifeSnapshot;daily_usage:DailyUsage}
+export interface CompanionSnapshot {recall?:{stored_messages:number;strategy:string;additional_model_requests:number};worker?:{error_code:string|null;failures:number};persona_id:string;relationship:BondSnapshot;mood:MoodSnapshot;memories:ManagedMemory[];memory_candidates:MemoryCandidate[];preferences:CompanionPreferences;life:LifeSnapshot;daily_usage:DailyUsage}

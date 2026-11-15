@@ -1,4 +1,4 @@
-name: Release companion v0.0.3 test
+name: Build stage3 repair v0.0.4 candidate
 on:
   workflow_dispatch:
     inputs:
@@ -14,7 +14,12 @@ on:
         description: Explicitly authorized version only
         required: true
         type: choice
-        options: ['0.0.3']
+        options: ['0.0.4']
+      publish_after_checks:
+        description: Explicitly publish only after verification; false prepares a draft
+        required: true
+        default: false
+        type: boolean
 permissions:
   contents: read
 concurrency:
@@ -51,14 +56,14 @@ jobs:
           import json,os,re,subprocess
           repo=os.environ['GH_REPO'];sha=os.environ['REQUEST_SHA'];run=os.environ['REQUEST_CI']
           assert os.environ['GITHUB_REF']=='refs/heads/main'
-          assert repo=='Lyuu508/DeepSeek-Niang' and os.environ['REQUEST_VERSION']=='0.0.3'
+          assert repo=='Lyuu508/DeepSeek-Niang' and os.environ['REQUEST_VERSION']=='0.0.4'
           assert re.fullmatch('[0-9a-f]{40}',sha) and re.fullmatch('[0-9]+',run)
           def api(path):return json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/'+path],text=True))
           assert subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()==sha
           assert api('commits/main')['sha']==sha
           subprocess.run(['git','merge-base','--is-ancestor',sha,'origin/main'],check=True)
           config=json.loads(subprocess.check_output(['git','show',sha+':VERSION.json']))
-          assert config=={'version':'0.0.3','androidVersionCode':1003}
+          assert config=={'version':'0.0.4','androidVersionCode':1004}
           status=api('actions/runs/'+run)
           assert status['conclusion']=='success' and status['head_sha']==sha and status['head_branch']=='main'
           assert status['path']=='.github/workflows/ci.yml' and status['head_repository']['full_name']==repo
@@ -71,7 +76,7 @@ jobs:
               assert candidates
               selected[key]=max(candidates,key=lambda a:int(a['name'].rsplit('-',1)[1]))['id']
           pages=json.loads(subprocess.check_output(['gh','api','--paginate','--slurp',f'repos/{repo}/releases?per_page=100']))
-          prior=[item for page in pages for item in page if item['tag_name']=='v0.0.3']
+          prior=[item for page in pages for item in page if item['tag_name']=='v0.0.4']
           assert len(prior)<=1
           if prior:assert prior[0]['draft'] and prior[0]['target_commitish']==sha,'Published version must never be reused'
           with open(os.environ['GITHUB_OUTPUT'],'a') as output:
@@ -124,7 +129,7 @@ jobs:
       - if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          name: signed-windows-0.0.3-${{ github.run_attempt }}
+          name: signed-windows-0.0.4-${{ github.run_attempt }}
           path: ${{ runner.temp }}/signed-windows
           if-no-files-found: warn
           retention-days: 30
@@ -172,7 +177,7 @@ jobs:
       - if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          name: signed-android-0.0.3-${{ github.run_attempt }}
+          name: signed-android-0.0.4-${{ github.run_attempt }}
           path: ${{ runner.temp }}/signed-android
           if-no-files-found: warn
           retention-days: 30
@@ -192,6 +197,7 @@ jobs:
       GH_REPO: ${{ github.repository }}
       EXPECTED_SOURCE_SHA: ${{ needs.authorize.outputs.sha }}
       CI_RUN_ID: ${{ needs.authorize.outputs.run }}
+      PUBLISH_VERIFIED_RELEASE: ${{ inputs.publish_after_checks }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -199,7 +205,7 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
         with:
-          pattern: signed-*-0.0.3-*
+          pattern: signed-*-0.0.4-*
           path: ${{ runner.temp }}/signed-artifacts
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
         with:
@@ -208,13 +214,13 @@ jobs:
           github-token: ${{ github.token }}
           path: ${{ runner.temp }}/test-reports
           merge-multiple: true
-      - name: Verify both signatures and tests, download draft assets, then publish
+      - name: Verify both signatures, tests and uploaded digests; prepare draft by default
         run: |
           python3 .github/scripts/publish-companion-test.py "$RUNNER_TEMP/signed-artifacts" "$RUNNER_TEMP/test-reports" "$RUNNER_TEMP/release-files" --ci-run "$CI_RUN_ID"
       - if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          name: release-0.0.3-evidence
+          name: release-0.0.4-evidence
           path: ${{ runner.temp }}/release-files
           if-no-files-found: warn
           retention-days: 30

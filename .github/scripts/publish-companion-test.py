@@ -1,4 +1,4 @@
-"""Publish v0.0.3 only after independent native builds, signatures and tests pass."""
+"""Prepare v0.0.4; publish only on explicit request after all verification gates."""
 import argparse
 import hashlib
 import json
@@ -15,7 +15,7 @@ ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'scripts'))
 import version
 
-VERSION='0.0.3'
+VERSION='0.0.4'
 TAG='v'+VERSION
 APP_ID='io.local.deepseekcompanion.test2'
 STAGE='source and test validation'
@@ -44,7 +44,7 @@ def find_release(tag):
 def one(root,name):
     matches=list(root.rglob(name));assert matches,'Expected a verified '+name
     if len(matches)>1:
-        assert all(re.fullmatch('signed-(windows|android)-0.0.3-[0-9]+',p.parent.name) for p in matches)
+        assert all(re.fullmatch('signed-(windows|android)-0.0.4-[0-9]+',p.parent.name) for p in matches)
         matches=sorted(matches,key=lambda p:int(p.parent.name.rsplit('-',1)[1]))
     return matches[-1]
 def validate_pair(windows,android,sha):
@@ -53,9 +53,9 @@ def validate_pair(windows,android,sha):
     assert windows['working_tree_clean'] and android['working_tree_clean']
     assert windows['signing']['authenticode_signed'] and windows['signing']['installed_process_started']
     assert windows['signing']['installer_language_verified'] and not windows['signing']['publicly_trusted_publisher']
-    assert android['version_code']==1003 and android['application_id']==APP_ID
+    assert android['version_code']==1004 and android['application_id']==APP_ID
     assert android['signature_verified'] and android['test_signer_persistence_guaranteed']
-    assert android['upgrade_compatible_with_test2_v0_0_2'] and not android['production_upgrade_compatible']
+    assert android['upgrade_compatible_with_test2_v0_0_3'] and not android['production_upgrade_compatible']
     assert not android['physical_device_tested'] and not windows['physical_device_tested']
 def automation(tests):
     logs={p.name:p.read_text() for p in tests.glob('*.txt')}
@@ -63,10 +63,10 @@ def automation(tests):
     assert 'test result: FAILED' not in logs['rust-tests.txt']
     rust=sum(map(int,re.findall(r'test result: ok\. (\d+) passed; 0 failed; 0 ignored;',logs['rust-tests.txt'])))
     py=re.search(r'Ran (\d+) tests',logs['python-tests.txt'])
-    assert rust>=103 and py and int(py[1])>=24 and '\nOK' in logs['python-tests.txt']
+    assert rust>=115 and py and int(py[1])>=24 and '\nOK' in logs['python-tests.txt']
     node=re.search(r'(?:# )?pass (\d+)',logs['sync-model.txt']);assert node and int(node[1])>=5
     ui={mode:read(tests/mode/'results.json') for mode in ['ui','ui-isolated']}
-    assert all(item['passed']>=26 and 'Mock' in item['scope'] for item in ui.values())
+    assert all(item['passed']>=28 and 'Mock' in item['scope'] for item in ui.values())
     return {'rust':rust,'python':int(py[1]),'node':int(node[1]),'ui_fixture':{mode:item['passed'] for mode,item in ui.items()}},logs,ui
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('artifacts',type=Path);parser.add_argument('tests',type=Path);parser.add_argument('output',type=Path);parser.add_argument('--ci-run',type=int,required=True)
@@ -75,7 +75,7 @@ def main():
     sha=run(['git','rev-parse','HEAD'],cwd=ROOT).decode().strip()
     assert sha==os.environ['EXPECTED_SOURCE_SHA']
     assert api('commits/main')['sha']==sha,'main moved; rebuild the latest source rather than publishing an older candidate'
-    assert version.check()=={'version':VERSION,'androidVersionCode':1003}
+    assert version.check()=={'version':VERSION,'androidVersionCode':1004}
     ci=api('actions/runs/'+str(args.ci_run))
     assert ci['head_sha']==sha and ci['conclusion']=='success' and ci['head_branch']=='main'
     windows_path=one(args.artifacts,'windows-build.json');android_path=one(args.artifacts,'android-build.json')
@@ -99,10 +99,10 @@ def main():
                  'WINDOWS-TEST-SIGNER.cer','signed-windows-install.log','windows-build.log']:
         path=windows_path.parent/name
         if path.is_file():shutil.copyfile(path,output/name)
-    for name in ['android-reverified.json','android-build.log','android-toolchain.log','ANDROID-SIGNING-REFERENCES.json','apksigner-0.0.3.txt']:
+    for name in ['android-reverified.json','android-build.log','android-toolchain.log','ANDROID-SIGNING-REFERENCES.json','apksigner-0.0.4.txt']:
         shutil.copyfile(android_path.parent/name,output/name)
     write(output/'SIGNING-IDENTITIES.json',public_win)
-    report={'version':VERSION,'android_version_code':1003,'source_commit':sha,'ci_run':args.ci_run,
+    report={'version':VERSION,'android_version_code':1004,'source_commit':sha,'ci_run':args.ci_run,
         'signing_workflow_run':os.environ['GITHUB_RUN_ID'],'distribution':'persisted-test2-update',
         'windows':windows,'android':android,'tests':counts,'files':files,
         'physical_windows_android_tested':False,'home_ethernet_wifi_tested':False,'real_deepseek_api_tested':False,
@@ -112,7 +112,7 @@ def main():
     (output/'SHA256SUMS.txt').write_text(''.join(value+'  '+name+'\n' for name,value in sorted(files.items())))
     (output/'AUTOMATED-TEST-RESULTS.txt').write_text('\n\n'.join(name+'\n'+body for name,body in sorted(logs.items())))
     write(output/'UI-TEST-RESULTS.json',{'source_commit':sha,'scope':'explicit UI fixtures; not real devices','runs':ui})
-    for source,name in [('docs/PHASE3_REPORT.md','PHASE3-REPORT.md'),('docs/PHASE2_PERSONA_IDENTITY_FIX.md','PAIRING-FIX-REPORT.md'),('docs/PHASE3_ACCEPTANCE.md','INSTALL-AND-ACCEPTANCE.md'),('docs/TEST_SIGNING_SETUP.md','SIGNING-SETUP.md'),('CHANGELOG.md','CHANGELOG.md')]:
+    for source,name in [('docs/PHASE3_FOLLOWUP_REPORT.md','PHASE3-REPORT.md'),('docs/PHASE3_SCAN_REPAIR.md','PAIRING-FIX-REPORT.md'),('docs/PHASE3_FOLLOWUP_ACCEPTANCE.md','INSTALL-AND-ACCEPTANCE.md'),('docs/TEST_SIGNING_SETUP.md','SIGNING-SETUP.md'),('CHANGELOG.md','CHANGELOG.md')]:
         shutil.copyfile(ROOT/source,output/name)
     for path in output.iterdir():
         assert path.is_file() and path.suffix not in ['.jks','.keystore','.p12','.pfx','.key']
@@ -120,7 +120,7 @@ def main():
             content=path.read_text(encoding='utf-8-sig')
             assert not re.search(r'-----BEGIN (?:RSA |EC |ENCRYPTED )?PRIVATE KEY-----|github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{20,}',content),'Private material pattern; publication blocked'
     repo=os.environ['GH_REPO'];base='https://github.com/'+repo+'/releases/download/'+TAG+'/'
-    body=f"""这是 DeepSeek娘 0.0.3 测试版：修复扫码后默认人格重复，新增关系、情绪、分层记忆和虚拟生活基础。
+    body=f"""这是 DeepSeek娘 0.0.4 阶段3修复版：修复升级旧队列导致的扫码同步失败及默认人格重复，扫码安全配置手机API，新增低成本旧聊检索及三栏电脑界面。
 
 - [Windows 中文 EXE]({base}{windows['file']})
 - [Android ARM64 测试 APK]({base}{android['file']})
@@ -129,11 +129,11 @@ def main():
 
 两端源码：[{sha}](https://github.com/{repo}/commit/{sha})；[同源 CI {args.ci_run}](https://github.com/{repo}/actions/runs/{args.ci_run})。无需解压，直接选择 EXE/APK 安装。
 
-Android 保持 {APP_ID} 和现有持久签名，真实旧 APK/apksigner 检查确认与 0.0.2「DeepSeek娘 扫码测试版」相同、versionCode 增至 1003。签名和版本满足该测试版覆盖条件；真实手机覆盖安装仍待验收。它不能覆盖 v0.0.1 正式版或旧 .test，不要求卸载/清数据；迁移方案见报告。没有生成替代签名。
+Android 保持 {APP_ID} 和现有持久签名，真实旧 APK/apksigner 检查确认与 0.0.3「DeepSeek娘 扫码测试版」相同、versionCode 增至 1004。签名和版本满足该测试版覆盖条件；真实手机覆盖安装仍待验收。它不能覆盖 v0.0.1 正式版或旧 .test，不要求卸载/清数据；迁移方案见报告。没有生成替代签名。
 
 Windows 已验证中文向导、签后安装及启动，沿用现有自签名测试证书，仍非公共 CA 信任发布者。
 
-已配对手机通过认证连接采用电脑默认人格 ID；原自动默认记录以可审计关联保留，聊天/记忆/消息 ID 不删除，手动人格不合并。请同时更新两端，旧同步 schema 会明确拒绝混用。
+已配对手机通过认证连接采用电脑默认人格 ID；旧版已签名队列仅在投影补齐已知新增默认值，不改原始签名。自动默认人格以可审计关联保留，聊天/记忆/消息 ID 不删除，手动人格不合并。请同时更新两端，旧同步 schema 会明确拒绝混用。
 
 关系不是每条消息加分；情绪与记忆有来源，记忆冲突需确认。虚拟看视频/听音乐不代表真实媒体播放或理解。主动消息默认关闭；规则与记忆整理不额外调用模型。实机、真实 DeepSeek 和家庭网络尚待主人验收，不作为自动化通过项。完成本版本后停止，不自动开始阶段 4。
 """
@@ -147,7 +147,7 @@ Windows 已验证中文向导、签后安装及启动，沿用现有自签名测
         assert tag.returncode!=0 and '404' in tag.stderr,'Version tag already exists; never move it'
         mark('create unpublished release by official REST API')
         payload=Path(os.environ['RUNNER_TEMP'])/'stage3-draft.json'
-        write(payload,{'tag_name':TAG,'target_commitish':sha,'name':'0.0.3测试版 · 关系与记忆','draft':True,'prerelease':True,'body':body})
+        write(payload,{'tag_name':TAG,'target_commitish':sha,'name':'0.0.4测试版 · 扫码与记忆修复','draft':True,'prerelease':True,'body':body})
         prior=json.loads(run(['gh','api','--method','POST',f'repos/{repo}/releases','--input',payload]))
     release_id=prior['id']
     existing_assets={a['name']:a for a in prior['assets']}
@@ -164,19 +164,16 @@ Windows 已验证中文向导、签后安装及启动，沿用现有自签名测
         if complete:break
         if attempt<4:time.sleep(2)
     assert release['draft'] and release['prerelease'] and release['target_commitish']==sha and complete
-    print('Both signed packages, test reports and '+str(len(release['assets']))+' draft assets verified; checking authenticated downloads.',flush=True)
+    print('Both signed packages, test reports and '+str(len(release['assets']))+' uploaded asset digests verified.',flush=True)
     assets={a['name']:a for a in release['assets']}
     assert set(assets)=={p.name for p in output.iterdir()}
-    verification=Path(os.environ['RUNNER_TEMP'])/'stage3-download-verify';verification.mkdir(exist_ok=True)
-    for name,asset in assets.items():
-        mark('verify authenticated draft download '+name)
-        assert asset['digest']=='sha256:'+digest(output/name) and asset['size']==(output/name).stat().st_size
-        for attempt in range(3):
-            with (verification/name).open('wb') as downloaded:
-                result=subprocess.run(['gh','api',f"repos/{repo}/releases/assets/{asset['id']}?verification={time.time_ns()}",'-H','Accept: application/octet-stream','-H','Cache-Control: no-cache'],stdout=downloaded,stderr=subprocess.PIPE,timeout=180)
-            if result.returncode==0 and digest(verification/name)==digest(output/name):break
-            if attempt<2:time.sleep(2)
-        assert result.returncode==0 and digest(verification/name)==digest(output/name),'Draft download verification failed'
+    # GitHub computes these digests over the actual uploaded bytes. Require
+    # equality with locally verified signed packages BEFORE publication. A draft
+    # GITHUB_TOKEN download is not portable; verify real public HTTP bytes below.
+    if os.environ.get('PUBLISH_VERIFIED_RELEASE')!='true':
+        mark('verified draft ready; public release and Git tag intentionally pending')
+        print(json.dumps({'draft_release_id':release_id,'source_commit':sha,'uploaded_assets':len(assets),'all_server_digests_match_verified_files':True,'publicly_published':False}),flush=True)
+        return
     mark('create verified version tag without moving an existing tag')
     tag=subprocess.run(['gh','api',f'repos/{repo}/git/ref/tags/{TAG}'],capture_output=True,text=True)
     if tag.returncode==0:assert json.loads(tag.stdout)['object']['sha']==sha

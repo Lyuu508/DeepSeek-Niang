@@ -552,3 +552,310 @@ fn repeated_pending_facts_deduplicate_and_relation_limits_respect_user_frequency
     assert_eq!(life::proactive_limits(&preferences, "熟悉"), (360, 2));
     assert_eq!(life::proactive_limits(&preferences, "亲密"), (240, 2));
 }
+
+#[test]
+fn old_conversation_is_recalled_after_many_new_turns_with_a_shared_bounded_budget() {
+    let mut store = Store::open(":memory:").unwrap();
+    let persona = store.profile_id.clone();
+    let source = chat(
+        &mut store,
+        &persona,
+        "上个月我们一起去黄山旅行，傍晚突降大雨，最后在山脚的小店避雨。",
+    );
+    for _ in 0..45 {
+        chat(&mut store, &persona, "今天先聊点普通小事。");
+    }
+    assert!(store.managed_memories(&persona).unwrap().is_empty());
+    let quotes = store
+        .retrieve_chat_recall(&persona, "还记得黄山旅行时的事情吗", &[], 1500, 4)
+        .unwrap();
+    assert!(
+        quotes
+            .iter()
+            .any(|quote| quote.message_id == source && quote.text.contains("山脚的小店"))
+    );
+    let before = store.usage_summary().unwrap().requests;
+    let input = StartChat {
+        request_id: Uuid::new_v4().to_string(),
+        conversation_id: persona.clone(),
+        text: Some("你还记得黄山旅行时在哪里避雨吗？".into()),
+        regenerate_user_id: None,
+    };
+    store.begin_chat(&input, &ChatSettings::default()).unwrap();
+    let prompt = store
+        .companion_context(&persona, &ChatSettings::default())
+        .unwrap();
+    assert!(prompt[0].content.contains("山脚的小店"));
+    assert_eq!(store.usage_summary().unwrap().requests, before);
+    let line = prompt[0]
+        .content
+        .lines()
+        .find(|line| line.contains("previous_chat_excerpts"))
+        .unwrap();
+    let evidence: serde_json::Value =
+        serde_json::from_str(line.split_once('：').unwrap().1).unwrap();
+    assert!(serde_json::to_vec(&evidence).unwrap().len() <= 2000);
+    assert!(
+        evidence["previous_chat_excerpts"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|entry| entry["message_id"] == source)
+    );
+    let disabled = ChatSettings {
+        include_history: false,
+        ..ChatSettings::default()
+    };
+    assert!(
+        !store.companion_context(&persona, &disabled).unwrap()[0]
+            .content
+            .contains("山脚的小店")
+    );
+    let mut prefs = store.companion_preferences(&persona).unwrap();
+    prefs.memory_context = false;
+    store.save_companion_preferences(&persona, &prefs).unwrap();
+    assert!(
+        !store
+            .companion_context(&persona, &ChatSettings::default())
+            .unwrap()[0]
+            .content
+            .contains("山脚的小店")
+    );
+    assert_eq!(
+        store.chat_recall_stats(&persona).unwrap()["additional_model_requests"],
+        0
+    );
+}
+
+#[test]
+fn archive_recall_respects_persona_private_facts_deleted_memory_and_secret_filters() {
+    let mut store = Store::open(":memory:").unwrap();
+    let persona = store.profile_id.clone();
+    let first = chat(&mut store, &persona, "黄山旅行时，我们在山脚的小店避雨。");
+    let other = store.create_persona("另一个真实人格", "单独设置").unwrap();
+    chat(&mut store, &other.id, "黄山旅行是另一个人格的独立经历。");
+    chat(
+        &mut store,
+        &persona,
+        "黄山旅行密码是 fixture-not-a-real-password。",
+    );
+    let quotes = store
+        .retrieve_chat_recall(&persona, "黄山旅行", &[], 2000, 6)
+        .unwrap();
+    assert!(quotes.iter().any(|q| q.message_id == first));
+    assert!(
+        quotes
+            .iter()
+            .all(|q| !q.text.contains("另一个人格") && !q.text.contains("密码"))
+    );
+    memory(&mut store, &persona, "在山脚的小店避雨", false, false);
+    assert!(
+        store
+            .retrieve_chat_recall(&persona, "黄山旅行", &[], 2000, 6)
+            .unwrap()
+            .is_empty()
+    );
+    let remembered = chat(
+        &mut store,
+        &persona,
+        "请记住：我们一起参加了独一无二的湖边生日聚会。",
+    );
+    let m = store
+        .managed_memories(&persona)
+        .unwrap()
+        .into_iter()
+        .find(|m| m.source_message_id.as_deref() == Some(&remembered))
+        .unwrap();
+    store.delete_persona_memory(&persona, &m.id).unwrap();
+    assert!(
+        store
+            .retrieve_chat_recall(&persona, "湖边生日聚会", &[], 2000, 6)
+            .unwrap()
+            .is_empty()
+    );
+    assert!(
+        store
+            .chat_messages(&persona)
+            .unwrap()
+            .iter()
+            .any(|m| m.id == remembered)
+    );
+}
+
+#[test]
+fn local_chat_index_tracks_updates_deletions_and_short_chinese_topics() {
+    let mut store = Store::open(":memory:").unwrap();
+    let persona = store.profile_id.clone();
+    let source = chat(&mut store, &persona, "黄山的日出很好看。");
+    assert_eq!(
+        store
+            .retrieve_chat_recall(&persona, "黄山", &[], 1000, 3)
+            .unwrap()[0]
+            .message_id,
+        source
+    );
+    // Controlled fixture edit checks the index's ordered remove/add trigger.
+    store
+        .conn
+        .execute(
+            "UPDATE messages SET content='庐山的云海很好看。' WHERE id=?1",
+            [&source],
+        )
+        .unwrap();
+    assert!(
+        store
+            .retrieve_chat_recall(&persona, "黄山", &[], 1000, 3)
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(
+        store
+            .retrieve_chat_recall(&persona, "庐山", &[], 1000, 3)
+            .unwrap()[0]
+            .message_id,
+        source
+    );
+    store
+        .delete(crate::event::Entity::Message, &source)
+        .unwrap();
+    assert!(
+        store
+            .retrieve_chat_recall(&persona, "庐山", &[], 1000, 3)
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(store.diagnostics().unwrap().integrity, "ok");
+}
+
+#[test]
+fn v6_chat_archive_migration_backs_up_original_rows_and_rolls_back_atomically() {
+    for failure in [false, true] {
+        let dir = std::env::temp_dir().join(format!("chat-recall-migration-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("old.sqlite3");
+        let owner = Uuid::new_v4().to_string();
+        let device = Uuid::new_v4().to_string();
+        let message = Uuid::new_v4().to_string();
+        let mut db = rusqlite::Connection::open(&path).unwrap();
+        for (version, sql) in [
+            (
+                1,
+                include_str!("../../../../db/migrations/0001_initial.sql"),
+            ),
+            (2, include_str!("../../../../db/migrations/0002_chat.sql")),
+            (
+                3,
+                include_str!("../../../../db/migrations/0003_personas.sql"),
+            ),
+            (
+                4,
+                include_str!("../../../../db/migrations/0004_lan_sync.sql"),
+            ),
+            (
+                5,
+                include_str!("../../../../db/migrations/0005_pairing_persona_identity.sql"),
+            ),
+            (
+                6,
+                include_str!("../../../../db/migrations/0006_companion_foundation.sql"),
+            ),
+        ] {
+            db.execute_batch(sql).unwrap();
+            db.execute(
+                "INSERT INTO schema_migrations VALUES(?1,?2)",
+                rusqlite::params![version, crate::event::sha256_hex(sql.as_bytes())],
+            )
+            .unwrap();
+        }
+        db.execute_batch("PRAGMA user_version=6; PRAGMA foreign_keys=ON")
+            .unwrap();
+        db.execute(
+            "INSERT INTO local_profiles(id,display_name) VALUES(?1,'旧库合成资料')",
+            [&owner],
+        )
+        .unwrap();
+        db.execute(
+            "INSERT INTO devices(id,profile_id,name,trust_state) VALUES(?1,?2,'旧设备','local')",
+            rusqlite::params![device, owner],
+        )
+        .unwrap();
+        db.execute("INSERT INTO local_clock(device_id) VALUES(?1)", [&device])
+            .unwrap();
+        db.execute(
+            "INSERT INTO conversations(id,profile_id,title) VALUES(?1,?1,'旧时间线')",
+            [&owner],
+        )
+        .unwrap();
+        crate::persona::ensure_default(&db, &owner, &device).unwrap();
+        let tx = db.transaction().unwrap();
+        Store::append_in(&tx,&device,&owner,Entity::Message,&message,crate::event::Operation::Put,json!({"persona_id":owner,"conversation_id":owner,"role":"user","content":"很久以前的黄山旅行，原始消息必须保留。"})).unwrap();
+        tx.commit().unwrap();
+        if failure {
+            db.execute_batch("CREATE TABLE chat_recall_fts(sentinel TEXT)")
+                .unwrap();
+        }
+        drop(db);
+        if failure {
+            assert!(Store::open(&path).is_err());
+            let db = rusqlite::Connection::open(&path).unwrap();
+            assert_eq!(
+                db.pragma_query_value(None, "user_version", |r| r.get::<_, i64>(0))
+                    .unwrap(),
+                6
+            );
+            assert!(
+                db.query_row(
+                    "SELECT content FROM messages WHERE id=?1",
+                    [&message],
+                    |r| r.get::<_, String>(0)
+                )
+                .unwrap()
+                .contains("原始消息必须保留")
+            );
+        } else {
+            let store = Store::open(&path).unwrap();
+            assert_eq!(
+                store.diagnostics().unwrap().schema_version,
+                crate::storage::SCHEMA_VERSION
+            );
+            assert_eq!(
+                store
+                    .retrieve_chat_recall(&owner, "黄山旅行", &[], 1500, 3)
+                    .unwrap()[0]
+                    .message_id,
+                message
+            );
+            assert!(
+                store
+                    .chat_messages(&owner)
+                    .unwrap()
+                    .iter()
+                    .any(|m| m.id == message)
+            );
+        }
+        let backups = std::fs::read_dir(&dir)
+            .unwrap()
+            .filter_map(|p| p.ok())
+            .filter(|p| p.file_name().to_string_lossy().contains("pre-v7-"))
+            .collect::<Vec<_>>();
+        assert_eq!(backups.len(), 1);
+        {
+            let backup = rusqlite::Connection::open(backups[0].path()).unwrap();
+            assert_eq!(
+                backup
+                    .pragma_query_value(None, "user_version", |r| r.get::<_, i64>(0))
+                    .unwrap(),
+                6
+            );
+            assert_eq!(
+                backup
+                    .query_row("SELECT id FROM messages WHERE id=?1", [&message], |r| {
+                        r.get::<_, String>(0)
+                    })
+                    .unwrap(),
+                message
+            );
+        }
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+}

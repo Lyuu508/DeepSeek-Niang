@@ -1227,3 +1227,369 @@ fn signed_but_false_relationship_evidence_is_rejected_atomically() {
     a.stop();
     b.stop();
 }
+
+#[test]
+fn upgraded_v4_queued_persona_and_usage_rows_sync_over_real_tls_without_resigning_history() {
+    let pc = service_named("旧库升级后的电脑");
+    let phone = service_named("手机");
+    trust(&pc, &phone);
+    trust(&phone, &pc);
+    let authority = pc.store.lock().unwrap().local_host_authority().unwrap();
+    phone
+        .store
+        .lock()
+        .unwrap()
+        .bind_paired_host(&authority)
+        .unwrap();
+    let message = synthetic_chat(&pc, &authority.persona_id, "升级前已经保存的聊天");
+    pc.capture().unwrap();
+    let mut events = pc.store.lock().unwrap().lan_export(0).unwrap();
+    let mut legacy_persona = false;
+    let mut legacy_usage = false;
+    for event in &mut events {
+        let omitted = match event.table.as_str() {
+            "personas" => {
+                legacy_persona = true;
+                Some("avatar_resource")
+            }
+            "api_usage_records" => {
+                legacy_usage = true;
+                Some("purpose")
+            }
+            _ => None,
+        };
+        if let Some(column) = omitted {
+            // This is the actual v4 wire shape. Migration must keep the original
+            // signed bytes; the new schema cannot rewrite a historical event.
+            event.row.as_object_mut().unwrap().remove(column);
+            event.fields.remove(column);
+            event.signature = pc.identity.sign(&event.signing_bytes().unwrap());
+        }
+    }
+    assert!(legacy_persona && legacy_usage);
+    let reply: Reply = transport::request(
+        &pc.identity,
+        &format!("127.0.0.1:{}", phone.port),
+        &phone.identity.public.certificate,
+        true,
+        &Request::Exchange {
+            schema: companion_core::storage::SCHEMA_VERSION,
+            id: pc.identity.public.id.clone(),
+            cursor: 0,
+            events: events.clone(),
+        },
+    )
+    .unwrap();
+    match reply {
+        Reply::Batch { ack, .. } => assert_eq!(ack, events.last().unwrap().seq),
+        Reply::Failure { code } => panic!("Legacy signed queue rejected: {code}"),
+        _ => panic!("Expected an authenticated committed batch"),
+    }
+    // An identical replay must remain identical and idempotent, including its signature.
+    assert_eq!(phone.import(&pc.identity.public.id, &events).unwrap(), 0);
+    let store = phone.store.lock().unwrap();
+    assert_eq!(store.personas().unwrap().len(), 1);
+    assert_eq!(store.active_persona_id().unwrap(), authority.persona_id);
+    assert_eq!(
+        store
+            .persona(&authority.persona_id)
+            .unwrap()
+            .avatar_resource,
+        "deepseek-niang"
+    );
+    assert!(
+        store
+            .chat_messages(&authority.persona_id)
+            .unwrap()
+            .iter()
+            .any(|m| m.id == message)
+    );
+    let usage = store
+        .companion_daily_usage(&authority.persona_id, companion_core::chat::now_ms(), 480)
+        .unwrap();
+    assert_eq!(usage["by_purpose"]["chat"]["requests"], 1);
+    drop(store);
+    pc.stop();
+    phone.stop();
+}
+
+#[test]
+fn explicit_scan_copies_api_only_over_mutual_tls_and_never_into_qr_or_sqlite() {
+    let pc = service_named("电脑");
+    let phone = service_named("手机");
+    pc.configure_platform(true, false);
+    phone.configure_platform(false, true);
+    let source = Arc::new(MemoryVault(Mutex::new(None)));
+    let target = Arc::new(MemoryVault(Mutex::new(None)));
+    let key = Secret::new("fixture-only-deepseek-api-handoff-1".into()).unwrap();
+    source.set(&key).unwrap();
+    pc.configure_api_vault(source.clone()).unwrap();
+    phone.configure_api_vault(target.clone()).unwrap();
+    let qr = pc
+        .make_invite(vec![format!("127.0.0.1:{}", pc.port)], true)
+        .unwrap();
+    assert!(!qr.text.contains(key.expose()) && !qr.svg.contains(key.expose()));
+    phone.pair_scanned(&qr.text).unwrap();
+    assert!(target.get().unwrap().expose() == key.expose());
+    assert_eq!(
+        phone.status().unwrap().peers[0]
+            .api_configuration
+            .as_deref(),
+        Some("received")
+    );
+    assert_eq!(phone.store.lock().unwrap().personas().unwrap().len(), 1);
+    assert_eq!(pc.store.lock().unwrap().personas().unwrap().len(), 1);
+    for s in [&pc, &phone] {
+        s.capture().unwrap();
+        let wire = serde_json::to_string(&s.store.lock().unwrap().lan_export(0).unwrap()).unwrap();
+        assert!(!wire.contains(key.expose()));
+        assert!(
+            !serde_json::to_string(&s.status().unwrap())
+                .unwrap()
+                .contains(key.expose())
+        );
+    }
+    // Changing the computer key does not silently modify an already paired phone.
+    let replacement = Secret::new("fixture-only-deepseek-api-handoff-2".into()).unwrap();
+    source.set(&replacement).unwrap();
+    phone.tick().unwrap();
+    assert!(target.get().unwrap().expose() == key.expose());
+    let next = pc
+        .make_invite(vec![format!("127.0.0.1:{}", pc.port)], true)
+        .unwrap();
+    phone.pair_scanned(&next.text).unwrap();
+    assert!(target.get().unwrap().expose() == replacement.expose());
+    assert_eq!(
+        phone.status().unwrap().peers[0]
+            .api_configuration
+            .as_deref(),
+        Some("updated")
+    );
+    assert_eq!(phone.store.lock().unwrap().personas().unwrap().len(), 1);
+    pc.stop();
+    phone.stop();
+}
+
+#[test]
+fn key_handoff_rejects_anonymous_other_device_wrong_token_expiry_and_revocation() {
+    let pc = service();
+    let phone = service();
+    let other = service();
+    pc.configure_platform(true, false);
+    let source = Arc::new(MemoryVault(Mutex::new(Some(
+        "fixture-only-secret-handoff".into(),
+    ))));
+    pc.configure_api_vault(source).unwrap();
+    let qr = pc
+        .make_invite(vec![format!("127.0.0.1:{}", pc.port)], true)
+        .unwrap();
+    phone.pair_scanned(&qr.text).unwrap();
+    trust(&pc, &other);
+    trust(&other, &pc);
+    let invite: Invitation = serde_json::from_str(&qr.text).unwrap();
+    let request = |token: String| Request::CredentialHandoff {
+        session: invite.session.clone(),
+        token,
+        id: phone.identity.public.id.clone(),
+    };
+    let endpoint = format!("127.0.0.1:{}", pc.port);
+    for (caller, mtls, token) in [
+        (&phone, false, invite.token.clone()),
+        (&other, true, invite.token.clone()),
+        (&phone, true, "00".repeat(32)),
+    ] {
+        let result: Reply = transport::request(
+            &caller.identity,
+            &endpoint,
+            &pc.identity.public.certificate,
+            mtls,
+            &request(token),
+        )
+        .unwrap();
+        assert!(matches!(result, Reply::Failure { .. }));
+    }
+    pc.window.lock().unwrap().as_mut().unwrap().expires = Instant::now();
+    let result: Reply = transport::request(
+        &phone.identity,
+        &endpoint,
+        &pc.identity.public.certificate,
+        true,
+        &request(invite.token.clone()),
+    )
+    .unwrap();
+    assert!(matches!(result, Reply::Failure { .. }));
+    pc.revoke(&phone.identity.public.id).unwrap();
+    assert!(
+        transport::request::<_, Reply>(
+            &phone.identity,
+            &endpoint,
+            &pc.identity.public.certificate,
+            true,
+            &request(invite.token)
+        )
+        .is_err()
+    );
+    pc.stop();
+    phone.stop();
+    other.stop();
+}
+
+#[test]
+fn phone_secure_storage_failure_keeps_the_authenticated_persona_and_chat_sync() {
+    struct WriteFailure;
+    impl SecretStore for WriteFailure {
+        fn backend_name(&self) -> &'static str {
+            "fixture unavailable vault"
+        }
+        fn get(&self) -> std::result::Result<Secret, VaultError> {
+            Err(VaultError::Missing)
+        }
+        fn set(&self, _: &Secret) -> std::result::Result<(), VaultError> {
+            Err(VaultError::Unavailable)
+        }
+        fn delete(&self) -> std::result::Result<(), VaultError> {
+            Err(VaultError::Unavailable)
+        }
+    }
+    let pc = service();
+    let phone = service();
+    pc.configure_platform(true, false);
+    pc.configure_api_vault(Arc::new(MemoryVault(Mutex::new(Some(
+        "fixture-only-api-secret".into(),
+    )))))
+    .unwrap();
+    phone.configure_api_vault(Arc::new(WriteFailure)).unwrap();
+    let persona = pc.store.lock().unwrap().profile_id.clone();
+    let message = synthetic_chat(&pc, &persona, "应保留的同步聊天");
+    let qr = pc
+        .make_invite(vec![format!("127.0.0.1:{}", pc.port)], true)
+        .unwrap();
+    assert!(matches!(
+        phone.pair_scanned(&qr.text),
+        Err(Error::KeyTransfer)
+    ));
+    let store = phone.store.lock().unwrap();
+    assert_eq!(store.personas().unwrap().len(), 1);
+    assert!(
+        store
+            .chat_messages(&persona)
+            .unwrap()
+            .iter()
+            .any(|m| m.id == message)
+    );
+    drop(store);
+    assert_eq!(
+        phone.status().unwrap().peers[0]
+            .api_configuration
+            .as_deref(),
+        Some("secure_storage_error")
+    );
+    pc.stop();
+    phone.stop();
+}
+
+#[test]
+fn scanning_a_computer_without_api_key_preserves_the_phone_key() {
+    let pc = service();
+    let phone = service();
+    pc.configure_platform(true, false);
+    pc.configure_api_vault(Arc::new(MemoryVault(Mutex::new(None))))
+        .unwrap();
+    let target = Arc::new(MemoryVault(Mutex::new(Some(
+        "fixture-only-existing-phone-key".into(),
+    ))));
+    phone.configure_api_vault(target.clone()).unwrap();
+    let qr = pc
+        .make_invite(vec![format!("127.0.0.1:{}", pc.port)], true)
+        .unwrap();
+    phone.pair_scanned(&qr.text).unwrap();
+    assert!(target.get().unwrap().expose() == "fixture-only-existing-phone-key");
+    assert_eq!(
+        phone.status().unwrap().peers[0]
+            .api_configuration
+            .as_deref(),
+        Some("source_not_configured")
+    );
+    pc.stop();
+    phone.stop();
+}
+
+#[test]
+fn windows_host_keeps_successful_phone_initiated_sync_without_reverse_discovery() {
+    let pc = service_named("网线电脑");
+    let phone = service_named("Wi-Fi手机");
+    pc.configure_platform(true, false);
+    phone.configure_platform(false, true);
+    let qr = pc
+        .make_invite(vec![format!("127.0.0.1:{}", pc.port)], true)
+        .unwrap();
+    phone.pair_scanned(&qr.text).unwrap();
+    assert!(
+        pc.store.lock().unwrap().lan_peers().unwrap()[0]
+            .address
+            .is_none()
+    );
+    phone.tick().unwrap();
+    pc.tick().unwrap();
+    let status = pc.status().unwrap();
+    assert!(status.peers[0].last_success_ms.is_some());
+    assert_eq!(status.peers[0].progress.state, "succeeded");
+    assert!(status.peers[0].progress.error.is_none());
+    let host = pc.store.lock().unwrap().profile_id.clone();
+    let message = synthetic_chat(&pc, &host, "无需反向连接也能发到手机");
+    pc.tick().unwrap();
+    phone.tick().unwrap();
+    assert!(
+        phone
+            .store
+            .lock()
+            .unwrap()
+            .chat_messages(&host)
+            .unwrap()
+            .iter()
+            .any(|m| m.id == message)
+    );
+    pc.stop();
+    phone.stop();
+}
+
+#[test]
+fn inaccessible_computer_api_storage_does_not_block_pairing_or_persona_sync() {
+    struct Unavailable;
+    impl SecretStore for Unavailable {
+        fn backend_name(&self) -> &'static str {
+            "fixture locked vault"
+        }
+        fn get(&self) -> std::result::Result<Secret, VaultError> {
+            Err(VaultError::Unavailable)
+        }
+        fn set(&self, _: &Secret) -> std::result::Result<(), VaultError> {
+            Err(VaultError::Unavailable)
+        }
+        fn delete(&self) -> std::result::Result<(), VaultError> {
+            Err(VaultError::Unavailable)
+        }
+    }
+    let pc = service();
+    let phone = service();
+    pc.configure_platform(true, false);
+    pc.configure_api_vault(Arc::new(Unavailable)).unwrap();
+    phone
+        .configure_api_vault(Arc::new(MemoryVault(Mutex::new(None))))
+        .unwrap();
+    let qr = pc
+        .make_invite(vec![format!("127.0.0.1:{}", pc.port)], true)
+        .unwrap();
+    assert!(matches!(
+        phone.pair_scanned(&qr.text),
+        Err(Error::KeyTransfer)
+    ));
+    assert_eq!(phone.store.lock().unwrap().personas().unwrap().len(), 1);
+    assert_eq!(
+        phone.store.lock().unwrap().active_persona_id().unwrap(),
+        pc.store.lock().unwrap().profile_id
+    );
+    assert!(phone.status().unwrap().peers[0].last_success_ms.is_some());
+    pc.stop();
+    phone.stop();
+}

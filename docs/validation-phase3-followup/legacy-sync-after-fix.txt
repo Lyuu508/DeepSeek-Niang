@@ -1,0 +1,9 @@
+   Compiling companion-core v0.0.3 (/workspace/DeepSeek-Niang/crates/companion-core)
+   Compiling companion-sync v0.0.3 (/workspace/DeepSeek-Niang/crates/companion-sync)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.88s
+     Running unittests src/lib.rs (target/debug/deps/companion_sync-c7e034e0108b26e9)
+
+running 1 test
+test tests::upgraded_v4_queued_persona_and_usage_rows_sync_over_real_tls_without_resigning_history ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 22 filtered out; finished in 0.23s

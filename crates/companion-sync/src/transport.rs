@@ -13,7 +13,15 @@ use std::{
     sync::Arc,
     time::Duration,
 };
+use zeroize::Zeroizing;
 pub const MAX_FRAME: usize = 4 * 1024 * 1024;
+fn io_error(error: std::io::Error) -> Error {
+    if error.kind() == std::io::ErrorKind::InvalidData {
+        Error::Authentication
+    } else {
+        Error::Offline
+    }
+}
 pub fn private(ip: IpAddr) -> bool {
     match ip {
         IpAddr::V4(ip) => ip.is_private() && !ip.is_unspecified() && !ip.is_broadcast(),
@@ -102,7 +110,7 @@ pub fn request<T: Serialize, R: DeserializeOwned>(
     read(&mut tls)
 }
 pub fn write<T: Serialize>(stream: &mut impl Write, value: &T) -> Result<()> {
-    let data = serde_json::to_vec(value).map_err(|_| Error::Invalid)?;
+    let data = Zeroizing::new(serde_json::to_vec(value).map_err(|_| Error::Invalid)?);
     if data.len() > MAX_FRAME {
         return Err(Error::Limit);
     }
@@ -110,16 +118,16 @@ pub fn write<T: Serialize>(stream: &mut impl Write, value: &T) -> Result<()> {
         .write_all(&(data.len() as u32).to_be_bytes())
         .and_then(|_| stream.write_all(&data))
         .and_then(|_| stream.flush())
-        .map_err(|_| Error::Offline)
+        .map_err(io_error)
 }
 pub fn read<T: DeserializeOwned>(stream: &mut impl Read) -> Result<T> {
     let mut len = [0; 4];
-    stream.read_exact(&mut len).map_err(|_| Error::Offline)?;
+    stream.read_exact(&mut len).map_err(io_error)?;
     let len = u32::from_be_bytes(len) as usize;
     if len > MAX_FRAME {
         return Err(Error::Limit);
     }
-    let mut bytes = vec![0; len];
-    stream.read_exact(&mut bytes).map_err(|_| Error::Offline)?;
+    let mut bytes = Zeroizing::new(vec![0; len]);
+    stream.read_exact(&mut bytes).map_err(io_error)?;
     serde_json::from_slice(&bytes).map_err(|_| Error::Invalid)
 }

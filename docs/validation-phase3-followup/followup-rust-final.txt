@@ -1,0 +1,180 @@
+   Compiling companion-core v0.0.4 (/workspace/DeepSeek-Niang/crates/companion-core)
+   Compiling companion-secrets v0.0.4 (/workspace/DeepSeek-Niang/crates/companion-secrets)
+   Compiling companion-chat v0.0.4 (/workspace/DeepSeek-Niang/crates/companion-chat)
+   Compiling companion-sync v0.0.4 (/workspace/DeepSeek-Niang/crates/companion-sync)
+   Compiling companion-node v0.0.4 (/workspace/DeepSeek-Niang/crates/companion-node)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.47s
+     Running unittests src/lib.rs (target/debug/deps/companion_chat-fec1877c1489e182)
+
+running 15 tests
+test tests::cancelled_stream_keeps_partial_content_and_never_waits_for_eof ... ok
+test tests::explicitly_rejected_429_retries_once_without_duplicate_output ... ok
+test tests::idle_timeout_and_truncated_stream_are_not_success ... ok
+test tests::credential_delete_cancels_active_generation_and_removes_mock_key ... ok
+test tests::official_request_is_documented_and_has_no_key_in_json ... ok
+test tests::real_loopback_http_stream_assembles_chinese_and_measured_usage ... ok
+test tests::redirects_are_rejected_without_forwarding_credentials ... ok
+test tests::companion_context_reaches_the_actual_request_without_extra_analysis_calls ... ok
+test tests::context_budget_rejection_keeps_input_and_closes_the_generation_without_network ... ok
+test tests::sse_parser_handles_every_utf8_split_and_multiline_events ... ok
+test tests::sse_rejects_oversized_or_invalid_utf8_frames ... ok
+test tests::untrusted_http_error_body_cannot_leak_key_or_get_retried ... ok
+test tests::missing_key_has_explicit_failure_and_still_keeps_sent_user_text ... ok
+test tests::service_persists_stream_and_reuses_user_on_regenerate_with_clean_context ... ok
+test tests::service_stop_is_durable_and_cannot_duplicate_user_message ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.36s
+
+     Running unittests src/lib.rs (target/debug/deps/companion_core-25584e688ec7ed78)
+
+running 47 tests
+test chat::tests::character_is_editable_with_optional_verified_state_and_no_fixed_affection ... ok
+test chat::tests::conversations_and_history_scope_are_isolated ... ok
+test chat::tests::invalid_usage_cannot_partially_commit_a_response ... ok
+test chat::tests::escaped_output_limit_cannot_corrupt_the_recovery_checkpoint ... ok
+test chat::tests::empty_failure_is_durable_without_fake_assistant_message_event ... ok
+test chat::tests::regeneration_keeps_one_user_and_both_reply_variants ... ok
+test chat::tests::send_is_transactional_idempotent_and_preserves_sync_fields ... ok
+test chat::tests::second_instance_cannot_recover_a_live_generation ... ok
+test chat::tests::restart_recovers_partial_reply_and_keeps_history_and_personality ... ok
+test chat::tests::stream_checkpoints_finalize_once_and_ignore_late_tokens ... ok
+test companion::tests::actual_prompt_contains_verified_state_and_only_budgeted_relevant_memory ... ok
+test companion::tests::all_eleven_moods_have_persistent_evidence_and_decay_to_calm ... ok
+test chat::tests::v1_migration_preserves_raw_events_sequence_and_creates_consistent_backup ... ok
+test companion::tests::archive_recall_respects_persona_private_facts_deleted_memory_and_secret_filters ... ok
+test companion::tests::conflicting_automatic_memory_cannot_overwrite_manual_pinned_facts ... ok
+test companion::tests::equal_logical_clock_with_a_different_revision_cannot_pass_manual_edit_check ... ok
+test companion::tests::heartbeat_gap_pauses_life_without_fabricating_offline_completed_work ... ok
+test companion::tests::host_life_is_persistent_virtual_and_never_claims_external_media ... ok
+test companion::tests::legacy_relationship_values_are_not_reset_by_the_new_engine ... ok
+test companion::tests::local_chat_index_tracks_updates_deletions_and_short_chinese_topics ... ok
+test companion::tests::local_rules_add_no_model_usage_and_measured_chat_tokens_remain_exact ... ok
+test companion::tests::memory_extraction_is_selective_deduplicated_and_rejects_obvious_secrets ... ok
+test companion::tests::quiet_hours_cross_midnight_and_follow_the_configured_timezone ... ok
+test companion::tests::old_conversation_is_recalled_after_many_new_turns_with_a_shared_bounded_budget ... ok
+test companion::tests::proactive_requires_opt_in_respects_cooldown_and_never_duplicates ... ok
+test companion::tests::ordinary_greetings_and_regeneration_do_not_grind_relationship_or_memory ... ok
+test companion::tests::repeated_pending_facts_deduplicate_and_relation_limits_respect_user_frequency_ceiling ... ok
+test companion::tests::retrieval_enforces_persona_permission_budget_revision_and_tombstone ... ok
+test companion::tests::relationship_progress_changes_real_prompt_style_without_resetting_personality ... ok
+test companion::tests::relationship_cooldown_daily_limit_negative_evidence_and_slow_stages_are_real ... ok
+test companion::tests::stale_candidate_and_stale_manual_edit_preserve_current_memory ... ok
+test persona::tests::history_memory_personality_states_and_tokens_are_isolated ... ok
+test persona::tests::failed_cross_profile_migration_rolls_back_the_whole_schema_upgrade ... ok
+test persona::tests::memory_owner_cannot_be_changed_or_deleted_from_another_persona ... ok
+test persona::tests::one_main_thread_and_last_persona_survive_reopen_without_changing_device_identity ... ok
+test persona::tests::migrated_last_turn_can_regenerate_in_the_permanent_space ... ok
+test persona::tests::renaming_keeps_main_thread_and_refuses_unknown_personas ... ok
+test persona::tests::sql_guards_block_cross_persona_relations_and_profile_reassignment ... ok
+test pairing::tests::v4_upgrade_is_backed_up_preserves_rows_and_rolls_back_on_failure ... ok
+test persona::tests::switching_mid_generation_does_not_move_the_reply_or_usage ... ok
+test companion::tests::v6_chat_archive_migration_backs_up_original_rows_and_rolls_back_atomically ... ok
+test persona::tests::v2_backup_merges_legacy_views_without_touching_ids_events_or_timestamps ... ok
+test replication::migration_tests::failed_v4_ddl_rolls_back_and_retains_the_usable_v3_backup ... ok
+test replication::migration_tests::legacy_defaults_never_accept_other_missing_or_extra_signed_fields ... ok
+test replication::migration_tests::evidence_life_tasks_and_public_preferences_sync_without_credentials_or_live_leases ... ok
+test replication::migration_tests::logical_message_order_survives_device_wall_clock_skew ... ok
+test replication::migration_tests::v3_migration_backup_and_restart_preserve_identity_and_existing_content ... ok
+
+test result: ok. 47 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.52s
+
+     Running tests/invariants.rs (target/debug/deps/invariants-2f5d05906bad652f)
+
+running 21 tests
+test authority_restart_invalidates_all_previous_boot_leases ... ok
+test checkpoint_never_skips_missing_sequence ... ok
+test corrupted_batch_is_rejected_without_partial_commit ... ok
+test concurrent_memory_edits_choose_same_logical_version ... ok
+test delete_wins_even_when_received_before_create ... ok
+test empty_incremental_vector_can_bootstrap_a_new_replica ... ok
+test expired_lease_requires_reconciliation_and_old_fence_cannot_commit ... ok
+test identity_equivocation_rolls_back_prior_valid_events_in_same_transaction ... ok
+test message_deletion_propagates_without_overwriting_other_messages ... ok
+test ordinary_chat_never_mechanically_adds_affection ... ok
+test keyword_index_tracks_updates_and_deletion_and_short_chinese_queries ... ok
+test relationship_cooldown_decay_caps_and_evidence_validation_apply ... ok
+test relationship_events_deduplicate_and_replay_order_is_stable ... ok
+test incremental_pagination_drains_more_than_one_batch ... ok
+test restart_preserves_identity_history_clock_and_integrity ... ok
+test one_authority_grants_one_lease_and_task_key_deduplicates ... ok
+test video_progress_uses_union_and_joint_modal_coverage ... ok
+test video_segmentation_covers_the_entire_timeline_including_tail ... ok
+test pause_resume_cancel_and_bounded_retry_work ... ok
+test simultaneous_offline_messages_converge_and_deduplicate ... ok
+test untrusted_and_wrong_profile_origins_are_rejected ... ok
+
+test result: ok. 21 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.11s
+
+     Running unittests src/main.rs (target/debug/deps/companion_node-dfafa82184e922fd)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/companion_secrets-503678ea32ccd9ec)
+
+running 3 tests
+test tests::rejects_header_injection_and_whitespace ... ok
+test tests::debug_and_errors_never_contain_secret ... ok
+test tests::unsupported_platform_fails_closed ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/companion_sync-2fbf1fa9b24b15ad)
+
+running 29 tests
+test tests::copied_public_certificate_cannot_prove_its_tls_private_key ... ok
+test tests::concurrent_same_field_retains_losing_candidate_and_converges ... ok
+test tests::accepted_nonblocking_socket_waits_for_real_tls_client ... ok
+test tests::field_conflicts_keep_both_revisions_and_delete_always_wins ... ok
+test tests::actual_disconnect_restart_same_identity_and_offline_backfill ... ok
+test tests::existing_paired_android_adopts_authenticated_windows_authority_without_new_persona ... ok
+test tests::inaccessible_computer_api_storage_does_not_block_pairing_or_persona_sync ... ok
+test tests::paginated_incremental_batches_ack_only_committed_data_and_survive_reopen ... ok
+test tests::explicit_scan_copies_api_only_over_mutual_tls_and_never_into_qr_or_sqlite ... ok
+test tests::pair_requires_both_confirmations_token_expiry_and_private_addresses ... ok
+test tests::key_handoff_rejects_anonymous_other_device_wrong_token_expiry_and_revocation ... ok
+test tests::phone_secure_storage_failure_keeps_the_authenticated_persona_and_chat_sync ... ok
+test tests::pairing_never_merges_user_created_same_name_personas ... ok
+test tests::qr_quick_flag_cannot_replace_desktop_consent_in_legacy_pairing ... ok
+test tests::paired_canonical_persona_survives_actual_host_disconnect_and_restart ... ok
+test tests::quick_qr_expiry_cancellation_and_attempt_limit_are_enforced ... ok
+test tests::real_bootstrap_tls_pairing_both_confirmations_then_mutual_sync ... ok
+test tests::quick_scan_real_tls_pairs_once_and_syncs_without_extra_confirmation ... ok
+test tests::qr_pairing_uses_one_host_persona_and_preserves_ids_across_repeat_scan_and_offline_resume ... ok
+test tests::scan_validates_all_endpoints_before_any_network_request ... ok
+test tests::real_tls13_mutual_auth_pinning_and_reconnect ... ok
+test tests::signatures_tamper_duplicates_gaps_unknown_origin_and_revocation ... ok
+test tests::signing_identity_restores_from_same_secure_slot_and_secrets_do_not_enter_outbox ... ok
+test tests::signed_but_false_relationship_evidence_is_rejected_atomically ... ok
+test tests::scanning_a_computer_without_api_key_preserves_the_phone_key ... ok
+test tests::two_independent_profiles_preserve_personas_chats_memories_and_offline_backfill ... ok
+test tests::upgraded_v4_queued_persona_and_usage_rows_sync_over_real_tls_without_resigning_history ... ok
+test tests::real_tls_sync_converges_bond_mood_memory_preferences_and_virtual_life ... ok
+test tests::windows_host_keeps_successful_phone_initiated_sync_without_reverse_discovery ... ok
+
+test result: ok. 29 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.23s
+
+   Doc-tests companion_chat
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests companion_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests companion_secrets
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests companion_sync
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

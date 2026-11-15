@@ -8,7 +8,7 @@ const activityNames:Record<string,string>={auto:'按日常顺序',rest:'休息',
 const minuteText=(value:number)=>String(Math.floor(value/60)).padStart(2,'0')+':'+String(value%60).padStart(2,'0');
 const parseMinute=(value:string)=>{const parts=value.split(':').map(Number);return parts[0]*60+parts[1];};
 
-export function CompanionPanel({data,onRefresh,onError,onMemories}:{data:CompanionSnapshot|null;onRefresh:()=>Promise<void>;onError:(error:ChatFailure|null)=>void;onMemories:()=>void}){
+export function CompanionPanel({data,onRefresh,onError,onMemories,compact=false}:{compact?:boolean;data:CompanionSnapshot|null;onRefresh:()=>Promise<void>;onError:(error:ChatFailure|null)=>void;onMemories:()=>void}){
  const [preferences,setPreferences]=useState<CompanionPreferences|null>(data?.preferences??null);
  const [dirty,setDirty]=useState(false);const [busy,setBusy]=useState(false);const [notice,setNotice]=useState('');
  useEffect(()=>{if(!dirty)setPreferences(data?.preferences??null);},[data,dirty]);
@@ -17,7 +17,7 @@ export function CompanionPanel({data,onRefresh,onError,onMemories}:{data:Compani
  if(!data||!preferences)return <div className="settings-content"><h1>关系与日常</h1><p>{nativeAvailable?'正在读取当前人格的记录…':'请使用原生客户端查看持久记录。'}</p></div>;
  const {relationship:bond,mood,life,daily_usage:usage}=data;
  const living=life.host_online&&data.preferences.life_enabled&&life.current?.state==='running';
- return <div className="settings-content companion-content">
+ return <div className={`settings-content companion-content ${compact?'rail-settings':''}`}>
   <div className="page-heading"><h1>慢慢熟悉，一起生活</h1><p>关系变化有来源，记忆可以核对。普通问候不会固定增加好感。</p></div>
   {runtimeMode==='mock'&&<p className="notice">以下是 UI 夹具，未验证真实情绪、SQLite、调度或模型回复。</p>}
   {notice&&<p className="notice" role="status">{notice}</p>}
@@ -37,7 +37,7 @@ export function CompanionPanel({data,onRefresh,onError,onMemories}:{data:Compani
   <form className="settings-card" onSubmit={event=>{event.preventDefault();void save();}}><h2>陪伴设置</h2>
    <label className="check-row"><input type="checkbox" checked={preferences.relationship_enabled} onChange={e=>change('relationship_enabled',e.target.checked)}/>自动记录有来源的关系和情绪事件</label>
    <label className="check-row"><input type="checkbox" checked={preferences.automatic_memory} onChange={e=>change('automatic_memory',e.target.checked)}/>从明确偏好与“请记住”中整理长期记忆</label>
-   <label className="check-row"><input type="checkbox" checked={preferences.memory_context} onChange={e=>change('memory_context',e.target.checked)}/>聊天时检索允许发送的相关记忆</label>
+   <label className="check-row"><input type="checkbox" checked={preferences.memory_context} onChange={e=>change('memory_context',e.target.checked)}/>聊天时按话题检索允许发送的记忆和旧聊天摘录</label>
    <div className="two-fields"><label>最多检索条数<input aria-label="最多检索条数" type="number" min={1} max={12} value={preferences.memory_limit} onChange={e=>change('memory_limit',Number(e.target.value))}/></label><label>记忆引用预算（字节）<input aria-label="记忆引用预算" type="number" min={256} max={6000} value={preferences.memory_budget_bytes} onChange={e=>change('memory_budget_bytes',Number(e.target.value))}/></label><label>整个上下文预算（字节）<input aria-label="整个上下文预算" type="number" min={8000} max={120000} step={1000} value={preferences.context_budget_bytes} onChange={e=>change('context_budget_bytes',Number(e.target.value))}/></label></div>
    <p className="field-help">UTF-8 字节数用作保守 Token 上界；超预算先移除旧回合，保留本次输入。实际 Token 以上方提供商用量为准。</p>
    <label className="check-row"><input type="checkbox" checked={preferences.life_enabled} onChange={e=>change('life_enabled',e.target.checked)}/>电脑应用在线时安排虚拟日常</label>

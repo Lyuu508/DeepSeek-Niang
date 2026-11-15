@@ -1,0 +1,36 @@
+✔ manual endpoint accepts private IPv4 only, never DNS/public/loopback (1.118307ms)
+✔ scan payload requires an explicit quick invitation and validates every private endpoint (0.386503ms)
+✔ stale success and pending work cannot be displayed as synchronized (0.129886ms)
+✖ generated native pairing QR decodes to the exact one-time invitation (84.821961ms)
+✔ native quick QR decodes Chinese device identity and includes an address without private keys (53.922915ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 4
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 296.355712
+
+✖ failing tests:
+
+test at tests/sync-model.test.mjs:23:1
+✖ generated native pairing QR decodes to the exact one-time invitation (84.821961ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  2 !== 3
+
+      at TestContext.<anonymous> (file:///workspace/DeepSeek-Niang/tests/sync-model.test.mjs:28:39)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 2,
+    expected: 3,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

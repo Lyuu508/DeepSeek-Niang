@@ -1,4 +1,5 @@
 //! LAN-only, consent-gated pairing and TLS 1.3 incremental replication.
+mod credentials;
 pub mod discovery;
 pub mod identity;
 pub mod transport;
@@ -7,7 +8,8 @@ use companion_core::{
     replication::{Change, Peer},
     storage::Store,
 };
-use companion_secrets::SecretStore;
+use companion_secrets::{Secret, SecretStore};
+use credentials::CredentialPacket;
 use discovery::{Candidate, Discovery};
 use identity::{Identity, PublicIdentity, fingerprint, hex, random, unhex, verify};
 use serde::{Deserialize, Serialize};
@@ -39,6 +41,16 @@ pub enum Error {
     Crypto,
     #[error("DISCOVERY_UNAVAILABLE")]
     Discovery,
+    #[error("SYNC_DATA_SCHEMA_MISMATCH")]
+    Schema,
+    #[error("SYNC_DATA_CONFLICT")]
+    Conflict,
+    #[error("SYNC_DATA_REJECTED")]
+    Rejected,
+    #[error("SYNC_CHECKPOINT_GAP")]
+    Gap,
+    #[error("PAIR_KEY_TRANSFER_FAILED")]
+    KeyTransfer,
     #[error("STORAGE_ERROR")]
     Storage,
     #[error("SYNC_VERSION_MISMATCH")]
@@ -70,6 +82,8 @@ pub struct PairCode {
     pub expires_in_seconds: u32,
 }
 struct PairWindow {
+    api_key: Option<Secret>,
+    api_key_unavailable: bool,
     authority: Option<HostAuthority>,
     session: String,
     token_hash: Vec<u8>,
@@ -102,6 +116,7 @@ pub struct Progress {
 }
 #[derive(Serialize)]
 pub struct PeerStatus {
+    pub api_configuration: Option<String>,
     pub id: String,
     pub name: String,
     pub fingerprint: String,
@@ -130,6 +145,11 @@ pub struct Status {
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "kind", deny_unknown_fields)]
 enum Request {
+    CredentialHandoff {
+        session: String,
+        token: String,
+        id: String,
+    },
     Pair {
         session: String,
         token: String,
@@ -149,6 +169,9 @@ enum Request {
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "kind", deny_unknown_fields)]
 enum Reply {
+    Credentials {
+        key: Option<CredentialPacket>,
+    },
     Waiting,
     Paired {
         identity: PublicIdentity,
@@ -212,6 +235,9 @@ fn local_endpoints(port: u16) -> Vec<String> {
     addresses
 }
 pub struct SyncService {
+    api_vault: Mutex<Option<Arc<dyn SecretStore>>>,
+    api_configuration: Mutex<BTreeMap<String, String>>,
+    round: Mutex<()>,
     windows_host: AtomicBool,
     android_phone: AtomicBool,
     store: Arc<Mutex<Store>>,
@@ -251,6 +277,9 @@ impl SyncService {
         listener.set_nonblocking(true).map_err(|_| Error::Offline)?;
         let port = listener.local_addr().map_err(|_| Error::Offline)?.port();
         let service = Arc::new(Self {
+            api_vault: Mutex::new(None),
+            api_configuration: Mutex::new(BTreeMap::new()),
+            round: Mutex::new(()),
             windows_host: AtomicBool::new(false),
             android_phone: AtomicBool::new(false),
             store,
@@ -352,6 +381,12 @@ impl SyncService {
             .into_iter()
             .map(|p| {
                 Ok(PeerStatus {
+                    api_configuration: self
+                        .api_configuration
+                        .lock()
+                        .map_err(|_| Error::Storage)?
+                        .get(&p.id)
+                        .cloned(),
                     id: p.id.clone(),
                     name: p.name.clone(),
                     fingerprint: fingerprint(&p.certificate)?,
@@ -430,7 +465,7 @@ impl SyncService {
             return Err(Error::Address);
         }
         let invite = Invitation {
-            version: 2,
+            version: if quick { 3 } else { 2 },
             session: uuid::Uuid::new_v4().to_string(),
             identity: self.identity.public.clone(),
             token: random()?,
@@ -451,7 +486,15 @@ impl SyncService {
             }
         }
         svg.push_str("\"/></svg>");
+        let snapshot = if quick {
+            self.api_key_snapshot()
+        } else {
+            Ok(None)
+        };
+        let api_key_unavailable = snapshot.is_err();
         *self.window.lock().map_err(|_| Error::Storage)? = Some(PairWindow {
+            api_key: snapshot.unwrap_or(None),
+            api_key_unavailable,
             authority: if quick {
                 Some(
                     self.store
@@ -537,12 +580,13 @@ impl SyncService {
     /// Address candidates come only from the locally scanned invitation, never
     /// from a subnet scan. No data is trusted before a pinned TLS handshake.
     pub fn pair_scanned(&self, text: &str) -> Result<()> {
+        let _round = self.round.lock().map_err(|_| Error::Storage)?;
         if text.len() > 8192 {
             return Err(Error::Limit);
         }
         let invite: Invitation = serde_json::from_str(text).map_err(|_| Error::Invalid)?;
         invite.identity.validate()?;
-        if invite.version != 2
+        if ![2, 3].contains(&invite.version)
             || !invite.quick
             || invite.identity.id == self.identity.public.id
             || unhex(&invite.token)?.len() != 32
@@ -571,8 +615,40 @@ impl SyncService {
             tls_signature: self.identity.sign_tls(&proof)?,
             confirm: true,
         };
+        let networks = if_addrs::get_if_addrs()
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|interface| interface.is_oper_up())
+            .filter_map(|interface| match interface.addr {
+                if_addrs::IfAddr::V4(address)
+                    if transport::private(std::net::IpAddr::V4(address.ip)) =>
+                {
+                    Some((u32::from(address.ip), u32::from(address.netmask)))
+                }
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        let mut endpoints = invite.addresses.clone();
+        endpoints.sort_by_key(|endpoint| {
+            let target = transport::address(endpoint)
+                .ok()
+                .and_then(|address| match address.ip() {
+                    std::net::IpAddr::V4(ip) => Some(u32::from(ip)),
+                    _ => None,
+                });
+            std::cmp::Reverse(
+                networks
+                    .iter()
+                    .filter(|(local, mask)| {
+                        target.is_some_and(|target| target & mask == local & mask)
+                    })
+                    .map(|(_, mask)| mask.count_ones())
+                    .max()
+                    .unwrap_or(0),
+            )
+        });
         let mut last = Error::Offline;
-        for endpoint in &invite.addresses {
+        for endpoint in &endpoints {
             let reply: Result<Reply> = transport::request(
                 &self.identity,
                 endpoint,
@@ -597,6 +673,21 @@ impl SyncService {
                     store.bind_paired_host(&authority)?;
                     drop(store);
                     self.set_progress(&identity.id, "syncing", None, 0);
+                    // Copy only during this explicit scan, over a second mTLS
+                    // connection. Do not wait for a potentially long backfill.
+                    let credential_result = self.receive_api_configuration(&invite, endpoint);
+                    let paired = peer(&identity, Some(endpoint.clone()));
+                    if let Err(error) = self.exchange(&paired, endpoint) {
+                        self.set_progress(
+                            &identity.id,
+                            "waiting_reconnect",
+                            Some(error.code().into()),
+                            0,
+                        );
+                        self.wake();
+                        return Err(error);
+                    }
+                    credential_result?;
                     self.wake();
                     return Ok(());
                 }
@@ -711,11 +802,31 @@ impl SyncService {
             .peer_certificates()
             .and_then(|c| c.first())
             .map(|c| hex(c.as_ref()));
+        let authenticated_source = if let Request::Exchange { id, .. } = &request {
+            self.store
+                .lock()
+                .map_err(|_| Error::Storage)?
+                .lan_peers()?
+                .into_iter()
+                .find(|peer| {
+                    peer.id == *id
+                        && !peer.revoked
+                        && client.as_deref() == Some(peer.certificate.as_str())
+                })
+                .map(|peer| peer.id)
+        } else {
+            None
+        };
         let reply = match self.handle(request, client) {
             Ok(reply) => reply,
-            Err(error) => Reply::Failure {
-                code: error.to_string(),
-            },
+            Err(error) => {
+                if let Some(id) = authenticated_source {
+                    self.set_progress(&id, "failed", Some(error.code().into()), 0);
+                }
+                Reply::Failure {
+                    code: error.code().into(),
+                }
+            }
         };
         transport::write(&mut tls, &reply)
     }
@@ -724,6 +835,9 @@ impl SyncService {
             return Err(Error::Authentication);
         }
         match request {
+            Request::CredentialHandoff { session, token, id } => {
+                self.credential_handoff(&session, &token, &id, client.as_deref())
+            }
             Request::Pair {
                 session,
                 token,
@@ -864,6 +978,7 @@ impl SyncService {
         }
     }
     fn tick(&self) -> Result<()> {
+        let _round = self.round.lock().map_err(|_| Error::Storage)?;
         {
             let mut w = self.window.lock().map_err(|_| Error::Storage)?;
             if w.as_ref().is_some_and(|w| w.expires <= Instant::now()) {
@@ -923,27 +1038,53 @@ impl SyncService {
         let candidates = self.discovery.candidates();
         let mut failure = false;
         for p in peers.into_iter().filter(|p| !p.revoked) {
-            let mut addresses = p
+            // QR-paired phones initiate outbound mTLS. The response already
+            // carries changes in both directions; a Windows host must not
+            // replace a successful incoming sync with a failed discovery dial.
+            if self.windows_host.load(Ordering::Acquire) && p.address.is_none() {
+                continue;
+            }
+            let mut seen = std::collections::BTreeSet::new();
+            let addresses = p
                 .address
                 .iter()
                 .cloned()
                 .chain(candidates.iter().map(|c| c.address.clone()))
+                .filter(|address| seen.insert(address.clone()))
                 .collect::<Vec<_>>();
-            addresses.sort();
-            addresses.dedup();
             let mut result = Err(Error::Offline);
             for address in addresses {
                 if transport::address(&address).is_err() {
                     continue;
                 }
-                result = self.exchange(&p, &address);
-                if result.is_ok() {
-                    break;
+                match self.exchange(&p, &address) {
+                    Ok(()) => {
+                        result = Ok(());
+                        break;
+                    }
+                    Err(error) => {
+                        let terminal = matches!(
+                            error,
+                            Error::Version
+                                | Error::Schema
+                                | Error::Conflict
+                                | Error::Rejected
+                                | Error::Gap
+                                | Error::Core(_)
+                        );
+                        if !matches!(error, Error::Offline) || matches!(result, Err(Error::Offline))
+                        {
+                            result = Err(error);
+                        }
+                        if terminal {
+                            break;
+                        }
+                    }
                 }
             }
             if let Err(error) = result {
                 failure = true;
-                self.set_progress(&p.id, "waiting_reconnect", Some(error.to_string()), 0);
+                self.set_progress(&p.id, "waiting_reconnect", Some(error.code().into()), 0);
             }
         }
         if failure { Err(Error::Offline) } else { Ok(()) }
@@ -1013,10 +1154,7 @@ impl SyncService {
                     }
                     self.set_progress(&p.id, "syncing", None, sent);
                 }
-                Reply::Failure { code } if code == "SYNC_VERSION_MISMATCH" => {
-                    return Err(Error::Version);
-                }
-                Reply::Failure { .. } => return Err(Error::Authentication),
+                Reply::Failure { code } => return Err(Error::from_remote(&code)),
                 _ => return Err(Error::Invalid),
             }
         }

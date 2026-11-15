@@ -1,3 +1,13 @@
+# 阶段3追加候选0.0.4 / Android1004
+
+沿用现有CI的独立Windows/Android构建与现有持久test2签名；平台、applicationId不变。先CI全绿，再手动运行 `release-companion-test.yml`，指定完整 main SHA、同源CI ID、authorized_version=0.0.4。新增 `publish_after_checks` 默认 false，只上传已验证同源安装包和日志到草稿，不创建Tag/公开Release。版本选择待主人确认；不得自动传true。
+
+签名脚本强制恢复 `TEST_RELEASE_SIGNING_B64`，用真实v0.0.3 APK官方apksigner确认当前签名/ID，再签新1004包，同时验证真实v1证书不同。Windows签后仍检查中文向导和安装启动。全部附件上传后要求GitHub服务器计算摘要与本机已验签字节一致；明确授权公开后还验证公开HTTP回下载。草稿下载使用已授权人工账号独立复核，不把不稳定GITHUB_TOKEN草稿下载当产品测试。
+
+0001～0006不改，升级schema7前一致备份，见 [数据库](DATABASE.md)。实际新增检查见 [追加报告](PHASE3_FOLLOWUP_REPORT.md)。以下v3命令/运行状态保留为历史；现有平台前置条件继续适用。
+
+---
+
 # v0.0.3 当前构建与发布流程
 
 目标版本 0.0.3 / Android1003。先运行 `CI`：Linux 全量检查，Windows 原生 cargo test、真实中文 NSIS EXE 与安装启动，Android JDK21、Command-line Tools、Platform36、Build-Tools36.0.0、NDK28.2.13676358 和 ARM64 APK。两端 jobs 独立，不因另一端失败取消成功产物；普通 CI 的 unsigned-ci APK 仅编译检查，不可安装且不能冒充签名升级包。

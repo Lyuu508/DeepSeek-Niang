@@ -384,7 +384,10 @@ fn v1_migration_preserves_raw_events_sequence_and_creates_consistent_backup() {
             .unwrap();
     }
     let mut s = Store::open(f.db()).unwrap();
-    assert_eq!(s.diagnostics().unwrap().schema_version, 6);
+    assert_eq!(
+        s.diagnostics().unwrap().schema_version,
+        crate::storage::SCHEMA_VERSION
+    );
     assert_eq!(s.message_contents().unwrap(), vec!["来自阶段零"]);
     assert_eq!(s.checkpoints().unwrap()[&device], 1);
     let saved: String = s

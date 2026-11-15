@@ -20,4 +20,5 @@ qrcode = { version = "=0.14.1", default-features = false }
 mdns-sd = "=0.21.7"
 if-addrs = "=0.15.0"
 subtle = "=2.6.1"
+zeroize = "=1.9.1"
 x509-parser = "=0.18.1"

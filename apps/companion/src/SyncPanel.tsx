@@ -1,11 +1,11 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {syncAPI,type PairCode} from './sync-native';
-import {syncErrors,syncLabel,quickInvitation,type SyncStatus} from './sync-model';
+import {syncErrors,syncLabel,quickInvitation,apiConfigurationLabels,type SyncStatus} from './sync-model';
 import {runtimeMode,nativeAvailable} from './native';
 import {PairScanner} from './PairScanner';
 import {Modal} from './Modal';
 
-export function SyncPanel({mobile}:{mobile:boolean}){
+export function SyncPanel({mobile,onPaired}:{mobile:boolean;onPaired?:()=>Promise<void>}){
  const [status,setStatus]=useState<SyncStatus|null>(null);const [error,setError]=useState('');const [busy,setBusy]=useState(false);
  const [code,setCode]=useState<PairCode|null>(null);const [seconds,setSeconds]=useState(0);const [scanning,setScanning]=useState(false);
  const [notice,setNotice]=useState('');const [revokeId,setRevokeId]=useState('');const alive=useRef(true);
@@ -19,11 +19,11 @@ export function SyncPanel({mobile}:{mobile:boolean}){
   try{
    const result=await syncAPI.command(action,args);if(!alive.current)return;
    if(action==='invite_quick'){if(!result)throw new Error();setCode(result);}
-   if(action==='pair_scanned')setNotice('电脑已连接，正在自动同步。');
+   if(action==='pair_scanned'){await onPaired?.();setNotice('电脑人格与聊天已同步，后续自动增量同步。');}
    if(action==='sync')setNotice('已请求同步，完成进度会显示在设备下方。');
    if(action==='revoke')setRevokeId('');
    await refresh();
-  }catch(e){if(alive.current)setError(typeof e==='string'?e:'连接操作未完成，请稍后重试。');}finally{if(alive.current)setBusy(false);}
+  }catch(e){if(action==='pair_scanned')await onPaired?.().catch(()=>{});if(alive.current)setError(typeof e==='string'?e:'连接操作未完成，请稍后重试。');}finally{if(alive.current)setBusy(false);}
  }
  function scanned(value:string){setScanning(false);if(quickInvitation(value))void command('pair_scanned',{text:value});else setError('请扫描电脑“连接手机”弹窗中的二维码。');}
  return <div className="settings-content sync-panel">
@@ -36,13 +36,13 @@ export function SyncPanel({mobile}:{mobile:boolean}){
    <h2>{mobile?'让手机和电脑连在一起':'手机一扫，接着聊'}</h2>
    <p>{mobile?'连接前请打开电脑端的“连接手机”。':'点击下方按钮，让手机扫描弹出的二维码。'}</p>
    <button className="primary connect-button" disabled={!nativeAvailable||busy} onClick={()=>{setError('');if(mobile)setScanning(true);else void command('invite_quick');}}>{busy?'正在连接…':mobile?'扫一扫':'连接手机'}</button>
-   <small>连接即同意同步两端人格、聊天和记忆；API Key 保留在各自设备。</small>
+   <small>扫码将同步电脑人格、聊天和记忆。电脑已配置 API 时，会通过加密连接更新手机配置；密钥只保存在系统安全存储。</small>
   </section>
-  {code&&!mobile&&<Modal title="用手机扫一扫" closeLabel="关闭二维码" onClose={cancelCode} className="qr-modal"><p>打开手机端“连接”里的“扫一扫”，对准下方二维码。</p><img className="pair-qr" alt="一次性连接二维码" src={`data:image/svg+xml,${encodeURIComponent(code.svg)}`}/><p className="qr-expiry" role="status">{seconds} 秒后过期 · 连接成功自动关闭</p><small>仅向你信任的手机展示。关闭弹窗会立即取消本次连接授权。</small></Modal>}
-  {scanning&&mobile&&<Modal title="扫一扫" closeLabel="关闭扫码" onClose={()=>setScanning(false)} className="scanner-modal"><PairScanner onResult={scanned}/></Modal>}
-  <section className="settings-card connected-card"><div className="card-heading"><h2>已连接设备</h2><button disabled={!nativeAvailable||busy||!status?.enabled} onClick={()=>void command('sync')}>手动同步</button></div>
+  {code&&!mobile&&<Modal title="用手机扫一扫" closeLabel="关闭二维码" onClose={cancelCode} className="qr-modal"><p>打开手机端“连接”里的“扫一扫”。电脑已配置 API 时，会同时安全配置手机；已有手机密钥会在本次主动扫码时更新。</p><img className="pair-qr" alt="一次性连接二维码" src={`data:image/svg+xml,${encodeURIComponent(code.svg)}`}/><p className="qr-expiry" role="status">{seconds} 秒后过期 · 连接成功自动关闭</p><small>仅向你信任的手机展示。关闭弹窗会立即取消本次连接授权。</small></Modal>}
+  {scanning&&mobile&&<Modal title="扫一扫" closeLabel="关闭扫码" onClose={()=>setScanning(false)} className="scanner-modal"><p>本次扫码同意使用电脑已配置的 API；现有手机配置可能更新。二维码不包含 API Key 明文。</p><PairScanner onResult={scanned}/></Modal>}
+  <section className="settings-card connected-card"><div className="card-heading"><h2>已配对设备</h2><button disabled={!nativeAvailable||busy||!status?.enabled} onClick={()=>void command('sync')}>手动同步</button></div>
    {!status?.peers.some(peer=>!peer.revoked)&&<div className="connection-empty"><span aria-hidden="true">⇄</span><p>还没有连接设备</p><small>{mobile?'扫描电脑上的二维码开始连接':'让手机扫一扫，连接后会显示在这里'}</small></div>}
-   {status?.peers.filter(peer=>!peer.revoked).map(peer=><article className="sync-device" key={peer.id}><h3>{peer.name}<span className="badge">{syncLabel(peer)}</span></h3><p>{peer.last_success_ms?`最近同步：${new Date(peer.last_success_ms).toLocaleString()}`:'正在等待首次同步'} · 待同步 {peer.pending} 项</p>{peer.progress.error&&<p className="inline-error">{syncErrors[peer.progress.error]??peer.progress.error}</p>}<details><summary>管理此连接</summary><p className="sync-fingerprint">设备：{peer.id}<br/>证书：{peer.fingerprint}</p><button onClick={()=>setRevokeId(peer.id)}>解除连接</button>{revokeId===peer.id&&<div className="button-row"><p>解除后两端已保存的记录仍保留。</p><button className="danger" disabled={busy} onClick={()=>void command('revoke',{id:peer.id})}>确认解除连接</button><button onClick={()=>setRevokeId('')}>取消</button></div>}</details></article>)}
+   {status?.peers.filter(peer=>!peer.revoked).map(peer=><article className="sync-device" key={peer.id}><h3>{peer.name}<span className="badge">{syncLabel(peer)}</span></h3><p>{peer.last_success_ms?`最近同步：${new Date(peer.last_success_ms).toLocaleString()}`:'正在等待首次同步'} · 待同步 {peer.pending} 项</p>{peer.progress.error&&<p className="inline-error">{syncErrors[peer.progress.error]??peer.progress.error}</p>}{peer.api_configuration&&apiConfigurationLabels[peer.api_configuration]&&<p className="credential-status">{apiConfigurationLabels[peer.api_configuration]}</p>}<details><summary>连接诊断与管理</summary><p>最近状态：{syncLabel(peer)}{peer.progress.error?' · 错误代码：'+peer.progress.error:''} · 已传输 {peer.progress.transferred} 项</p><p className="sync-fingerprint">设备：{peer.id}<br/>证书：{peer.fingerprint}</p><button onClick={()=>setRevokeId(peer.id)}>解除连接</button>{revokeId===peer.id&&<div className="button-row"><p>解除后已保存的记录和已接收的 API 配置仍保留。可在手机设置删除密钥；要让共享的旧 Key 失效，需要在服务商处更换。</p><button className="danger" disabled={busy} onClick={()=>void command('revoke',{id:peer.id})}>确认解除连接</button><button onClick={()=>setRevokeId('')}>取消</button></div>}</details></article>)}
   </section>
   {!!status?.conflicts.length&&<section className="settings-card"><h2>保留的并发修订</h2><p>两端同时修改时保留候选，不丢弃记录。可在对应人格或记忆页面重新编辑。</p>{status.conflicts.map((conflict,index)=><details key={index}><summary>{conflict.entity} · {conflict.field}</summary><p className="sync-fingerprint">{conflict.value}</p></details>)}</section>}
   <details className="settings-card connection-help"><summary>连接遇到问题？</summary><p>两端应用保持打开，使用同一路由器的普通网络。访客 Wi-Fi、AP 隔离或不同 VLAN 可能阻止连接。</p><p>Windows 允许本应用访问专用网络，保留防火墙。网络恢复后自动补传，也可点击“手动同步”重试。</p>{status?.discovery_error&&<p className="inline-error">设备发现暂时不可用。二维码包含连接地址，可重新扫码连接。</p>}</details>

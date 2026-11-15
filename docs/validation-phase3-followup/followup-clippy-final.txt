@@ -1,0 +1,6 @@
+    Checking companion-core v0.0.4 (/workspace/DeepSeek-Niang/crates/companion-core)
+    Checking companion-secrets v0.0.4 (/workspace/DeepSeek-Niang/crates/companion-secrets)
+    Checking companion-node v0.0.4 (/workspace/DeepSeek-Niang/crates/companion-node)
+    Checking companion-chat v0.0.4 (/workspace/DeepSeek-Niang/crates/companion-chat)
+    Checking companion-sync v0.0.4 (/workspace/DeepSeek-Niang/crates/companion-sync)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.67s

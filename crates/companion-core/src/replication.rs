@@ -610,10 +610,21 @@ fn merge_cells(db: &Connection, e: &Change) -> Result<()> {
     }
     Ok(())
 }
+fn legacy_default(table: &str, column: &str) -> Option<Value> {
+    match (table, column) {
+        ("personas", "avatar_resource") => Some(json!("deepseek-niang")),
+        ("api_usage_records", "purpose") => Some(json!("chat")),
+        _ => None,
+    }
+}
 fn validate_row(db: &Connection, e: &Change, local: &str) -> Result<()> {
     let cols = columns(db, &e.table)?;
     let obj = e.row.as_object().ok_or(Error::Invalid("row object"))?;
-    if obj.len() != cols.len() || obj.keys().any(|k| !cols.contains(k)) {
+    if obj.keys().any(|k| !cols.contains(k))
+        || cols
+            .iter()
+            .any(|column| !obj.contains_key(column) && legacy_default(&e.table, column).is_none())
+    {
         return Err(Error::Invalid("unknown sync field"));
     }
     for (name, value) in obj {
@@ -870,6 +881,15 @@ fn project(db: &Connection, e: &Change) -> Result<()> {
         |r| r.get(0),
     )?;
     let mut row = e.row.clone();
+    // v4 queues are already signed. Supply only the two known additive SQL
+    // defaults in the projection; never change the stored wire/signature.
+    for column in &cols {
+        if row.get(column).is_none()
+            && let Some(value) = legacy_default(&e.table, column)
+        {
+            row[column] = value;
+        }
+    }
     let mut settings = serde_json::Map::new();
     let mut s =
         db.prepare("SELECT field,value_json FROM lan_cells WHERE table_name=?1 AND row_key=?2")?;
@@ -1307,7 +1327,10 @@ mod migration_tests {
             assert_eq!(s.device_id, device);
             assert_eq!(s.profile_id, profile);
             assert_eq!(s.personas().unwrap()[0].id, profile);
-            assert_eq!(s.diagnostics().unwrap().schema_version, 6);
+            assert_eq!(
+                s.diagnostics().unwrap().schema_version,
+                crate::storage::SCHEMA_VERSION
+            );
             assert_eq!(
                 s.conn
                     .query_row(
@@ -1379,5 +1402,26 @@ mod migration_tests {
         );
         drop(db);
         std::fs::remove_dir_all(folder).unwrap();
+    }
+    #[test]
+    fn legacy_defaults_never_accept_other_missing_or_extra_signed_fields() {
+        let mut store = Store::open(":memory:").unwrap();
+        capture(&mut store);
+        let mut event = store
+            .lan_export(0)
+            .unwrap()
+            .into_iter()
+            .find(|e| e.table == "personas")
+            .unwrap();
+        event.row.as_object_mut().unwrap().remove("avatar_resource");
+        event.fields.remove("avatar_resource");
+        validate_row(&store.conn, &event, &store.device_id).unwrap();
+        let mut unknown = event.clone();
+        unknown.row["unsupported_field"] = json!("fixture-only");
+        assert!(validate_row(&store.conn, &unknown, &store.device_id).is_err());
+        let mut missing = event;
+        missing.row.as_object_mut().unwrap().remove("name");
+        missing.fields.remove("name");
+        assert!(validate_row(&store.conn, &missing, &store.device_id).is_err());
     }
 }

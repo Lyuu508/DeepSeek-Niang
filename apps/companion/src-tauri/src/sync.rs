@@ -9,10 +9,15 @@ use std::sync::{
 use tauri::Manager;
 use tauri::State;
 
+fn sync_error(error: impl Into<companion_sync::Error>) -> String {
+    error.into().code().to_owned()
+}
+
 pub struct SyncHost {
     pub suspended: AtomicBool,
     pub store: Arc<Mutex<Store>>,
     pub credentials: Arc<dyn SecretStore>,
+    pub api_credentials: Arc<dyn SecretStore>,
     pub discovery: Arc<dyn Discovery>,
     pub service: Mutex<Option<Arc<SyncService>>>,
 }
@@ -33,8 +38,11 @@ impl SyncHost {
             name,
             self.discovery.clone(),
         )
-        .map_err(|e| e.to_string())?;
+        .map_err(sync_error)?;
         started.configure_platform(cfg!(target_os = "windows"), cfg!(target_os = "android"));
+        started
+            .configure_api_vault(self.api_credentials.clone())
+            .map_err(sync_error)?;
         *service = Some(started.clone());
         Ok(started)
     }
@@ -58,12 +66,12 @@ pub fn discovery(app: &tauri::AppHandle) -> Arc<dyn Discovery> {
 pub async fn sync_status(host: State<'_, Arc<SyncHost>>) -> Result<serde_json::Value, String> {
     let host = host.inner().clone();
     tauri::async_runtime::spawn_blocking(move || {
-        let enabled=host.store.lock().map_err(|_|"STORAGE_ERROR")?.lan_enabled().map_err(|e|e.to_string())?;
+        let enabled=host.store.lock().map_err(|_|"STORAGE_ERROR")?.lan_enabled().map_err(sync_error)?;
         if host.suspended.load(Ordering::Acquire) || !enabled {
             let store=host.store.lock().map_err(|_|"STORAGE_ERROR")?;
             return Ok(serde_json::json!({"enabled":false,"device_id":store.device_id,"fingerprint":"","name":std::env::consts::OS,"port":0,"candidates":[],"peers":[],"pending":[],"conflicts":[],"discovery_error":null}));
         }
-        let status=host.ensure()?.status().map_err(|e|e.to_string())?;
+        let status=host.ensure()?.status().map_err(sync_error)?;
         serde_json::to_value(status).map_err(|_|"SYNC_STATUS_ERROR".into())
     }).await.map_err(|_|"SYNC_TASK_ERROR".to_string())?
 }
@@ -86,7 +94,7 @@ pub async fn sync_command(
                 .lock()
                 .map_err(|_| "STORAGE_ERROR")?
                 .lan_set_enabled(false)
-                .map_err(|e| e.to_string())?;
+                .map_err(sync_error)?;
             return Ok(serde_json::Value::Null);
         }
         let enabled = host
@@ -94,7 +102,7 @@ pub async fn sync_command(
             .lock()
             .map_err(|_| "STORAGE_ERROR")?
             .lan_enabled()
-            .map_err(|e| e.to_string())?;
+            .map_err(sync_error)?;
         let explicit_start = matches!(
             action.as_str(),
             "enable" | "invite_quick" | "pair_scanned" | "invite"
@@ -120,14 +128,14 @@ pub async fn sync_command(
         match action.as_str() {
             "enable" => {}
             "invite_quick" => {
-                return serde_json::to_value(service.invite_quick().map_err(|e| e.to_string())?)
+                return serde_json::to_value(service.invite_quick().map_err(sync_error)?)
                     .map_err(|_| "PAIR_ERROR".into());
             }
             "pair_scanned" => service
                 .pair_scanned(text.as_deref().ok_or("PAIR_CODE_REQUIRED")?)
-                .map_err(|e| e.to_string())?,
+                .map_err(sync_error)?,
             "invite" => {
-                return serde_json::to_value(service.invite().map_err(|e| e.to_string())?)
+                return serde_json::to_value(service.invite().map_err(sync_error)?)
                     .map_err(|_| "PAIR_ERROR".into());
             }
             "cancel" => service.cancel_pair(),
@@ -136,19 +144,19 @@ pub async fn sync_command(
                     text.as_deref().ok_or("PAIR_CODE_REQUIRED")?,
                     address.as_deref().ok_or("LAN_ADDRESS_REQUIRED")?,
                 )
-                .map_err(|e| e.to_string())?,
+                .map_err(sync_error)?,
             "confirm" => service
                 .confirm(id.as_deref().ok_or("DEVICE_REQUIRED")?)
-                .map_err(|e| e.to_string())?,
+                .map_err(sync_error)?,
             "revoke" => service
                 .revoke(id.as_deref().ok_or("DEVICE_REQUIRED")?)
-                .map_err(|e| e.to_string())?,
+                .map_err(sync_error)?,
             "reconnect" => service
                 .reconnect(
                     id.as_deref().ok_or("DEVICE_REQUIRED")?,
                     address.as_deref().ok_or("LAN_ADDRESS_REQUIRED")?,
                 )
-                .map_err(|e| e.to_string())?,
+                .map_err(sync_error)?,
             "sync" => service.wake(),
             _ => return Err("UNKNOWN_SYNC_COMMAND".into()),
         }

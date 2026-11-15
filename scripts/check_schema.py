@@ -68,9 +68,18 @@ for table in scoped_tables:
     assert 'persona_id' in {r[1] for r in db.execute('PRAGMA table_info(' + table + ')')}
 db.execute("INSERT INTO memory_fts(memory_id,text) VALUES('fixture','主人喜欢绘画练习')")
 assert db.execute("SELECT count(*) FROM memory_fts WHERE memory_fts MATCH ?", ('"喜欢绘画"',)).fetchone()[0] == 1
+# Exercise the independent full-chat index, including an edit and a tombstone.
+db.execute("INSERT INTO sync_events(event_id,profile_id,origin_device_id,origin_seq,lamport,schema_version,entity_type,entity_id,operation,checksum,envelope_json) VALUES('recall-event','lab','device',1,1,1,'message','recall-fixture','put',?,'{}')", ('0'*64,))
+db.execute("INSERT INTO messages(id,conversation_id,profile_id,role,content,status,origin_device_id,created_lamport,source_event_id) VALUES('recall-fixture','a','lab','user','去年一起去了黄山旅行','complete','device',1,'recall-event')")
+assert db.execute("SELECT count(*) FROM chat_recall_fts WHERE chat_recall_fts MATCH ?", ('"黄山旅行"',)).fetchone()[0] == 1
+db.execute("UPDATE messages SET content='今年一起去了青岛旅行' WHERE id='recall-fixture'")
+assert db.execute("SELECT count(*) FROM chat_recall_fts WHERE chat_recall_fts MATCH ?", ('"黄山旅行"',)).fetchone()[0] == 0
+assert db.execute("SELECT count(*) FROM chat_recall_fts WHERE chat_recall_fts MATCH ?", ('"青岛旅行"',)).fetchone()[0] == 1
+db.execute("UPDATE messages SET is_deleted=1 WHERE id='recall-fixture'")
+assert db.execute("SELECT count(*) FROM chat_recall_fts WHERE chat_recall_fts MATCH ?", ('"青岛旅行"',)).fetchone()[0] == 0
 assert db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
 assert list(db.execute("PRAGMA foreign_key_check")) == []
 print(json.dumps({"sqlite_version": sqlite3.sqlite_version, "required_tables": len(required),
     "all_required_tables_exist": True, "chat_tables": len(chat_tables), "persona_tables": len(persona_tables), "companion_tables": len(companion_tables),
     "persona_scoped_tables": len(scoped_tables), "persona_constraints": "passed", "foreign_keys": "passed", "bounds": "passed",
-    "chinese_trigram_search": "passed", "integrity": "ok"}, ensure_ascii=False, indent=2))
+    "chinese_trigram_search": "passed", "full_chat_index_insert_edit_delete": "passed", "integrity": "ok"}, ensure_ascii=False, indent=2))

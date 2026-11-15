@@ -1,3 +1,13 @@
+# 当前候选schema7 / 阶段3追加修复
+
+生产顺序0001～0007，user_version=7，0001～0006字节保持。0007只增加本机可重建 `chat_recall_fts` 外部内容FTS5 trigram索引及消息增删改触发器，回填已有完整未删除聊天。索引不在普通同步表中，始终由真实messages派生，不改变原消息/人格/记忆/已签名事件ID或正文。
+
+旧库升级前SQLite Online Backup保存含WAL的一致 `.pre-v7-UUID.bak`，全部迁移事务内验证外键/完整性/行数、失败整体回滚。自动化用真实v6合成库验证备份、历史检索与失败回滚，未读取主人实际手机库。迁移后有新聊天时不能直接覆盖旧备份或降级；先保留当前库与备份，人工比对恢复。
+
+旧v4已签名personas行缺avatar_resource、api_usage_records行缺purpose，只在当前投影应用对应固定默认值，历史签名/序列不变，其余不合法缺列/多列仍拒绝。人格别名归一沿用v3，不删除原行、手动人格不合并。生产连接要求两端相同schema7，请同时更新。以下为schema6及之前的历史结构说明。
+
+---
+
 # 当前 schema 6 / v0.0.3
 
 生产顺序为 0001～0006，user_version=6。0001～0004 字节原样保留。新增 `0005_pairing_persona_identity.sql` 的 `lan_host_binding`、不可变 `persona_links` 和头像资源；`0006_companion_foundation.sql` 的关系证据、记忆元数据/冲突候选、主机/活动/生活台账、情绪、主动消息、偏好以及仅本机的处理/worker状态。API用量新增purpose分类。原型表保留，不以删除旧模块代替迁移。

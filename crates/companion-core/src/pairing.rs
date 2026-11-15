@@ -98,7 +98,10 @@ mod tests {
                 std::fs::read_dir(&dir)
                     .unwrap()
                     .filter_map(|p| p.ok())
-                    .filter(|p| p.file_name().to_string_lossy().contains("pre-v6-"))
+                    .filter(|p| p
+                        .file_name()
+                        .to_string_lossy()
+                        .contains(&format!("pre-v{}-", crate::storage::SCHEMA_VERSION)))
                     .count(),
                 1
             );

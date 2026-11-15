@@ -294,6 +294,7 @@ pub fn run() {
                 suspended: std::sync::atomic::AtomicBool::new(false),
                 store: service.store.clone(),
                 credentials: sync_vault,
+                api_credentials: service.vault.clone(),
                 discovery: sync::discovery(app.handle()),
                 service: Mutex::new(None),
             });

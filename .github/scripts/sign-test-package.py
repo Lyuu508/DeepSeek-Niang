@@ -17,7 +17,7 @@ import verify_android
 import version
 from test_release_identity import existing_bundle
 
-VERSION='0.0.3'
+VERSION='0.0.4'
 APP_ID='io.local.deepseekcompanion.test2'
 
 def run(args,env=None,**kwargs):
@@ -39,7 +39,7 @@ def reference(tag,name,destination):
     return destination
 
 def public_identity(directory):
-    identity=read(reference('v0.0.2','SIGNING-IDENTITIES.json',directory/'reference-identities.json'))
+    identity=read(reference('v0.0.3','SIGNING-IDENTITIES.json',directory/'reference-identities.json'))
     assert identity['android_application_id']==APP_ID
     return identity
 
@@ -48,7 +48,7 @@ def base_report(source,platform):
     assert sha==os.environ['EXPECTED_SOURCE_SHA'] and re.fullmatch('[0-9a-f]{40}',sha)
     assert not run(['git','status','--porcelain'],cwd=ROOT).strip(),'Source must remain clean'
     spec=version.check()
-    assert spec=={'version':VERSION,'androidVersionCode':1003}
+    assert spec=={'version':VERSION,'androidVersionCode':1004}
     report=read(source/(platform+'-build.json'))
     assert report['source_commit']==sha and report['version']==VERSION and report['working_tree_clean']
     package=source/report['file']
@@ -118,17 +118,17 @@ def android(source,output):
         run([keytool,'-certreq',*common,'-keypass:env','EXISTING_TEST_PASSWORD'],env=context)
         assert hashlib.sha256(certificate).hexdigest()==public['android_certificate_sha256']
         tools=Path(os.environ['ANDROID_HOME'])/'build-tools/36.0.0'
-        reference_apk=reference('v0.0.2','DeepSeek-Niang_0.0.2_android-arm64-isolated-test.apk',temp/'reference-test2.apk')
+        reference_apk=reference('v0.0.3','DeepSeek-Niang_0.0.3_android-arm64-isolated-test.apk',temp/'reference-test2.apk')
         signature=run(verify_android.sdk_command(tools,'apksigner','verify','--verbose','--print-certs',str(reference_apk))).decode()
         reference_cert=re.findall(r'certificate SHA-256 digest: ([0-9a-f]+)',signature)
         assert reference_cert==[public['android_certificate_sha256']]
         badging=run(verify_android.sdk_command(tools,'aapt2','dump','badging',str(reference_apk))).decode()
-        assert "package: name='"+APP_ID+"' versionCode='1002' versionName='0.0.2'" in badging
+        assert "package: name='"+APP_ID+"' versionCode='1003' versionName='0.0.3'" in badging
         original=reference('v0.0.1','DeepSeek-Niang_0.0.1_android-arm64.apk',temp/'reference-production.apk')
         production=verify_android.verify_reference(original)
         assert production['signer_certificate_sha256']!=reference_cert[0]
         write(output/'ANDROID-SIGNING-REFERENCES.json',{'production':production,'previous_test2':{
-            'application_id':APP_ID,'version':'0.0.2','version_code':1002,'sha256':digest(reference_apk),
+            'application_id':APP_ID,'version':'0.0.3','version_code':1003,'sha256':digest(reference_apk),
             'signer_certificate_sha256':reference_cert[0],'apksigner_output':signature}})
         aligned=temp/'aligned.apk';signed=output/f'DeepSeek-Niang_{VERSION}_android-arm64-isolated-test.apk'
         run(verify_android.sdk_command(tools,'zipalign','-f','-P','16','4',str(apk),str(aligned)))
@@ -138,10 +138,10 @@ def android(source,output):
         assert result['source_commit']==sha and result['working_tree_clean'] and result['signer_certificate_sha256']==reference_cert[0]
         result.update(unsigned_build_sha256=raw['sha256'],test_signer_persistence_guaranteed=True,
             signature_source='existing GitHub encrypted TEST_RELEASE_SIGNING_B64',current_test2_update_identity_stable=True,
-            upgrade_compatible_with_test2_v0_0_2=True,physical_upgrade_tested=False,production_upgrade_compatible=False,
+            upgrade_compatible_with_test2_v0_0_3=True,physical_upgrade_tested=False,production_upgrade_compatible=False,
             certificate_matches_v0_0_1=False)
         write(output/'android-build.json',result);write(output/'android-reverified.json',result)
-        (output/'apksigner-0.0.3.txt').write_bytes(run(verify_android.sdk_command(tools,'apksigner','verify','--verbose','--print-certs',str(signed))))
+        (output/'apksigner-0.0.4.txt').write_bytes(run(verify_android.sdk_command(tools,'apksigner','verify','--verbose','--print-certs',str(signed))))
         public.update(current_test2_update_identity_stable=True,production_upgrade_compatible=False)
         write(output/'SIGNING-IDENTITIES.json',public)
         for name in ['android-build.log','android-toolchain.log']:shutil.copyfile(source/name,output/name)

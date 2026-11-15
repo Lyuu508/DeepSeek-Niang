@@ -87,6 +87,14 @@ fn classify(text: &str) -> Option<(String, String, String, i64)> {
         .unwrap_or(text)
         .trim_start_matches(['：', ':', '，', ',', ' '])
         .trim();
+    if explicit.is_none()
+        && (content.starts_with("我叫你")
+            || ["？", "?", "什么", "哪里", "怎么"]
+                .iter()
+                .any(|mark| content.contains(mark)))
+    {
+        return None;
+    }
     let kind = if content.contains("这个梗的意思是") || content.starts_with("网络梗：") {
         "knowledge"
     } else if content.contains("我们的约定") {
@@ -105,6 +113,10 @@ fn classify(text: &str) -> Option<(String, String, String, i64)> {
         || content.starts_with("我的工作是")
         || content.starts_with("我的职业是")
         || content.starts_with("我习惯")
+        || content.starts_with("我叫")
+        || content.starts_with("我的名字是")
+        || content.starts_with("我住在")
+        || content.starts_with("我的生日是")
     {
         "semantic"
     } else {

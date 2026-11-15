@@ -16,6 +16,7 @@ const LAN_MIGRATION: &str = include_str!("../../../db/migrations/0004_lan_sync.s
 const PERSONA_MIGRATION: &str = include_str!("../../../db/migrations/0003_personas.sql");
 const PAIRING_MIGRATION: &str =
     include_str!("../../../db/migrations/0005_pairing_persona_identity.sql");
+const RECALL_MIGRATION: &str = include_str!("../../../db/migrations/0007_chat_recall.sql");
 const COMPANION_MIGRATION: &str =
     include_str!("../../../db/migrations/0006_companion_foundation.sql");
 
@@ -26,7 +27,7 @@ pub struct Store {
     pub(crate) boot_id: String,
     _file_lock: Option<std::fs::File>,
 }
-pub const SCHEMA_VERSION: u32 = 6;
+pub const SCHEMA_VERSION: u32 = 7;
 #[derive(Debug, Serialize)]
 pub struct MemoryRecord {
     pub id: String,
@@ -91,7 +92,7 @@ impl Store {
         conn.pragma_update(None, "journal_mode", "WAL")?;
         conn.pragma_update(None, "synchronous", "FULL")?;
         let version: u32 = conn.pragma_query_value(None, "user_version", |r| r.get(0))?;
-        if version > 6 {
+        if version > SCHEMA_VERSION {
             return Err(Error::Schema);
         }
         let migrations = [
@@ -101,6 +102,7 @@ impl Store {
             (4, LAN_MIGRATION),
             (5, PAIRING_MIGRATION),
             (6, COMPANION_MIGRATION),
+            (7, RECALL_MIGRATION),
         ];
         for (number, sql) in migrations {
             let digest = sha256_hex(sql.as_bytes());
@@ -117,11 +119,12 @@ impl Store {
         }
         // A consistent SQLite backup, including committed WAL, before upgrading old data.
         let path = path.as_ref();
-        if (1..6).contains(&version) && path != Path::new(":memory:") {
-            let backup = path.with_extension(format!("pre-v6-{}.bak", Uuid::new_v4()));
+        if (1..SCHEMA_VERSION).contains(&version) && path != Path::new(":memory:") {
+            let backup =
+                path.with_extension(format!("pre-v{SCHEMA_VERSION}-{}.bak", Uuid::new_v4()));
             conn.backup("main", backup, rusqlite::backup::NO_PROGRESS)?;
         }
-        if version < 6 {
+        if version < SCHEMA_VERSION {
             let preserved = if version > 0 {
                 [
                     "messages",

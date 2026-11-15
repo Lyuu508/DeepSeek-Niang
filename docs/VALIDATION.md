@@ -1,3 +1,11 @@
+# 阶段3追加修复验证入口
+
+候选0.0.4/1004的修复、测试性质与限制见 [追加报告](PHASE3_FOLLOWUP_REPORT.md)、[扫码根因](PHASE3_SCAN_REPAIR.md)、[本地证据](validation-phase3-followup/README.md)、[实机清单](PHASE3_FOLLOWUP_ACCEPTANCE.md)。当前本地115 Rust、24 Python、5 Node、普通/隔离UI各28项；原21项内核和全部原用例保留，无忽略。实际回环TLS不等于家庭局域网，UI/HTTP提供者是明确夹具，无真实DeepSeek或手机通道。
+
+双端完整原生/签名/安装结果只认同源候选BUILD-RESULTS及Actions，不在执行前宣称成功。版本选择未确认前不公开新版本，原v3仍保留。下面为已公开v3及更早历史记录。
+
+---
+
 # v0.0.3 验证入口
 
 当前阶段3报告：PHASE3_REPORT.md；扫码身份缺陷：PHASE2_PERSONA_IDENTITY_FIX.md；主人实机：PHASE3_ACCEPTANCE.md。本地合成证据：validation-phase3/README.md。原21项内核测试和全部原有用例保留。
