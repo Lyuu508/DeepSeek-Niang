@@ -35,6 +35,6 @@ API 配置的普通业务日志不输出秘密；明文序列化仅限专门短�
 
 两端独立构建，全部必要测试、同源、签名与安装验证通过后才收集 EXE/APK、SHA256SUMS、BUILD-RESULTS、日志和报告。上传后先严格比对 GitHub 服务器计算的每个附件 SHA256/大小；默认保留草稿、无 Tag，待确认版本。公开操作后还必须实际 HTTP 回下载和逐文件哈希。替换了旧工作流不稳定的私有草稿 GITHUB_TOKEN 下载步骤，没有删除产品测试、减弱传输认证或跳过文件校验。
 
-当前环境无法直接下载 `results-receiver.actions.githubusercontent.com` 原始日志及向 `uploads.github.com` 上传；保持限制，Hosted Actions 保留完整构建/测试日志并上传报告。访问受限不伪报成功，也不绕过域名限制。Secrets 元数据权限不足不能推断密钥丢失，是否可恢复由签名任务实际验证。
+当前环境无法直接下载 `results-receiver.actions.githubusercontent.com` 原始日志、`productionresultssa7.blob.core.windows.net` 的 Actions 附件，及向 `uploads.github.com` 上传；已报告具体域名，是否加白名单由主人决定，不尝试绕过。Hosted Actions 继续保留完整构建/测试日志并上传报告；run_logged 同时用固定检查/失败测试标识输出结果注释，既可通过GitHub作业元数据定位，也不输出日志正文、Key或任意异常内容。访问受限不伪报成功，也不绕过域名限制。Secrets 元数据权限不足不能推断密钥丢失，是否可恢复由签名任务实际验证。
 
 完成后停止阶段3，待主人 [实机验收](PHASE3_FOLLOWUP_ACCEPTANCE.md)。原 v0.0.1～v0.0.3 Release、Tag、旧数据均保留。
