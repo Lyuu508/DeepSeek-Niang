@@ -1,0 +1,92 @@
+name: Refresh signed v0.0.2 installers
+on:
+  push:
+    branches: [main]
+    paths: ['.github/release-requests/v0.0.2-refresh.json']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: stage-release
+  cancel-in-progress: false
+jobs:
+  sign-and-publish:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      actions: read
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: release-tools
+          fetch-depth: 0
+          persist-credentials: false
+      - id: verify
+        name: Verify exact same-source CI and the existing release
+        run: |
+          python -c @'
+          import json,os,re,subprocess
+          from pathlib import Path
+          request=json.loads(Path('release-tools/.github/release-requests/v0.0.2-refresh.json').read_text())
+          sha=request['source_sha'];run=request['ci_run_id'];repo=os.environ['GH_REPO']
+          assert request['authorized_version']=='0.0.2' and re.fullmatch('[0-9a-f]{40}',sha)
+          assert request['android_application_id']=='io.local.deepseekcompanion.test2'
+          def api(path):return json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/'+path],text=True))
+          status=api(f'actions/runs/{run}')
+          assert status['head_sha']==sha and status['head_branch']=='main' and status['head_repository']['full_name']==repo
+          assert status['conclusion']=='success' and status['path']=='.github/workflows/ci.yml'
+          jobs=api(f'actions/runs/{run}/jobs?per_page=100')['jobs']
+          for name in ['test','packages / windows','packages / android']:assert any(j['name']==name and j['conclusion']=='success' for j in jobs),name
+          subprocess.run(['git','-C','release-tools','merge-base','--is-ancestor',sha,'origin/main'],check=True)
+          artifacts=api(f'actions/runs/{run}/artifacts')['artifacts']
+          wanted={'windows-package-1','android-package-1','automated-test-reports-1'}
+          chosen=[a for a in artifacts if a['name'] in wanted]
+          assert {a['name'] for a in chosen}==wanted
+          assert all(not a['expired'] and a['workflow_run']['head_sha']==sha for a in chosen)
+          release=api('releases/'+str(request['release_id']))
+          assert release['tag_name']=='v0.0.2' and release['prerelease'] and not release['draft']
+          with open(os.environ['GITHUB_OUTPUT'],'a') as out:out.write('sha='+sha+'\nrun='+str(run)+'\nids='+','.join(str(a['id']) for a in chosen)+'\n')
+          '@
+          if ($LASTEXITCODE) { throw 'Source or CI verification failed' }
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ steps.verify.outputs.sha }}
+          path: tested-source
+          persist-credentials: false
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          artifact-ids: ${{ steps.verify.outputs.ids }}
+          run-id: ${{ steps.verify.outputs.run }}
+          github-token: ${{ github.token }}
+          path: release-artifacts
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407
+        with:
+          cmdline-tools-version: '12266719'
+          packages: 'build-tools;36.0.0'
+          log-accepted-android-sdk-licenses: false
+      - name: Restore or atomically persist both test signing identities
+        env:
+          TEST_RELEASE_SIGNING_B64: ${{ secrets.TEST_RELEASE_SIGNING_B64 }}
+          SIGNING_SECRETS_TOKEN: ${{ secrets.SIGNING_SECRETS_TOKEN }}
+        run: |
+          python release-tools/scripts/test_release_identity.py
+          if ($LASTEXITCODE) { throw 'Signing identities are not safely persisted; no installer will be published' }
+      - name: Sign, verify, install-test, then replace assets in the original release
+        run: |
+          python release-tools/.github/scripts/refresh-test-release.py tested-source release-artifacts (Join-Path $env:RUNNER_TEMP 'deepseek-windows-artifacts')
+          if ($LASTEXITCODE) { throw 'Verified installer refresh failed' }
+      - name: Remove private temporary files
+        if: always()
+        run: Remove-Item -LiteralPath (Join-Path $env:RUNNER_TEMP 'deepseek-protected-signing') -Recurse -Force -ErrorAction SilentlyContinue

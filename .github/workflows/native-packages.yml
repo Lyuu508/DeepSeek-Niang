@@ -11,6 +11,9 @@ on:
       android_compile_only:
         type: boolean
         default: false
+      fresh_test_identity:
+        type: boolean
+        default: false
     secrets:
       ANDROID_KEYSTORE_B64:
         required: false
@@ -45,6 +48,10 @@ jobs:
           package-manager-cache: false
       - name: Verify hosted MSVC prerequisites and select Rust
         run: |
+          $ParseTokens = $null
+          $ParseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD '.github/scripts/windows-test-sign.ps1'), [ref]$ParseTokens, [ref]$ParseErrors) | Out-Null
+          if ($ParseErrors.Count -gt 0) { throw 'Signing PowerShell script has syntax errors' }
           rustup toolchain install 1.99.0 --profile minimal
           if ($LASTEXITCODE) { throw 'Rust install failed' }
           rustup default 1.99.0
@@ -178,6 +185,7 @@ jobs:
         env:
           SIGNED: ${{ inputs.signed_android }}
           COMPILE_ONLY: ${{ inputs.android_compile_only }}
+          COMPANION_FRESH_TEST_IDENTITY: ${{ inputs.fresh_test_identity }}
           COMPANION_ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/deepseek-signing.jks
           COMPANION_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           COMPANION_ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -195,6 +203,7 @@ jobs:
             variant=debug
             package_name="DeepSeek-Niang_$(python3 -c 'import json;print(json.load(open("VERSION.json"))["version"])')_android-arm64-test-update-unsigned-check.apk"
             verify_mode=(--unsigned-test-ci)
+            if [ "$COMPANION_FRESH_TEST_IDENTITY" = 'true' ]; then verify_mode+=(--fresh-test-identity); fi
             echo '仅编译检查：未签名，不能安装，不能替换当前手机上的 0.0.2。等待相同签名后才交付手机更新。' > "$RUNNER_TEMP/deepseek-android-artifacts/ANDROID-DISTRIBUTION.txt"
           else
             python3 scripts/run_logged.py "$RUNNER_TEMP/deepseek-android-artifacts/android-build.log" sh scripts/build-android.sh --test-package

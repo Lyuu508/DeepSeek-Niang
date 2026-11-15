@@ -13,7 +13,7 @@ ET.register_namespace("tools", "http://schemas.android.com/tools")
 UNSIGNED_TEST_POLICY = '\n// DeepSeek unsigned test compile only\nandroid.buildTypes.getByName("debug") { signingConfig = null }\n'
 
 
-def prepare(project: Path, branding: Path | None = None, unsigned_test: bool = False) -> None:
+def prepare(project: Path, branding: Path | None = None, unsigned_test: bool = False, fresh_test: bool = False) -> None:
     manifest = project / "app/src/main/AndroidManifest.xml"
     if not manifest.is_file():
         raise SystemExit("Generated Android project missing. Run tauri android init with a valid SDK/NDK first.")
@@ -62,7 +62,7 @@ def prepare(project: Path, branding: Path | None = None, unsigned_test: bool = F
     debug_strings.parent.mkdir(parents=True, exist_ok=True)
     debug_root = ET.Element("resources")
     for key in ["app_name", "main_activity_title"]:
-        ET.SubElement(debug_root, "string", {"name": key}).text = "DeepSeek娘 测试版"
+        ET.SubElement(debug_root, "string", {"name": key}).text = "DeepSeek娘 扫码测试版" if fresh_test else "DeepSeek娘 测试版"
     ET.indent(debug_root, space="    ")
     ET.ElementTree(debug_root).write(debug_strings, encoding="utf-8", xml_declaration=True)
     branding = branding or Path(__file__).resolve().parents[1] / "assets/branding"
@@ -110,6 +110,9 @@ android {
     }
 }
 '''
+        text = text.replace('applicationIdSuffix = ".test2"', 'applicationIdSuffix = ".test"')
+        if fresh_test:
+            text = text.replace('applicationIdSuffix = ".test"', 'applicationIdSuffix = ".test2"')
         if unsigned_test:
             text += UNSIGNED_TEST_POLICY
         gradle.write_text(text, encoding="utf-8")
@@ -141,6 +144,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--project", type=Path, default=Path(__file__).resolve().parents[1] / "apps/companion/src-tauri/gen/android")
     parser.add_argument('--unsigned-test-ci', action='store_true')
+    parser.add_argument('--fresh-test-identity', action='store_true')
     args = parser.parse_args()
-    prepare(args.project, unsigned_test=args.unsigned_test_ci)
+    prepare(args.project, unsigned_test=args.unsigned_test_ci, fresh_test=args.fresh_test_identity)
     print("Android prepared: API 36, INTERNET, adjustResize, disabled automatic backup and production cleartext.")

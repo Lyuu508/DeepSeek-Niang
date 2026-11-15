@@ -84,3 +84,4 @@ jobs:
       source_sha: ${{ github.sha }}
       signed_android: false
       android_compile_only: true
+      fresh_test_identity: true

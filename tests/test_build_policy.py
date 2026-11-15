@@ -97,8 +97,14 @@ class BuildPolicy(unittest.TestCase):
             self.assertEqual(gradle.read_text().count('signingConfig = null'), 1)
             self.assertIn('applicationIdSuffix = ".test"', gradle.read_text())
             self.assertEqual(list(project.rglob('*.keystore')), [])
+            prepare.prepare(project, unsigned_test=True, fresh_test=True)
+            self.assertIn('applicationIdSuffix = ".test2"', gradle.read_text())
+            self.assertIn('io.local.deepseekcompanion', gradle.read_text())
+            debug = ET.parse(project / 'app/src/debug/res/values/companion_test.xml').getroot()
+            self.assertEqual(debug.find("string[@name='app_name']").text, 'DeepSeek娘 扫码测试版')
             prepare.prepare(project)
             self.assertNotIn('signingConfig = null', gradle.read_text())
+            self.assertIn('applicationIdSuffix = ".test"', gradle.read_text())
 
     def test_export_rejects_credential_shaped_content_even_in_env_example(self):
         exporter = module("export_source")

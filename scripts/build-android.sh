@@ -24,7 +24,11 @@ npm ci --ignore-scripts
 cargo test --workspace --locked
 npm run tauri -- android init --ci
 if test "$mode" = '--unsigned-test-ci'; then
-    python3 scripts/prepare_android.py --unsigned-test-ci
+    if test "${COMPANION_FRESH_TEST_IDENTITY:-false}" = 'true'; then
+        python3 scripts/prepare_android.py --unsigned-test-ci --fresh-test-identity
+    else
+        python3 scripts/prepare_android.py --unsigned-test-ci
+    fi
 else
     python3 scripts/prepare_android.py
 fi
@@ -36,7 +40,11 @@ elif test "$mode" = '--unsigned-ci'; then
     npm run tauri -- android build --apk --target aarch64
 elif test "$mode" = '--unsigned-test-ci'; then
     npm run tauri -- android build --apk --debug --target aarch64
-    python3 scripts/verify_android.py --unsigned-test-ci
+    if test "${COMPANION_FRESH_TEST_IDENTITY:-false}" = 'true'; then
+        python3 scripts/verify_android.py --unsigned-test-ci --fresh-test-identity
+    else
+        python3 scripts/verify_android.py --unsigned-test-ci
+    fi
 else
     python3 scripts/android_signing.py --configure
     npm run tauri -- android build --apk --target aarch64

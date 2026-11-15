@@ -1,5 +1,7 @@
 # DeepSeek娘
 
+最新授权：0.0.2 将使用持久保存的新测试签名更新 EXE/APK。Android 新包名 `.test2`、启动名称“DeepSeek娘 扫码测试版”，与旧版并存以保留聊天。Windows 使用独立自签名测试证书。签名先写入 GitHub 加密 Secrets，再签名、验签并替换现有下载资产；[管理员一次性配置与其他账号后续更新说明](docs/TEST_SIGNING_SETUP.md)。下列链接在新签名流程完成前仍是旧安装包，不能视作本次手机修订交付。
+
 ## 0.0.2 测试版直接下载
 
 - [Windows 中文 EXE 安装程序](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.2/DeepSeek-Niang_0.0.2_windows-x64-setup-zh.exe)
