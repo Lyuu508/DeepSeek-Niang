@@ -1,3 +1,33 @@
+# Windows 安装说明
+
+当前下载：**v0.0.5 测试版，Windows 10/11 x64**。[下载中文 EXE](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.5/DeepSeek-Niang_0.0.5_windows-x64-setup.exe)。普通用户不需要安装 Rust、Node.js 或 Python。
+
+## 安装步骤
+
+1. 已有用户先阅读[升级与数据保护](USAGE.md#升级与数据保护)，退出旧应用，保留当前用户应用数据目录的完整备份，不先卸载或删库。
+2. 下载 EXE 和同版 [SHA256SUMS.txt](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.5/SHA256SUMS.txt)。在文件目录运行：
+
+   ```powershell
+   Get-FileHash -Algorithm SHA256 .\DeepSeek-Niang_0.0.5_windows-x64-setup.exe
+   ```
+
+   与清单逐字核对摘要；不一致时停止使用该文件。
+3. 运行安装器。当前有自签名测试签名，并非公共 CA 信任发布者；不要关闭系统防护或导入不明根证书。
+4. 缺少 WebView2 时，从[微软官方页面](https://developer.microsoft.com/microsoft-edge/webview2/)安装 Evergreen Runtime 后再尝试启动。
+5. 打开“设置”验证安全存储，再输入自己的 DeepSeek API Key。聊天需要互联网和提供商额度；密钥由 Windows Credential Manager 保管。
+6. 使用手机时同时更新手机到 v0.0.5，再按[连接说明](USAGE.md#连接电脑与手机)扫码。扫码会授权给本次认证手机配置电脑已有 Key，请仅向可信手机展示。
+
+## 数据与验证边界
+
+应用通过当前用户的 Tauri 应用数据目录保存 `companion.sqlite3`，Windows 标识为 `io.local.deepseekcompanion`。数据库与备份未做库级加密，迁移前一致性备份不替代独立备份；不要直接复制运行中的 WAL 数据库主文件或上传私有目录。
+
+本版 Hosted runner 已检查中文向导、安装退出和原生窗口出现；用户旧机覆盖升级、真实 API 与完整界面体验仍待验收。发布截图为空白窗口，原因尚未确认；持续白屏见 [FAQ](FAQ.md#windows-打开后持续白屏怎么办)，不要删库排错。
+
+首次使用见[使用说明](USAGE.md)，自行编译见[开发与构建](BUILDING.md)。下方保留 v0.0.1／v0.0.2 历史说明，其中旧签名、下载与“不提供同步”等状态不适用于当前版本。
+
+<details>
+<summary>历史开发与发布说明（原文保留，不代表当前状态）</summary>
+
 # 当前 0.0.2 中文修订
 
 中文 Windows 安装器的发布与检查结果见 [扫码与中文修订报告](PHASE2_SCAN_ZH_REPORT.md)。在现有 0.0.2 页面选择带 `windows-x64-setup-zh.exe` 后缀的附件与 `WINDOWS-ZH-SHA256SUMS.txt`，无需解压。原 EXE/APK 和原校验文件保留用于回退；新 Windows 修订的源码见其独立构建报告，与旧手机 APK 不同。
@@ -79,3 +109,5 @@ MSI 需在 Windows 安装相应 WiX/VBScript 前置条件后使用 `--bundles ms
 记录系统版本、包 SHA-256、能否打开窗口、本地历史能否保留、凭据自检结果以及脱敏错误码即可。提供真实 API 连通测试结果时，不附 Key、Authorization 头或私人数据库。
 
 改名后 NSIS 安装路径/卸载条目可能不同，覆盖升级需实际检查旧版识别和用户数据保留；本次Windows runner仅测试全新安装，没有验证用户旧版覆盖。不承诺安装器无缝覆盖。不要为解决问题先卸载/清空聊天。数据库升级及回滚见 PERSONA_MIGRATION.md。
+
+</details>
