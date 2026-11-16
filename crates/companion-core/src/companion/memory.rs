@@ -22,6 +22,7 @@ pub struct ManagedMemory {
     pub owner_locked: bool,
     pub source_kind: String,
     pub source_message_id: Option<String>,
+    pub source_life_event_id: Option<String>,
     pub source_excerpt: Option<String>,
     pub created_at_ms: Option<i64>,
     pub updated_at_ms: Option<i64>,
@@ -249,7 +250,7 @@ struct PendingMemoryRevision {
 impl Store {
     pub fn managed_memories(&self, persona: &str) -> Result<Vec<ManagedMemory>> {
         crate::persona::owner_exists(&self.conn, persona, &self.profile_id)?;
-        let mut q=self.conn.prepare(&format!("SELECT m.id,m.text,m.version_lamport,coalesce(d.kind,'semantic'),m.importance_milli,coalesce(d.pinned,0),m.sensitivity='api_allowed',coalesce(d.owner_locked,1),coalesce(d.source_kind,'legacy'),d.source_message_id,d.created_at_ms,d.updated_at_ms,m.version_event_id,(SELECT content FROM messages WHERE id=d.source_message_id) FROM memories m LEFT JOIN companion_memory_meta d ON d.memory_id=m.id WHERE m.persona_id IN ({MEMBERS}) AND m.is_deleted=0 ORDER BY coalesce(d.pinned,0) DESC,m.version_lamport DESC,m.id LIMIT 500"))?;
+        let mut q=self.conn.prepare(&format!("SELECT m.id,m.text,m.version_lamport,coalesce(d.kind,'semantic'),m.importance_milli,coalesce(d.pinned,0),m.sensitivity='api_allowed',coalesce(d.owner_locked,1),coalesce(d.source_kind,'legacy'),d.source_message_id,d.created_at_ms,d.updated_at_ms,m.version_event_id,coalesce((SELECT content FROM messages WHERE id=d.source_message_id),(SELECT description FROM companion_life_events WHERE id=d.source_life_event_id)),d.source_life_event_id FROM memories m LEFT JOIN companion_memory_meta d ON d.memory_id=m.id WHERE m.persona_id IN ({MEMBERS}) AND m.is_deleted=0 ORDER BY coalesce(d.pinned,0) DESC,m.version_lamport DESC,m.id LIMIT 500"))?;
         Ok(q.query_map([persona], |r| {
             Ok(ManagedMemory {
                 id: r.get(0)?,
@@ -266,6 +267,7 @@ impl Store {
                 updated_at_ms: r.get(11)?,
                 revision: r.get(12)?,
                 source_excerpt: r.get::<_, Option<String>>(13)?.map(|v| excerpt(&v, 160)),
+                source_life_event_id: r.get(14)?,
             })
         })?
         .collect::<std::result::Result<Vec<_>, _>>()?)

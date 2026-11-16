@@ -36,7 +36,13 @@ class BuildPolicy(unittest.TestCase):
             prepare.prepare(project)
             root = ET.parse(manifest).getroot()
             android = "{http://schemas.android.com/apk/res/android}"
-            self.assertEqual(len(root.findall("uses-permission")), 4)
+            tools="{http://schemas.android.com/tools}"
+            enabled=[p for p in root.findall("uses-permission") if p.get(tools+"node")!="remove"]
+            removed=[p.get(android+"name") for p in root.findall("uses-permission") if p.get(tools+"node")=="remove"]
+            self.assertEqual(len(enabled),4)
+            self.assertEqual(set(removed),{"android.permission.RECEIVE_BOOT_COMPLETED","android.permission.WAKE_LOCK"})
+            self.assertEqual(len(root.findall("application/receiver")),2)
+            self.assertTrue(all(r.get(tools+"node")=="remove" for r in root.findall("application/receiver")))
             self.assertEqual(root.find("uses-feature").get(android + "required"), "false")
             self.assertEqual(root.find("application").get(android + "allowBackup"), "false")
             self.assertEqual(root.find("application").get(android + "usesCleartextTraffic"), "false")

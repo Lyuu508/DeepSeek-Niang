@@ -1,3 +1,5 @@
+> [v0.0.5 安装与发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.0.5) · v0.0.5 阶段4：在既有生活/任务表上增加连续计划、恢复、结构化日记、兴趣和主动分享。Android 保持 `.test2` / 1005；双端必须同时更新。详见 [阶段4报告](docs/PHASE4_REPORT.md) 和 [升级验收](docs/PHASE4_ACCEPTANCE.md)。本地规则不调用模型，主动模型分享需另行开启；实体设备与真实 API 结果单独验收。以下历史说明按原版本保留。
+
 # DeepSeek娘
 
 DeepSeek-Niang AI Companion 是 Windows + Android 本地优先陪伴应用，沿用 Tauri 2、React、TypeScript、Rust、SQLite 与 DeepSeek API。默认一个人格一个永久聊天空间，不使用云数据库。

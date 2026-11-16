@@ -1071,10 +1071,17 @@ fn real_tls_sync_converges_bond_mood_memory_preferences_and_virtual_life() {
             serde_json::to_value(a.current_mood(&host, now + 1000).unwrap()).unwrap(),
             serde_json::to_value(b.current_mood(&host, now + 1000).unwrap()).unwrap()
         );
+        let mut life_a = a.life_snapshot(&host, now + 1000).unwrap();
+        let mut life_b = b.life_snapshot(&host, now + 1000).unwrap();
         assert_eq!(
-            a.life_snapshot(&host, now + 1000).unwrap(),
-            b.life_snapshot(&host, now + 1000).unwrap()
+            life_a.as_object_mut().unwrap().remove("can_control"),
+            Some(serde_json::json!(true))
         );
+        assert_eq!(
+            life_b.as_object_mut().unwrap().remove("can_control"),
+            Some(serde_json::json!(false))
+        );
+        assert_eq!(life_a, life_b);
         assert_eq!(
             a.managed_memories(&host).unwrap()[0].id,
             b.managed_memories(&host).unwrap()[0].id
@@ -1590,6 +1597,98 @@ fn inaccessible_computer_api_storage_does_not_block_pairing_or_persona_sync() {
         pc.store.lock().unwrap().profile_id
     );
     assert!(phone.status().unwrap().peers[0].last_success_ms.is_some());
+    pc.stop();
+    phone.stop();
+}
+
+#[test]
+fn stage4_real_tls_plan_outcomes_and_share_receipts_dedupe_on_both_devices() {
+    use companion_core::companion::{CompanionPreferences, living::LifePlanInput};
+    let pc = service_named("Windows 电脑");
+    let phone = service_named("Android 手机");
+    pc.store
+        .lock()
+        .unwrap()
+        .set_device_platform("windows")
+        .unwrap();
+    phone
+        .store
+        .lock()
+        .unwrap()
+        .set_device_platform("android")
+        .unwrap();
+    pc.capture().unwrap();
+    phone.capture().unwrap();
+    let p = pc.store.lock().unwrap().active_persona_id().unwrap();
+    let code = pc
+        .make_invite(vec![format!("127.0.0.1:{}", pc.port)], true)
+        .unwrap();
+    phone.pair_scanned(&code.text).unwrap();
+    phone.tick().unwrap();
+    phone.tick().unwrap();
+    let now = companion_core::chat::now_ms();
+    {
+        let mut s = pc.store.lock().unwrap();
+        let prefs = CompanionPreferences {
+            proactive_enabled: true,
+            quiet_start_minute: 0,
+            quiet_end_minute: 0,
+            ..Default::default()
+        };
+        s.save_companion_preferences(&p, &prefs).unwrap();
+        s.create_life_plan(
+            &p,
+            &LifePlanInput {
+                name: "同步的虚拟创作".into(),
+                kind: "create".into(),
+                steps: 1,
+                duration_ms: 30000,
+            },
+            now,
+        )
+        .unwrap();
+        for n in 0..3 {
+            s.advance_life_at(now + n * 30000, n * 30000, true).unwrap();
+        }
+    }
+    for _ in 0..4 {
+        phone.tick().unwrap();
+    }
+    let id = {
+        let s = phone.store.lock().unwrap();
+        let v = s.life_snapshot(&p, now + 60000).unwrap();
+        assert_eq!(v["completed_today"], 1);
+        assert_eq!(v["plans"][0]["next_step"], 1);
+        assert_eq!(v["proactive_messages"].as_array().unwrap().len(), 1);
+        v["proactive_messages"][0]["id"]
+            .as_str()
+            .unwrap()
+            .to_owned()
+    };
+    phone
+        .store
+        .lock()
+        .unwrap()
+        .record_share_receipt(&p, &id, true, "disabled", now + 60001)
+        .unwrap();
+    for _ in 0..4 {
+        phone.tick().unwrap();
+    }
+    for service in [&pc, &phone] {
+        let mut s = service.store.lock().unwrap();
+        s.advance_life_at(now + 61000, 61000, false).unwrap();
+        let v = s.life_snapshot(&p, now + 61000).unwrap();
+        assert_eq!(v["proactive_messages"].as_array().unwrap().len(), 1);
+        assert_eq!(
+            s.chat_messages(&p)
+                .unwrap()
+                .iter()
+                .filter(|m| m.role == "assistant")
+                .count(),
+            1
+        );
+        assert_eq!(s.managed_memories(&p).unwrap().len(), 1);
+    }
     pc.stop();
     phone.stop();
 }

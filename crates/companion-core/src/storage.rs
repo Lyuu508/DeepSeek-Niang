@@ -25,9 +25,10 @@ pub struct Store {
     pub device_id: String,
     pub profile_id: String,
     pub(crate) boot_id: String,
+    pub(crate) authority_epoch: i64,
     _file_lock: Option<std::fs::File>,
 }
-pub const SCHEMA_VERSION: u32 = 7;
+pub const SCHEMA_VERSION: u32 = 8;
 #[derive(Debug, Serialize)]
 pub struct MemoryRecord {
     pub id: String,
@@ -103,6 +104,10 @@ impl Store {
             (5, PAIRING_MIGRATION),
             (6, COMPANION_MIGRATION),
             (7, RECALL_MIGRATION),
+            (
+                8,
+                include_str!("../../../db/migrations/0008_life_tasks.sql"),
+            ),
         ];
         for (number, sql) in migrations {
             let digest = sha256_hex(sql.as_bytes());
@@ -132,8 +137,25 @@ impl Store {
                     "memories",
                     "api_usage_records",
                     "task_queue",
+                    "personas",
+                    "devices",
+                    "lan_peers",
+                    "persona_links",
+                    "companion_activities",
+                    "companion_life_events",
+                    "companion_bond_events",
+                    "companion_mood_events",
+                    "companion_proactive",
                 ]
                 .iter()
+                .filter(|table| {
+                    conn.query_row(
+                        "SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='table' AND name=?1)",
+                        [table],
+                        |r| r.get::<_, bool>(0),
+                    )
+                    .unwrap_or(false)
+                })
                 .map(|table| {
                     Ok((
                         *table,
@@ -227,12 +249,20 @@ impl Store {
         crate::persona::ensure_default(&tx, profile, device)?;
         // A process restart invalidates every old monotonic deadline and executor token.
         tx.execute("UPDATE task_queue SET state='uncertain',fence=fence+1,lease_boot_id=NULL,lease_until_tick=NULL,last_error='AUTHORITY_RESTART_RECONCILE' WHERE authority_device_id=?1 AND state='running'",[device])?;
+        tx.execute("UPDATE budget_reservations SET state='uncertain' WHERE state='reserved' AND task_id IN (SELECT id FROM task_queue WHERE authority_device_id=?1 AND state='uncertain')",[device])?;
+        tx.execute("INSERT OR IGNORE INTO api_usage_records(id,profile_id,persona_id,task_id,request_key,provider,model_id,currency,usage_state,created_at_ms,price_snapshot_json,purpose) SELECT b.request_key,t.profile_id,t.persona_id,t.id,b.request_key,'deepseek',coalesce(json_extract(c.settings_json,'$.model'),'unknown'),'unknown','unknown',b.created_at_ms,'{}','life' FROM budget_reservations b JOIN task_queue t ON t.id=b.task_id LEFT JOIN persona_chat_preferences c ON c.persona_id=t.persona_id WHERE b.state='uncertain' AND b.currency='TOKEN' AND t.kind='companion_proactive' AND t.authority_device_id=?1",[device])?;
+        let epoch: i64 = tx.query_row("SELECT coalesce(max(authority_epoch),0)+1 FROM task_queue WHERE authority_device_id=?1",[device],|r|r.get(0))?;
+        tx.execute(
+            "UPDATE task_queue SET authority_epoch=?1 WHERE authority_device_id=?2",
+            params![epoch, device],
+        )?;
         tx.commit()?;
         let mut store = Self {
             conn,
             device_id: device.into(),
             profile_id: profile.into(),
             boot_id: Uuid::new_v4().to_string(),
+            authority_epoch: epoch,
             _file_lock: guard,
         };
         for persona in store.personas()? {

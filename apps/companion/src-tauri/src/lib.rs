@@ -256,6 +256,7 @@ async fn delete_memory(
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_companion_keystore::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             let directory = app.path().app_data_dir()?;
             std::fs::create_dir_all(&directory)?;
@@ -267,19 +268,17 @@ pub fn run() {
                 credentials,
                 DeepSeekClient::official()?,
             ));
-            let weak = Arc::downgrade(&service.store);
+            let weak = Arc::downgrade(&service);
             std::thread::spawn(move || {
+                let boot = std::time::Instant::now();
                 loop {
-                    let Some(store) = weak.upgrade() else {
-                        break;
-                    };
-                    if let Ok(mut store) = store.lock() {
-                        let _ = store.companion_worker_tick(
-                            companion_core::chat::now_ms(),
-                            cfg!(target_os = "windows"),
-                        );
-                    }
-                    drop(store);
+                    let Some(service) = weak.upgrade() else { break };
+                    let _ = tauri::async_runtime::block_on(service.life_tick(
+                        companion_core::chat::now_ms(),
+                        boot.elapsed().as_millis().min(i64::MAX as u128) as i64,
+                        cfg!(target_os = "windows"),
+                    ));
+                    drop(service);
                     std::thread::sleep(std::time::Duration::from_secs(30));
                 }
             });
@@ -322,7 +321,12 @@ pub fn run() {
             companion::companion_snapshot,
             companion::save_companion_preferences,
             companion::edit_companion_memory,
-            companion::resolve_memory_candidate
+            companion::resolve_memory_candidate,
+            companion::life_plan_create,
+            companion::life_task_control,
+            companion::life_diary,
+            companion::share_receipt,
+            companion::claim_share_notification
         ])
         .run(tauri::generate_context!())
         .expect("native application startup failed");

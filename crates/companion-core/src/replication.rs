@@ -29,7 +29,6 @@ const TABLES: &[(&str, &str)] = &[
     ("chat_turn_choices", "user_message_id"),
     ("relationship_events", "id"),
     ("character_moods", "id"),
-    ("character_interests", "id"),
     ("task_queue", "id"),
     ("task_checkpoints", "task_id,step_key"),
     ("life_plans", "id"),
@@ -41,14 +40,16 @@ const TABLES: &[(&str, &str)] = &[
     ("application_settings", "profile_id,key,device_id"),
     ("persona_links", "alias_id"),
     ("companion_preferences", "persona_id"),
-    ("companion_memory_meta", "memory_id"),
     ("companion_memory_candidates", "id"),
     ("companion_hosts", "persona_id"),
     ("companion_activities", "id"),
     ("companion_life_events", "id"),
+    ("character_interests", "id"),
+    ("companion_memory_meta", "memory_id"),
     ("companion_bond_events", "id"),
     ("companion_mood_events", "id"),
     ("companion_proactive", "id"),
+    ("companion_receipts", "proactive_id,device_id"),
 ];
 fn key_fields(table: &str) -> Result<Vec<&str>> {
     Ok(TABLES
@@ -75,6 +76,7 @@ fn columns(db: &Connection, table: &str) -> Result<Vec<String>> {
                 "lease_until_tick",
                 "fence",
                 "attempt",
+                "authority_epoch",
             ]
             .contains(&c.as_str()),
             _ => c != "origin_signature",
@@ -614,6 +616,14 @@ fn legacy_default(table: &str, column: &str) -> Option<Value> {
     match (table, column) {
         ("personas", "avatar_resource") => Some(json!("deepseek-niang")),
         ("api_usage_records", "purpose") => Some(json!("chat")),
+        ("life_plans", "host_device_id")
+        | ("companion_activities", "task_id" | "plan_id")
+        | ("companion_memory_meta", "source_life_event_id") => Some(Value::Null),
+        ("life_plans", "state") => Some(json!("active")),
+        ("life_plans", "created_at_ms" | "next_due_at_ms")
+        | ("companion_activities", "elapsed_ms" | "progress_milli" | "checkpoint_seq")
+        | ("companion_life_events", "sequence") => Some(json!(0)),
+        ("companion_activities", "duration_ms") => Some(json!(1200000)),
         _ => None,
     }
 }
@@ -694,6 +704,39 @@ fn validate_row(db: &Connection, e: &Change, local: &str) -> Result<()> {
                 .ok_or(Error::Invalid("companion config"))?,
         )?;
         settings.validate()?;
+    }
+    if e.table == "character_interests" {
+        let evidence: Value = serde_json::from_str(
+            e.row["evidence_json"]
+                .as_str()
+                .ok_or(Error::Invalid("interest evidence"))?,
+        )?;
+        if let Some(history) = evidence.as_array() {
+            for item in history
+                .iter()
+                .filter(|v| v.get("source_event_id").is_some())
+            {
+                let valid:bool=db.query_row("SELECT EXISTS(SELECT 1 FROM companion_life_events WHERE id=?1 AND persona_id=?2 AND host_device_id=?3 AND kind='completed')",params![item["source_event_id"].as_str(),to_sql(&e.row["persona_id"]),e.origin],|r|r.get(0))?;
+                if !valid {
+                    return Err(Error::Untrusted);
+                }
+            }
+        }
+    }
+    if e.table == "companion_receipts" && e.row["device_id"] != e.origin {
+        return Err(Error::Untrusted);
+    }
+    if e.table == "life_plans"
+        && e.row.get("host_device_id").is_some_and(|v| !v.is_null())
+        && e.row["host_device_id"] != e.origin
+    {
+        return Err(Error::Untrusted);
+    }
+    if e.table == "companion_memory_meta" && e.row["source_kind"] == "life" {
+        let valid:bool=db.query_row("SELECT EXISTS(SELECT 1 FROM companion_life_events WHERE id=?1 AND persona_id=?2 AND host_device_id=?3 AND kind='completed')",params![to_sql(&e.row["source_life_event_id"]),to_sql(&e.row["persona_id"]),e.origin],|r|r.get(0))?;
+        if !valid {
+            return Err(Error::Untrusted);
+        }
     }
     if e.table == "companion_hosts" {
         let previous: Option<String> = db
@@ -827,22 +870,27 @@ fn validate_row(db: &Connection, e: &Change, local: &str) -> Result<()> {
         .collect::<Vec<_>>()
         .join(" AND ");
     for field in cols.iter().filter(|f| {
-        keys.contains(&f.as_str())
-            || [
-                "profile_id",
-                "persona_id",
-                "main_conversation_id",
-                "is_builtin",
-                "conversation_id",
-                "user_message_id",
-                "origin_device_id",
-                "source_event_id",
-                "authority_device_id",
-                "host_device_id",
-                "source_device_id",
-                "canonical_id",
-            ]
-            .contains(&f.as_str())
+        obj.contains_key(f.as_str())
+            && (keys.contains(&f.as_str())
+                || [
+                    "profile_id",
+                    "persona_id",
+                    "main_conversation_id",
+                    "is_builtin",
+                    "conversation_id",
+                    "user_message_id",
+                    "origin_device_id",
+                    "source_event_id",
+                    "host_device_id",
+                    "task_id",
+                    "plan_id",
+                    "source_life_event_id",
+                    "authority_device_id",
+                    "host_device_id",
+                    "source_device_id",
+                    "canonical_id",
+                ]
+                .contains(&f.as_str()))
     }) {
         let existing: Option<SqlValue> = db
             .query_row(

@@ -11,6 +11,8 @@ use std::{
 };
 use tokio::sync::watch;
 use tokio_util::sync::CancellationToken;
+#[path = "proactive.rs"]
+mod proactive;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -50,6 +52,7 @@ struct Run {
 struct Active {
     runs: BTreeMap<String, Run>,
     changing_key: bool,
+    background: Option<Run>,
 }
 pub struct ChatService {
     pub store: Arc<Mutex<Store>>,
@@ -78,6 +81,9 @@ impl ChatService {
         let mut active = self.active.lock().map_err(|_| ChatFailure::new("BUSY"))?;
         if active.changing_key || !active.runs.is_empty() {
             return Err(ChatFailure::new("BUSY"));
+        }
+        if let Some(background) = &active.background {
+            background.cancel.cancel();
         }
         let (prepared, settings, prompt, message, user) = {
             let mut store = self
@@ -238,6 +244,13 @@ impl ChatService {
             }
         }
     }
+    pub fn cancel_life_generation(&self) {
+        if let Ok(active) = self.active.lock()
+            && let Some(run) = &active.background
+        {
+            run.cancel.cancel();
+        }
+    }
     pub fn stop(&self, request_id: &str) -> Result<bool, ChatFailure> {
         let state = self.active.lock().map_err(|_| ChatFailure::new("BUSY"))?;
         if let Some(run) = state.runs.get(request_id) {
@@ -289,6 +302,7 @@ impl ChatService {
             state
                 .runs
                 .values()
+                .chain(state.background.iter())
                 .map(|r| {
                     r.cancel.cancel();
                     r.done.clone()

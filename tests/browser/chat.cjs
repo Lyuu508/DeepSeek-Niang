@@ -142,8 +142,29 @@ async function configure(page){await settings(page);await page.getByLabel('API K
   await page.getByLabel('开启主动消息',{exact:true}).check();await page.getByLabel('主动消息最小间隔').fill('180');await page.getByLabel('主动消息每日上限').fill('1');
   await page.getByRole('button',{name:'保存陪伴设置',exact:true}).click();await page.getByText('陪伴设置已保存，配对设备同步后生效。',{exact:true}).waitFor();
   await chat(page);await page.getByRole('button',{name:'关系与日常',exact:true}).click();assert(await page.getByLabel('开启主动消息',{exact:true}).isChecked());
-  assert.equal(await page.getByLabel('主动消息每日上限').inputValue(),'1');assert.match(await page.locator('.companion-content').innerText(),/虚拟看视频、听音乐不代表实际播放/);
+  assert.equal(await page.getByLabel('主动消息每日上限').inputValue(),'1');assert.match(await page.locator('.companion-content').innerText(),/不执行网页浏览或媒体理解/);
   await page.locator('.page-scroll').evaluate(el=>{el.scrollTop=0;});await page.screenshot({path:path.join(artifact,'phase3-companion-desktop-ui-fixture.png'),animations:'disabled'});
+ });
+ await check('stage4 life panels keep evidence and offline state visible',async()=>{
+  assert(await page.getByRole('heading',{name:'正在做什么',exact:true}).isVisible());
+  assert.match(await page.locator('.life-center').innerText(),/虚拟日程|虚拟安排/);
+  assert(await page.getByLabel('浏览日记日期').isVisible());
+ });
+ await check('stage4 proactive model costs require a separate explicit opt in',async()=>{
+  assert.equal(await page.getByLabel('模型生成主动分享',{exact:true}).isChecked(),false);
+  await page.getByLabel('主动交流模式').selectOption('quiet');
+  await page.getByLabel('每日主动分享Token预算').fill('3000');
+  await page.getByRole('button',{name:'保存陪伴设置',exact:true}).click();
+  await chat(page);await page.getByRole('button',{name:'关系与日常',exact:true}).click();
+  assert.equal(await page.getByLabel('主动交流模式').inputValue(),'quiet');
+  assert.equal(await page.getByLabel('每日主动分享Token预算').inputValue(),'3000');
+ });
+ await check('stage4 multi-day plan form records the selected persona plan',async()=>{
+  await page.getByLabel('生活计划名称').fill('UI模拟三天计划');await page.getByLabel('生活计划天数').fill('3');await page.getByRole('button',{name:'创建多日计划',exact:true}).click();await page.getByText('UI模拟三天计划',{exact:true}).waitFor();assert.match(await page.locator('.life-center').innerText(),/已完成 0\/3 步/);
+ });
+ await check('stage4 diary date navigation is usable without inventing records',async()=>{
+  await page.getByLabel('浏览日记日期').fill('2026-11-15');
+  assert.match(await page.locator('.life-center').innerText(),/这一天还没有记录|尚无日记记录/);
  });
  await check('memory editor retains the record and exposes importance privacy and provenance',async()=>{
   await page.getByRole('button',{name:'本地数据',exact:true}).click();const row=page.locator('.memory').filter({hasText:'人格A的独立记忆'});await row.getByRole('button',{name:'编辑',exact:true}).click();

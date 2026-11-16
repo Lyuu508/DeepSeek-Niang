@@ -618,3 +618,81 @@ async fn context_budget_rejection_keeps_input_and_closes_the_generation_without_
             .any(|m| m.role == "user" && m.content == "本次输入必须保留")
     );
 }
+
+fn seed_life(service: &ChatService) -> String {
+    use companion_core::companion::{CompanionPreferences, living::LifePlanInput};
+    let mut s = service.store.lock().unwrap();
+    s.set_device_platform("windows").unwrap();
+    let p = s.active_persona_id().unwrap();
+    s.save_companion_preferences(
+        &p,
+        &CompanionPreferences {
+            proactive_enabled: true,
+            proactive_model_enabled: true,
+            proactive_token_budget: 20000,
+            quiet_start_minute: 0,
+            quiet_end_minute: 0,
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    s.create_life_plan(
+        &p,
+        &LifePlanInput {
+            name: "有来源的虚拟计划".into(),
+            kind: "create".into(),
+            steps: 1,
+            duration_ms: 30000,
+        },
+        1000000,
+    )
+    .unwrap();
+    for n in 0..3 {
+        s.advance_life_at(1000000 + n * 30000, 1000000 + n * 30000, true)
+            .unwrap();
+    }
+    p
+}
+#[tokio::test]
+async fn proactive_model_uses_real_loopback_http_and_records_measured_life_tokens_once() {
+    let (endpoint, requests, task) = server(vec![success("合成分享：虚拟创作安排结束了。")]).await;
+    let (service, _) = service(endpoint);
+    let p = seed_life(&service);
+    assert_eq!(service.life_tick(1090000, 1090000, true).await.unwrap(), 1);
+    assert_eq!(service.life_tick(1120000, 1120000, true).await.unwrap(), 0);
+    let request = requests.lock().unwrap();
+    assert_eq!(request.len(), 1);
+    assert_eq!(request[0].body["max_tokens"], 256);
+    assert!(request[0].body.to_string().contains("virtual"));
+    assert!(!request[0].body.to_string().contains(FIXTURE_KEY));
+    drop(request);
+    assert_eq!(
+        service
+            .store
+            .lock()
+            .unwrap()
+            .life_usage_window(&p, 0, 2000000)
+            .unwrap()["by_activity"][0]["prompt_tokens"],
+        9
+    );
+    task.abort();
+}
+#[tokio::test]
+async fn absent_key_and_disabled_proactive_never_open_provider_connection() {
+    let (endpoint, requests, task) = server(vec![]).await;
+    let (service, _) = service(endpoint);
+    let p = seed_life(&service);
+    service.vault.delete().unwrap();
+    assert_eq!(service.life_tick(1090000, 1090000, true).await.unwrap(), 0);
+    assert!(requests.lock().unwrap().is_empty());
+    service.vault.set(&secret()).unwrap();
+    {
+        let mut s = service.store.lock().unwrap();
+        let mut prefs = s.companion_preferences(&p).unwrap();
+        prefs.proactive_enabled = false;
+        s.save_companion_preferences(&p, &prefs).unwrap();
+    }
+    assert_eq!(service.life_tick(1120000, 1120000, true).await.unwrap(), 0);
+    assert!(requests.lock().unwrap().is_empty());
+    task.abort();
+}

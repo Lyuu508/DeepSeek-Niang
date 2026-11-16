@@ -1,3 +1,4 @@
+import {notifyShare} from './notifications';
 import {StrictMode,useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import type {Bootstrap,ChatEvent,ChatFailure,ChatMessage,ChatSettings,Diagnostics,CompanionSnapshot} from '@deepseek/contracts';
@@ -66,6 +67,9 @@ function App(){
  const [boot,setBoot]=useState<Bootstrap|null>(null);
  const [companion,setCompanion]=useState<CompanionSnapshot|null>(null);
  const [page,setPage]=useState<'chat'|'settings'|'storage'|'personas'|'sync'|'companion'>('chat');
+ const handledShares=useRef(new Set<string>());
+ useEffect(()=>{if(!companion||companion.persona_id!==boot?.active_persona_id||runtimeMode!=='native')return;for(const share of companion.life.proactive_messages){if(share.state!=='delivered'||share.read_at_ms)continue;const key=companion.persona_id+'/'+share.id;if(handledShares.current.has(key))continue;if(page==='chat'&&document.visibilityState==='visible'){handledShares.current.add(key);void native.shareReceipt(companion.persona_id,share.id,true,share.notification_state??'pending').catch(()=>handledShares.current.delete(key));}else if(companion.preferences.notifications_enabled){handledShares.current.add(key);void notifyShare(companion,share.id,'DeepSeek娘 · 新分享').catch(()=>handledShares.current.delete(key));}}},[companion,page,boot?.active_persona_id]);
+
  const [allMessages,setAllMessages]=useState<Record<string,ChatMessage[]>>({});
  const [drafts,setDrafts]=useState<Record<string,string>>({});
  const [error,setError]=useState<ChatFailure|null>(null);const [loading,setLoading]=useState(false);

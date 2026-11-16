@@ -56,6 +56,8 @@ def verify(apk, signed=True, test_package=False, fresh_test=False):
     for setting in ['allowBackup', 'usesCleartextTraffic']:
         assert re.search(rf'android:{setting}\([^)]*\)=(?:false|\(type 0x12\)0x0)(?:\s|$)', manifest), f'Unsafe APK manifest setting: {setting}'
     assert 'android:sharedUserId' not in manifest, 'Shared application UID is not allowed'
+    for unused in ['android.permission.RECEIVE_BOOT_COMPLETED','android.permission.WAKE_LOCK','app.tauri.notification.LocalNotificationRestoreReceiver','app.tauri.notification.TimedNotificationPublisher']:
+        assert unused not in manifest, 'Unexpected notification background capability: '+unused
     certificate = None
     if signed:
         signature = subprocess.check_output(sdk_command(tools,'apksigner','verify','--verbose','--print-certs',str(apk)), text=True)

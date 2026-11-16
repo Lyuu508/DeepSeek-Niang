@@ -41,6 +41,15 @@ def prepare(project: Path, branding: Path | None = None, unsigned_test: bool = F
         if activity.get(name) == ".MainActivity":
             activity.set(f"{{{ANDROID}}}label", "@string/main_activity_title")
     ET.indent(tree, space="    ")
+    # Immediate opt-in notifications only: do not accept a boot receiver / wake-lock from a library.
+    tools_ns="http://schemas.android.com/tools"
+    ET.register_namespace("tools",tools_ns)
+    for unused in ["android.permission.RECEIVE_BOOT_COMPLETED", "android.permission.WAKE_LOCK"]:
+        if not any(p.get(name)==unused for p in root.findall("uses-permission")):
+            ET.SubElement(root,"uses-permission",{name:unused,"{"+tools_ns+"}node":"remove"})
+    for receiver in ["app.tauri.notification.TimedNotificationPublisher", "app.tauri.notification.LocalNotificationRestoreReceiver"]:
+        if not any(p.get(name)==receiver for p in application.findall("receiver")):
+            ET.SubElement(application,"receiver",{name:receiver,"{"+tools_ns+"}node":"remove"})
     tree.write(manifest, encoding="utf-8", xml_declaration=True)
     activity = project / "app/src/main/java/io/local/deepseekcompanion/MainActivity.kt"
     activity.parent.mkdir(parents=True, exist_ok=True)

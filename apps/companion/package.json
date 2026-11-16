@@ -1,6 +1,6 @@
 {
   "name": "@deepseek/companion",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,8 +10,9 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@deepseek/contracts": "0.0.4",
+    "@deepseek/contracts": "0.0.5",
     "@tauri-apps/api": "2.12.4",
+    "@tauri-apps/plugin-notification": "2.8.1",
     "jsqr": "1.4.0",
     "react": "19.3.1",
     "react-dom": "19.3.1"

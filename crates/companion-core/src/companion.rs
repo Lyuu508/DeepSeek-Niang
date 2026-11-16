@@ -1,6 +1,7 @@
 //! Persistent companion foundation. Rules use actual local evidence, never model-written scores.
 pub mod bond;
 pub mod life;
+pub mod living;
 pub mod memory;
 pub mod recall;
 #[cfg(test)]
@@ -45,6 +46,10 @@ pub struct CompanionPreferences {
     pub life_enabled: bool,
     pub preferred_activity: String,
     pub proactive_enabled: bool,
+    pub proactive_mode: String,
+    pub proactive_model_enabled: bool,
+    pub proactive_token_budget: i64,
+    pub notifications_enabled: bool,
     pub proactive_interval_minutes: i64,
     pub proactive_daily_limit: i64,
     pub quiet_start_minute: i64,
@@ -63,6 +68,10 @@ impl Default for CompanionPreferences {
             life_enabled: true,
             preferred_activity: "auto".into(),
             proactive_enabled: false,
+            proactive_mode: "natural".into(),
+            proactive_model_enabled: false,
+            proactive_token_budget: 4096,
+            notifications_enabled: false,
             proactive_interval_minutes: 240,
             proactive_daily_limit: 2,
             quiet_start_minute: 1320,
@@ -73,7 +82,11 @@ impl Default for CompanionPreferences {
 }
 impl CompanionPreferences {
     pub fn validate(&self) -> Result<()> {
-        if !(1..=12).contains(&self.memory_limit)
+        if !matches!(
+            self.proactive_mode.as_str(),
+            "off" | "quiet" | "natural" | "active" | "custom"
+        ) || !(0..=100000).contains(&self.proactive_token_budget)
+            || !(1..=12).contains(&self.memory_limit)
             || !(256..=6000).contains(&self.memory_budget_bytes)
             || !(8000..=120000).contains(&self.context_budget_bytes)
             || !(60..=1440).contains(&self.proactive_interval_minutes)
@@ -92,6 +105,11 @@ impl CompanionPreferences {
                     | "recall"
                     | "wait"
                     | "share"
+                    | "wake"
+                    | "read"
+                    | "interest"
+                    | "create"
+                    | "journal"
             )
         {
             return Err(Error::Invalid("companion preferences range"));
@@ -300,7 +318,7 @@ impl Store {
             result.insert(purpose.into(),json!({"requests":row.0,"measured_requests":row.1,"unknown_requests":row.0-row.1,"prompt_tokens":row.2,"completion_tokens":row.3}));
         }
         Ok(
-            json!({"day_start_ms":start,"timezone_offset_minutes":offset,"by_purpose":result,"memory_and_life_provider":"local_rules_no_model_calls"}),
+            json!({"day_start_ms":start,"timezone_offset_minutes":offset,"by_purpose":result,"memory_and_life_provider":"local_rules; optional_budgeted_deepseek_shares", "weekly":self.life_usage_window(persona,now-7*86400000,now+1)?}),
         )
     }
 }

@@ -836,7 +836,11 @@ fn v6_chat_archive_migration_backs_up_original_rows_and_rolls_back_atomically() 
         let backups = std::fs::read_dir(&dir)
             .unwrap()
             .filter_map(|p| p.ok())
-            .filter(|p| p.file_name().to_string_lossy().contains("pre-v7-"))
+            .filter(|p| {
+                p.file_name()
+                    .to_string_lossy()
+                    .contains(&format!("pre-v{}-", crate::storage::SCHEMA_VERSION))
+            })
             .collect::<Vec<_>>();
         assert_eq!(backups.len(), 1);
         {
