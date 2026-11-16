@@ -164,7 +164,7 @@ pub(crate) fn policy(
         params![p, now - 86400000],
         |r| r.get(0),
     )?;
-    let busy:bool=db.query_row("SELECT EXISTS(SELECT 1 FROM chat_requests r JOIN conversation_personas c ON c.conversation_id=r.conversation_id WHERE c.persona_id=?1 AND r.state IN ('pending','streaming'))",[p],|r|r.get(0))?;
+    let busy:bool=db.query_row("SELECT EXISTS(SELECT 1 FROM chat_requests r JOIN conversation_personas c ON c.conversation_id=r.conversation_id WHERE c.persona_id=?1 AND r.state IN ('sending','generating'))",[p],|r|r.get(0))?;
     let recent:Option<i64>=db.query_row("SELECT max(m.created_at_ms) FROM messages m JOIN conversation_personas c ON c.conversation_id=m.conversation_id WHERE c.persona_id=?1 AND m.role='user'",[p],|r|r.get(0))?;
     Ok(count < limit && !busy && !recent.is_some_and(|v| now >= v && now - v < 120000))
 }

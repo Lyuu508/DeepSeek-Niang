@@ -622,3 +622,18 @@ fn failed_schema8_upgrade_rolls_back_all_rebuilds_and_retains_backup() {
     );
     std::fs::remove_dir_all(dir).unwrap();
 }
+
+#[test]
+fn active_foreground_chat_blocks_share_even_after_recent_interaction_window() {
+    let (mut s, p) = setup();
+    candidate(&mut s, &p);
+    let input = crate::chat::StartChat {
+        request_id: Uuid::new_v4().to_string(),
+        conversation_id: p.clone(),
+        text: Some("前台合成测试请求".into()),
+        regenerate_user_id: None,
+    };
+    s.begin_chat(&input, &ChatSettings::default()).unwrap();
+    let now = crate::chat::now_ms() + 180000;
+    assert!(s.prepare_proactive_share(now, 1090000).unwrap().is_none());
+}

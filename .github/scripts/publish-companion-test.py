@@ -63,7 +63,7 @@ def automation(tests):
     assert 'test result: FAILED' not in logs['rust-tests.txt']
     rust=sum(map(int,re.findall(r'test result: ok\. (\d+) passed; 0 failed; 0 ignored;',logs['rust-tests.txt'])))
     py=re.search(r'Ran (\d+) tests',logs['python-tests.txt'])
-    assert rust>=141 and py and int(py[1])>=24 and '\nOK' in logs['python-tests.txt']
+    assert rust>=142 and py and int(py[1])>=24 and '\nOK' in logs['python-tests.txt']
     node=re.search(r'(?:# )?pass (\d+)',logs['sync-model.txt']);assert node and int(node[1])>=5
     ui={mode:read(tests/mode/'results.json') for mode in ['ui','ui-isolated']}
     assert all(item['passed']>=32 and 'Mock' in item['scope'] for item in ui.values())

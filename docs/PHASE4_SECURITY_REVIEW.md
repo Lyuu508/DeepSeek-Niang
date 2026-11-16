@@ -12,4 +12,4 @@ Android manifest 明确移除依赖库携带的 RECEIVE_BOOT_COMPLETED、WAKE_LO
 
 API Key 仍使用 DPAPI/Android Keystore，模型生成无 Key 不建立收费任务，不输出密钥。默认保留关闭/模型显式同意；相关记忆受已有 API 隐私许可过滤。未知 POST 保留额度不自动重放。系统通知正文为通用提示，不展示私人聊天；系统 API 成功不等于已读。
 
-发布门禁检查原生安装包/测试来源同 SHA、官方签名和历史证书、完整性和禁止私人文件模式；保留旧版本资产。141项 Rust、原24项 Python、5项 Node、schema、Clippy和品牌/UI门禁不降低。机器级代码签名、实体设备与真实 API 均按实际证据记录。
+发布门禁检查原生安装包/测试来源同 SHA、官方签名和历史证书、完整性和禁止私人文件模式；保留旧版本资产。142项 Rust、原24项 Python、5项 Node、schema、Clippy和品牌/UI门禁不降低。机器级代码签名、实体设备与真实 API 均按实际证据记录。
