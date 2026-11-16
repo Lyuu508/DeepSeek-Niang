@@ -1,3 +1,35 @@
+# Android 安装说明
+
+当前下载：**v0.0.5 测试版，Android 10+、ARM64**。[下载 APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.5/DeepSeek-Niang_0.0.5_android-arm64-isolated-test.apk)。普通用户不需要 Android Studio、SDK 或 USB 调试。
+
+## 先确认安装身份
+
+本版应用名为“DeepSeek娘 扫码测试版”，安装身份 `io.local.deepseekcompanion.test2`，versionCode 为 1005。已用官方工具核对与 v0.0.4 test2 同证书，满足该测试身份更新条件；真实手机覆盖升级仍待验收。
+
+**不能覆盖 v0.0.1 原身份或早期 `.test`，也不能自动读取其私有数据。** 更早的 test2 仍需按实际升级跨度验证。保留旧应用及数据；提示签名冲突时停止，不通过卸载或清数据强行安装。详见[升级与数据保护](USAGE.md#升级与数据保护)。
+
+## 安装步骤
+
+1. 下载 APK，对照同版 [SHA256SUMS.txt](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.5/SHA256SUMS.txt) 校验文件。也可先在电脑计算 SHA-256，再传到手机。
+2. 按 Android 提示，仅为所用文件管理器或浏览器临时允许安装来源；安装完成后可撤销权限，不关闭系统防护。
+3. 打开正确的“扫码测试版”。在设置中验证安全存储，再在手机本地配置自己的 DeepSeek API Key，或按下文通过可信电脑授权配置。
+4. 检查旧人格、聊天和记忆是否保留；有异常先保留现状并反馈，不重复卸载、降级或重建数据。
+
+## 连接电脑与独立使用
+
+电脑与手机都更新到 v0.0.5，连接可互访局域网。电脑点击“连接手机”，手机进入连接页点击“扫一扫”，需要相机权限；相机识别在本机进行。扫码也会授权电脑将已有 Key 一次写入本次认证手机安全存储，重新扫码可能更新手机已有配置。二维码本身不含 Key，普通同步不传 Key。完整边界见[连接说明](USAGE.md#连接电脑与手机)。
+
+手机 Key 配置成功后可以独立联网聊天，不要求电脑开机。手机查看已同步生活记录，但不独立执行 Windows 生活任务。应用被停止或系统限制时，不保证实时同步或系统通知，没有云推送。
+
+## 数据与权限
+
+Key 由 Android Keystore 保护的私有存储保存，业务数据库和迁移备份未做数据库级加密。自动云备份被禁用，目前没有完整一键加密导出和跨安装身份迁移工具；系统不允许导出时保留原应用，不绕过沙箱。升级前保全方式和恢复限制见[使用说明](USAGE.md#升级与数据保护)。
+
+APK 构建、签名及清单校验不能替代真实相机、键盘、Keystore、覆盖升级或通知体验。当前范围见[验证说明](VALIDATION.md)。自行编译请看[开发与构建](BUILDING.md)，下方为历史构建与安装记录。
+
+<details>
+<summary>历史开发与发布说明（原文保留，不代表当前状态）</summary>
+
 # Android 安装与 Windows 本机构建 APK
 
 当前版本 0.0.1，[下载本次APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.1/DeepSeek-Niang_0.0.1_android-arm64.apk)。正式原始PNG已导入，已完成完整构建和签名/版本/ABI/图标资源核验，实际范围见RELEASE_0.0.1。旧dev.1 APK不作为本版附件。目标Android 10/API 29+、ARM64；versionCode=1001，高于旧包1000，签名证书一致。已作为GitHub预发布提供下载，仍是开发签名调试包，尚未真机安装运行；以随包 BUILD-RESULTS.json 为准。
@@ -54,3 +86,5 @@ npm run tauri -- android build --apk --debug --target aarch64
 遇到 Java 版本错误，应让 JAVA_HOME 与 Gradle 所用 JDK 一致；遇到 NDK 缺失，检查 NDK_HOME 下是否有 toolchains\llvm；遇到证书/代理错误，配置受信任 CA，不禁用 TLS 校验。真实密钥只在手机设置页输入。
 
 本次从正式PNG重新构建完整APK并核验资源；真实设备运行仍需独立验收。实际打包日志与签名以本次BUILD-RESULTS为准。若已有dev.1安装，使用原签名覆盖；签名与Key不可放源码ZIP。原签名缺失时不能靠换applicationId或卸载来冒充升级成功。
+
+</details>

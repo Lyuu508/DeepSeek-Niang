@@ -1,3 +1,21 @@
+# 测试签名与升级兼容
+
+当前公开版本为 v0.0.5 / Android 1005。[签名身份](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.5/SIGNING-IDENTITIES.json)与[新旧 APK 对照](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.5/ANDROID-SIGNING-REFERENCES.json)均为公开资料，不包含私钥。
+
+| 平台 | 当前测试身份 |
+| --- | --- |
+| Android | `io.local.deepseekcompanion.test2`，证书 SHA-256 `fefb57342751c7bd5ef8271e4a8b09f8702c0285e0120e8407b557d20dbbf153` |
+| Windows | 自签名测试证书 SHA-256 `069f0150a9698a8178bdaf7dfea13f5509185aa69b9ba940f5473edbafa8af62`，不是公共 CA 信任发布者 |
+
+本版已核对实际 v0.0.4 与 v0.0.5 APK 同证书、版本代码递增；满足该测试身份更新条件，但真实手机覆盖升级未验收。`upgrade_compatible_with_test2_v0_0_4` 与原身份兼容是不同范围，不能把报告中历史通用 `upgrade_compatible: false` 解释为所有 test2 更新都不可行。
+
+v0.0.1 原身份及早期 `.test` 与本版不同，不能覆盖或自动读取其私有数据。保留旧应用、不卸载、不清数据，完整跨身份迁移尚未实现。普通用户看[升级说明](USAGE.md#升级与数据保护)，无需生成、导入或接触签名私钥。
+
+协作者继续复用仓库已有加密签名 bundle；缺失或不匹配必须停止，不能重建替代身份。旧版本公开 APK、身份文件和证书对照是验证依赖，不因附件整理而改名或删除。本次未读取 Secrets 元数据或值，也未执行签名、发布或证书信任操作。以下“一次性配置”是已完成历史，不是后续更新必须重做的步骤。
+
+<details>
+<summary>历史开发与发布说明（原文保留，不代表当前状态）</summary>
+
 # 当前阶段3追加候选与后续协作者复用
 
 本版 `release-companion-test.yml` 仅恢复**既有**完整 `TEST_RELEASE_SIGNING_B64`，签名配置缺失/不完整/证书不符时失败，禁止生成替代私钥。无需一次性 `SIGNING_SECRETS_TOKEN`，不再执行首次初始化。具有同仓库Actions权限的其他账号直接运行授权版本工作流，Secret归仓库而非ChatGPT账号；无需在聊天传递任何值。
@@ -47,3 +65,5 @@
 工作流会与公开 `SIGNING-IDENTITIES.json` 中的真实证书指纹比较；发现身份已公开但 bundle 丢失时拒绝重新生成，避免再次破坏覆盖更新。后续 `.test2` APK 必须保持该 applicationId 和证书。新的版本仍需用户明确授权，按项目版本序列递增。
 
 GitHub Secrets API 不能读回秘密值。换仓库不是换账号；若未来要迁移到另一个仓库，应另行安排受保护的备份/迁移，不能仅复制公开证书来恢复私钥。
+
+</details>

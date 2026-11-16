@@ -1,3 +1,49 @@
+# 开发与构建
+
+本文当前入口对应 v0.0.5。普通用户请用[安装包](../README.md#下载-v005-测试版)与[使用说明](USAGE.md)，不需要本页工具链。
+
+## 开发环境
+
+使用仓库现有检出，先阅读 [AGENTS.md](../AGENTS.md) 和 [SECURITY.md](../SECURITY.md)。Node.js 至少 22.12（CI 为 24），Rust 1.99.0、Clippy、Python 3、C/C++ 编译工具；使用已提交的 npm／Cargo 锁文件。UI 测试需要 Chromium。每个云任务已有隔离环境，除非用户明确要求，不另建 Git worktree。
+
+在仓库根目录执行：
+
+```bash
+npm ci --ignore-scripts
+cargo test --workspace --locked
+cargo clippy --workspace --all-targets --locked -- -D warnings
+npm run build
+python3 scripts/check_schema.py
+python3 scripts/version.py
+python3 -m unittest discover -s tests -p 'test_*.py'
+node --test tests/sync-model.test.mjs
+node scripts/check-branding.mjs
+npm run test:ui
+```
+
+**先完成 Rust 测试，再执行 Node 同步及 UI 测试。** Rust 测试产生 `.cache/phase2-qr.json` 和 `.cache/phase2-quick-qr.json`，后两者读取这些夹具；缺文件不能判为二维码功能失败。UI 是显式夹具，不验证真实 DeepSeek、系统 Key 存储或手机驱动。测试包横幅模式可另运行 `VITE_COMPANION_TEST_PACKAGE=1 npm run test:ui`。
+
+## 启动前端与原生开发窗口
+
+```bash
+npm run dev --workspace @deepseek/companion -- --host 127.0.0.1
+```
+
+默认端口 1420；可在末尾加 `--port 1422` 等空闲端口。根脚本的参数转发不能替代上面的 workspace 形式。普通浏览器只有预览能力，开发环境显式 `?test=mock` 才使用标记过的内存夹具，不要填真实 Key。
+
+Windows 原生开发使用 `npm run tauri -- dev`，需要 MSVC、Windows SDK 与 WebView2；Linux 浏览器预览不代表 Windows 原生启动。若云环境已准备 `/workspace/.cache` 工具链，可在仓库根目录使用 `python3 scripts/cloud_env.py cargo …` 激活；该帮助脚本不表示 Android 工具链也已经安装。
+
+## 原生构建与发布边界
+
+Windows 需要 Visual Studio C++ Build Tools、Windows SDK、WebView2 和 Rust MSVC target。Android 当前 CI 使用完整 JDK 21、SDK Platform 36、Build-Tools 36.0.0、NDK 28.2.13676358 及 ARM64 target；用户需自行接受相关许可。具体构建选项以 `scripts/build-windows.ps1`、`scripts/build-android.sh` 和 `.github/workflows/native-packages.yml` 为准；本地开发包不能冒充已发布 test2 更新包，不调用历史生成签名分支。
+
+v0.0.5 已发布，**不要重跑发布器来修改说明，也不要复用版本号或移动 Tag**。现有 `release-companion-test.yml` 固定该版，恢复原测试签名、核对 v0.0.4 APK、同源门禁及摘要后才允许显式发布；不是可自动发布任意下一版的通用工作流。普通 CI 不公开 Release。
+
+签名连续性见[签名说明](TEST_SIGNING_SETUP.md)，附件整理影响见[展示与发布信息审查](PRODUCT_PRESENTATION_REVIEW.md)。本次文档整理没有修改任何脚本或工作流。下方历史命令和工具链背景保留供追溯，其中旧版本、安装身份及授权状态不适用于当前发布。
+
+<details>
+<summary>历史开发与发布说明（原文保留，不代表当前状态）</summary>
+
 # 阶段3追加候选0.0.4 / Android1004
 
 沿用现有CI的独立Windows/Android构建与现有持久test2签名；平台、applicationId不变。先CI全绿，再手动运行 `release-companion-test.yml`，指定完整 main SHA、同源CI ID、authorized_version=0.0.4。新增 `publish_after_checks` 默认 false，只上传已验证同源安装包和日志到草稿，不创建Tag/公开Release。版本选择待主人确认；不得自动传true。
@@ -131,3 +177,5 @@ Windows 的 Python 命令可改为 `py -3`。辅助脚本仅处理真实生成�
 需要密钥仅在设备本地输入；不需要上传聊天数据库。未验证项在验收矩阵继续保持待验收。
 
 旧库v1/v2首次启动会在原私有目录生成一致性 .pre-v3-UUID.bak，再事务迁移；本次仅合成旧库实测。用户数据不进源码，实机升级前保留备份，失败别删库。回滚方法/限制见 PERSONA_MIGRATION.md。
+
+</details>

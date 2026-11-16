@@ -1,3 +1,48 @@
+# 验证范围与待核实问题
+
+## v0.0.5 发布证据
+
+发布源码：`9248ffa1a91a5636bc5c25202a11cc1de50f0820`，Windows 与 Android 报告一致。查看[构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.5/BUILD-RESULTS.json)、[同源 CI](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43817794325)和[签名发布运行](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43819179372)。本文描述已发布版本，不把本次文档分支的检查当成重新构建安装包。
+
+| 层次 | 已有证据 | 不能推出的结论 |
+| --- | --- | --- |
+| 核心逻辑与 SQLite | Linux 142 项、Windows 143 项 Rust 测试；迁移、隔离、任务、恢复等回归 | 用户真实旧库一定无问题 |
+| 脚本与界面构建 | 24 项 Python、5 项 Node；前端、Clippy、schema 和品牌检查 | 所有设备上的完整运行体验通过 |
+| 同步 | 真实回环 TLS 1.3／双向认证与数据库交换 | 家庭路由器、Wi-Fi、Windows 防火墙或手机后台通过 |
+| 模型客户端 | 回环 HTTP／SSE 提供者夹具 | 已使用真实 DeepSeek 或核对真实账单 |
+| 浏览器 UI | 普通／测试包各 32 项显式 UI 夹具 | 已在 Windows WebView 或 Android 真机操作通过 |
+| Windows 安装 | 中文安装控件、安装结果、进程和原生窗口出现 | 完整内容渲染、真实 API 或用户旧安装升级通过 |
+| Android 包 | ARM64、版本、身份、官方签名校验及 v0.0.4 同证书 | 真机安装、覆盖升级、Keystore、相机和通知已验收 |
+
+完整测试文本与截图仍在同版 Release，历史资料保持原位置。[阶段 4 实现报告](PHASE4_REPORT.md)描述测试范围；[实机清单](PHASE4_ACCEPTANCE.md)全部是待用户实际执行事项，不是已通过记录。
+
+## 待核实问题
+
+### Windows 空白窗口截图
+
+v0.0.5 的[发布截图](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.5/windows-installed-window.png)只有空白主窗口和标题栏。`.github/scripts/windows-package-smoke.ps1` 检查安装退出码、进程存活和窗口句柄，然后截图，没有断言前端内容加载。现有证据不足以判断截图过早还是内容加载存在问题，也不能证明完整界面正常。
+
+尚无已验证的通用修复，需在独立代码／平台任务中复现；本轮未改代码或降低测试要求。用户若持续白屏，保留数据并提供系统、版本、WebView2 状态及脱敏错误信息，见 [FAQ](FAQ.md#windows-打开后持续白屏怎么办)。
+
+### 旧界面提示与可选模型分享
+
+部分界面帮助文字仍概括为“本地规则、不额外调用模型”，而 v0.0.5 已有独立模型主动分享开关；部分生活来源记忆的显示标签也未区分 `life` 来源。这些文字需要单独代码修订。当前文档按实际开关解释：普通日程、结构化日记及规则处理不调用模型；允许模型分享和聊天引用资料会产生用量。
+
+### 仍待实际设备验收
+
+真实 DeepSeek 及账单、Android 覆盖安装与安全存储、家庭局域网、相机／键盘／系统栏、通知和长期任务恢复均需用户设备证据。本次没有这些设备、真实 Key 或私人旧库；未将其标成通过。
+
+## 首页截图来源
+
+首页两张图片来自云环境对 v0.0.5 源码执行 `npm run test:ui` 后保留的浏览器截图，不是原生运行截图。使用当前 UI 的合成状态，不包含真实 Key 或对话；模拟提示原样保留，未裁掉或替换。来源、文件摘要见[图片说明](images/README.md)。
+
+## 历史验证记录
+
+以下原文描述阶段 0～3 的历史环境、计数、网络阻碍与候选状态，不代表当前状态。历史失败和测试资料仍保留，不因本次首页整理而删除。
+
+<details>
+<summary>历史开发与发布说明（原文保留，不代表当前状态）</summary>
+
 # 阶段3追加修复验证入口
 
 候选0.0.4/1004的修复、测试性质与限制见 [追加报告](PHASE3_FOLLOWUP_REPORT.md)、[扫码根因](PHASE3_SCAN_REPAIR.md)、[本地证据](validation-phase3-followup/README.md)、[实机清单](PHASE3_FOLLOWUP_ACCEPTANCE.md)。当前本地115 Rust、24 Python、5 Node、普通/隔离UI各28项；原21项内核和全部原用例保留，无忽略。实际回环TLS不等于家庭局域网，UI/HTTP提供者是明确夹具，无真实DeepSeek或手机通道。
@@ -104,3 +149,5 @@ Windows 安装包、Android APK、系统密钥存储、真实 DeepSeek SSE、设
 源码归档排除 `.git`、node_modules、target、dist、缓存、DB、密钥、备份和候选仓库快照；文档保留必要审查 hash 与公开来源链接。
 
 **GitHub 未更新，本次修改仅保留在本地。**
+
+</details>
