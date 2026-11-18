@@ -1,0 +1,15 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "desktop-pet-settings",
+  "description": "Settings for the Windows desktop pet.",
+  "windows": [
+    "main"
+  ],
+  "platforms": [
+    "windows"
+  ],
+  "permissions": [
+    "allow-desktop-pet-settings",
+    "allow-desktop-pet-configure"
+  ]
+}

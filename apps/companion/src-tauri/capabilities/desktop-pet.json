@@ -1,0 +1,18 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "desktop-pet",
+  "description": "Only state, window controls, and current-persona quick chat.",
+  "windows": [
+    "pet"
+  ],
+  "platforms": [
+    "windows"
+  ],
+  "permissions": [
+    "allow-pet-snapshot",
+    "allow-pet-motion",
+    "allow-pet-action",
+    "allow-pet-send",
+    "allow-pet-stop"
+  ]
+}

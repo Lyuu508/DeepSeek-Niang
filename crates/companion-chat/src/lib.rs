@@ -38,6 +38,15 @@ impl ChatFailure {
             "STREAM_INCOMPLETE" => ("回复流意外中断，已保留收到的内容。", true),
             "STREAM_INVALID" => ("服务返回了无法识别的流式数据。", true),
             "OUTPUT_LIMIT" => ("回复达到本地长度限制，已保留当前内容。", false),
+            "PET_PERSONA_CHANGED" => (
+                "当前人格已切换。请核对桌宠上的名字后再发送，草稿已保留。",
+                false,
+            ),
+            "PET_WINDOW_ERROR" => ("桌宠窗口操作失败，请从托盘找回桌宠或重新打开应用。", true),
+            "PET_STARTUP_ERROR" => (
+                "Windows 登录启动设置未保存。请检查本机当前账户的权限。",
+                true,
+            ),
             "CANCELLED" => ("生成已停止。", false),
             "BUSY" => ("已有回复正在生成，请先停止或等待完成。", false),
             "DATA_VERSION_CONFLICT" => (

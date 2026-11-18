@@ -696,3 +696,50 @@ async fn absent_key_and_disabled_proactive_never_open_provider_connection() {
     assert!(requests.lock().unwrap().is_empty());
     task.abort();
 }
+
+#[tokio::test]
+async fn pet_chat_rejects_a_stale_persona_and_writes_to_the_shared_permanent_thread() {
+    let (endpoint, requests, server_task) = server(vec![success("桌宠的实际测试回复")]).await;
+    let (service, _) = service(endpoint);
+    let (first, second) = {
+        let mut store = service.store.lock().unwrap();
+        let first = store.personas().unwrap().remove(0);
+        let second = store.create_persona("另一位", "保持平静").unwrap();
+        store.select_persona(&second.id).unwrap();
+        (first, second)
+    };
+    let (observe, mut events) = observer();
+    let stale = service
+        .start_for_active_persona(
+            input(&first.main_conversation_id, "这条草稿不应被误送"),
+            &first.id,
+            observe.clone(),
+        )
+        .unwrap_err();
+    assert_eq!(stale.code, "PET_PERSONA_CHANGED");
+    assert!(requests.lock().unwrap().is_empty());
+    let prepared = service
+        .start_for_active_persona(
+            input(&second.main_conversation_id, "桌宠快聊实验"),
+            &second.id,
+            observe,
+        )
+        .unwrap();
+    let finished = final_event(&mut events).await;
+    assert_eq!(finished.id, prepared.assistant_id);
+    server_task.await.unwrap();
+    let store = service.store.lock().unwrap();
+    assert!(
+        store
+            .chat_messages(&first.main_conversation_id)
+            .unwrap()
+            .is_empty()
+    );
+    let shared = store.chat_messages(&second.main_conversation_id).unwrap();
+    assert_eq!(shared.iter().filter(|m| m.role == "user").count(), 1);
+    assert!(
+        shared
+            .iter()
+            .any(|m| m.id == finished.id && m.state == "complete")
+    );
+}

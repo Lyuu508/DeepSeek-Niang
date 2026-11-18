@@ -78,6 +78,25 @@ impl ChatService {
         input: StartChat,
         observer: Observer,
     ) -> Result<PreparedChat, ChatFailure> {
+        self.start_checked(input, None, observer)
+    }
+
+    /// The desktop pet submits exactly to the persona shown beside its composer.
+    pub fn start_for_active_persona(
+        self: &Arc<Self>,
+        input: StartChat,
+        persona_id: &str,
+        observer: Observer,
+    ) -> Result<PreparedChat, ChatFailure> {
+        self.start_checked(input, Some(persona_id), observer)
+    }
+
+    fn start_checked(
+        self: &Arc<Self>,
+        input: StartChat,
+        required_persona: Option<&str>,
+        observer: Observer,
+    ) -> Result<PreparedChat, ChatFailure> {
         let mut active = self.active.lock().map_err(|_| ChatFailure::new("BUSY"))?;
         if active.changing_key || !active.runs.is_empty() {
             return Err(ChatFailure::new("BUSY"));
@@ -90,6 +109,12 @@ impl ChatService {
                 .store
                 .lock()
                 .map_err(|_| ChatFailure::new("STORAGE_ERROR"))?;
+            if let Some(persona) = required_persona
+                && (store.active_persona_id()? != persona
+                    || store.permanent_persona(&input.conversation_id)?.id != persona)
+            {
+                return Err(ChatFailure::new("PET_PERSONA_CHANGED"));
+            }
             let settings = store.settings_for_conversation(&input.conversation_id)?;
             let prepared = store.begin_chat(&input, &settings)?;
             let prompt = match store.companion_context(&prepared.conversation_id, &settings) {

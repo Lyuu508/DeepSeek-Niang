@@ -66,3 +66,5 @@
 
 /* Stage 4 stays inside the existing status/settings rail and mobile page. */
 .life-center{display:grid;gap:16px;min-width:0}.life-center .settings-card{min-width:0}.life-center progress{width:100%;accent-color:var(--accent,#478cda)}.life-actions{display:flex;gap:8px;flex-wrap:wrap}.life-center form{display:grid;gap:10px}.life-center input[type=date]{max-width:155px}.life-center small{display:block;overflow-wrap:anywhere}.life-center .card-heading{flex-wrap:wrap}.life-center .evidence-list{max-height:340px;overflow:auto;padding-right:6px}.life-center details{padding:8px 0}.life-center p{overflow-wrap:anywhere}
+
+.desktop-pet-entry{padding:6px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font-size:12px}.desktop-pet-settings .check-row{margin:9px 0}

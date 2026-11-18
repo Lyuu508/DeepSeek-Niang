@@ -3,6 +3,7 @@ pub mod bond;
 pub mod life;
 pub mod living;
 pub mod memory;
+pub mod pet;
 pub mod recall;
 #[cfg(test)]
 mod tests;

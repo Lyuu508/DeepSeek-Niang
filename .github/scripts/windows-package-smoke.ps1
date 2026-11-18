@@ -64,6 +64,18 @@ if (-not $Setup.WaitForExit(180000)) { Stop-Process -Id $Setup.Id -Force; throw 
 if ($Setup.ExitCode -notin @(0, 3010)) { throw "Installer exited with $($Setup.ExitCode)" }
 $InstalledApps = @(Get-ChildItem -LiteralPath $InstallFolder -Filter '*.exe' | Where-Object Name -NotMatch '(?i)uninstall')
 if ($InstalledApps.Count -ne 1) { throw 'Installed application not found' }
+$DesktopPetBundled = $false
+if (Test-Path 'apps/companion/pet.html') {
+    if ($Config.identifier -ne 'io.local.deepseekcompanion') { throw 'Expected the main Windows installation identity' }
+    $InstalledPayload = [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($InstalledApps[0].FullName))
+    foreach ($Resource in @('pet.html', 'pet_motion', 'pet_action')) {
+        if (-not $InstalledPayload.Contains($Resource)) { throw "Missing desktop pet resource in the installed client: $Resource" }
+    }
+    foreach ($Sprite in @('idle', 'walk', 'wave')) {
+        if ($InstalledPayload -notmatch ('assets[/\\]' + $Sprite + '-[\w-]+\.webp')) { throw "Missing sprite from the installed client: $Sprite" }
+    }
+    $DesktopPetBundled = $true
+}
 $Process = $null
 $Screenshot = $false
 $WindowTitle = ''
@@ -112,6 +124,8 @@ public static class CompanionWindowCapture {
         installer_exit_code = $Setup.ExitCode
         installed_on_windows_runner = $true
         installed_process_started = $true
+        desktop_pet_bundled = $DesktopPetBundled
+        application_identifier = $Config.identifier
         window_title = $WindowTitle
         window_screenshot = $Screenshot
         real_user_device_tested = $false

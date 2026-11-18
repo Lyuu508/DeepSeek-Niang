@@ -1,3 +1,5 @@
+import {listen} from '@tauri-apps/api/event';
+import {PetSettingsCard} from './desktop-pet/PetSettingsCard';
 import {notifyShare} from './notifications';
 import {StrictMode,useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import {createRoot} from 'react-dom/client';
@@ -31,6 +33,7 @@ function SettingsPanel({boot,onRefresh,onError,compact=false}:{compact?:boolean;
  const change=<K extends keyof ChatSettings>(name:K,value:ChatSettings[K])=>setSettings(s=>({...s,[name]:value}));
  return <div className={`settings-content ${compact?'rail-settings':''}`}>
   <div className="page-heading"><span className="eyebrow">MAKE IT YOURS</span><h1>让陪伴更合心意</h1><p>人设和聊天偏好保存在本机。API Key 使用独立的系统安全存储。</p></div>
+  {runtimeMode==='native'&&boot?.platform==='windows'&&<PetSettingsCard/>}
   {notice&&<div className="notice" role="status">{notice}</div>}
   <section className="settings-card"><div className="card-heading"><span className="card-icon">⌘</span><div><h2>DeepSeek API</h2><p>直接连接官方服务，无云端中转。</p></div><span className={`badge ${boot?.key_status.configured?'success':''}`}>{boot?.key_status.configured?'已配置密钥':'未配置密钥'}</span></div>
    <div className="storage-status"><span>本机存储</span><strong>{boot?.key_status.backend??'原生安全存储未连接'}</strong></div>
@@ -67,8 +70,31 @@ function App(){
  const [boot,setBoot]=useState<Bootstrap|null>(null);
  const [companion,setCompanion]=useState<CompanionSnapshot|null>(null);
  const [page,setPage]=useState<'chat'|'settings'|'storage'|'personas'|'sync'|'companion'>('chat');
- const handledShares=useRef(new Set<string>());
- useEffect(()=>{if(!companion||companion.persona_id!==boot?.active_persona_id||runtimeMode!=='native')return;for(const share of companion.life.proactive_messages){if(share.state!=='delivered'||share.read_at_ms)continue;const key=companion.persona_id+'/'+share.id;if(handledShares.current.has(key))continue;if(page==='chat'&&document.visibilityState==='visible'){handledShares.current.add(key);void native.shareReceipt(companion.persona_id,share.id,true,share.notification_state??'pending').catch(()=>handledShares.current.delete(key));}else if(companion.preferences.notifications_enabled){handledShares.current.add(key);void notifyShare(companion,share.id,'DeepSeek娘 · 新分享').catch(()=>handledShares.current.delete(key));}}},[companion,page,boot?.active_persona_id]);
+ const readingShares=useRef(new Set<string>());
+ const notifyingShares=useRef(new Set<string>());
+ useEffect(()=>{
+  if(!companion||companion.persona_id!==boot?.active_persona_id||runtimeMode!=='native')return;
+  function updateShares(){
+   if(!companion)return;
+   const reading=page==='chat'&&document.visibilityState==='visible'&&document.hasFocus();
+   for(const share of companion.life.proactive_messages){
+    if(share.state!=='delivered'||share.read_at_ms)continue;
+    const key=companion.persona_id+'/'+share.id;
+    if(reading&&!readingShares.current.has(key)){
+     readingShares.current.add(key);
+     void native.shareReceipt(companion.persona_id,share.id,true,share.notification_state??'pending')
+      .catch(()=>readingShares.current.delete(key));
+    }else if(!reading&&companion.preferences.notifications_enabled&&!notifyingShares.current.has(key)){
+     notifyingShares.current.add(key);
+     void notifyShare(companion,share.id,'DeepSeek娘 · 新分享').catch(()=>notifyingShares.current.delete(key));
+    }
+   }
+  }
+  updateShares();
+  window.addEventListener('focus',updateShares);
+  document.addEventListener('visibilitychange',updateShares);
+  return()=>{window.removeEventListener('focus',updateShares);document.removeEventListener('visibilitychange',updateShares);};
+ },[companion,page,boot?.active_persona_id]);
 
  const [allMessages,setAllMessages]=useState<Record<string,ChatMessage[]>>({});
  const [drafts,setDrafts]=useState<Record<string,string>>({});
@@ -111,12 +137,13 @@ function App(){
  },[active?.request,active?.detached,refresh]);
  const requestIsActive=(id:string)=>activeRef.current?.request===id;
  const updateActive=(value:typeof active)=>{activeRef.current=value;setActive(value);};
- const onEvent=(event:ChatEvent)=>{
+ const onEvent=(event:ChatEvent,fromPet=false)=>{
   const thread=event.type==='started'?event.request.conversation_id:event.conversation_id;
   eventEpoch.current[thread]=(eventEpoch.current[thread]??0)+1;
   if(event.type==='started'){
    setAllMessages(old=>{let list=(old[event.request.conversation_id]??[]).map(m=>m.user_message_id===event.request.user_message_id?{...m,selected:false}:m);list=merge(merge(list,event.user),event.message);return {...old,[event.request.conversation_id]:list};});
    if(activeRef.current?.request===event.request.request_id)updateActive({...activeRef.current,started:true});
+   else if(fromPet&&!activeRef.current)updateActive({request:event.request.request_id,conversation:event.request.conversation_id,started:true});
   }else if(event.type==='delta'){
    setAllMessages(old=>({...old,[event.conversation_id]:(old[event.conversation_id]??[]).map(m=>m.id===event.message_id&&m.revision<=event.revision&&!terminal(m)?{...m,content:event.content,revision:event.revision,state:'generating'}:m)}));
   }else{
@@ -125,6 +152,15 @@ function App(){
    if(activeRef.current?.request===event.request_id)updateActive(null);void refresh().catch(e=>setError(failure(e)));
   }
  };
+ const petChatHandler=useRef(onEvent);
+ petChatHandler.current=onEvent;
+ useEffect(()=>{
+  if(runtimeMode!=='native'||boot?.platform!=='windows')return;
+  const unlistenChat=listen<ChatEvent>('desktop-pet:chat',event=>petChatHandler.current(event.payload,true));
+  const unlistenOpen=listen('desktop-pet:open-chat',()=>{setPage('chat');setDrawer(false);});
+  const listeners=[unlistenChat,unlistenOpen];listeners.forEach(listener=>void listener.catch(()=>{}));
+  return()=>listeners.forEach(listener=>void listener.then(unlisten=>unlisten()).catch(()=>{}));
+ },[boot?.platform]);
  async function switchPersona(id:string){
   if(switchLock.current)return;switchLock.current=true;setSwitching(true);setError(null);
   try{await native.selectPersona(id);await refresh();setPage('chat');setDrawer(false);}catch(e){setError(failure(e));}finally{switchLock.current=false;setSwitching(false);}
@@ -144,7 +180,7 @@ function App(){
  const title=page==='companion'?'关系与日常':page==='sync'?(mobile?'设备连接':'局域网同步'):page==='settings'?'设置':page==='storage'?'本地数据':page==='personas'?'人格管理':persona?.name??'DeepSeek娘';
  const currentCompanion=companion?.persona_id===boot?.active_persona_id?companion:null;
  return <div className="app" data-theme={dark?'dark':'light'} data-platform={mobile?'android':'desktop'}>
-  <header><button className="menu-toggle" aria-label="打开侧栏" onClick={()=>setDrawer(true)}><span className="desktop-menu-symbol">☰</span><span className="phone-menu-avatar"><Avatar persona={persona} small/></span></button>{page==='chat'&&<div className="mobile-persona-avatar"><Avatar persona={persona} small/></div>}<div className="header-title"><strong>{title}</strong><small>{mobile?(page==='chat'?'你的专属聊天空间':'DeepSeek娘'):page==='chat'?'一直延续的聊天时间线':'DeepSeek娘'}</small></div><div className="header-actions"><span className={`connection-badge ${boot?.key_status.configured?'ready':''}`}><i/>{boot?.key_status.configured?'密钥已配置':'待配置密钥'}</span><button className="icon-button" aria-label="切换深浅色" onClick={()=>setDark(!dark)}>{dark?'☀':'☾'}</button></div></header>
+  <header><button className="menu-toggle" aria-label="打开侧栏" onClick={()=>setDrawer(true)}><span className="desktop-menu-symbol">☰</span><span className="phone-menu-avatar"><Avatar persona={persona} small/></span></button>{page==='chat'&&<div className="mobile-persona-avatar"><Avatar persona={persona} small/></div>}<div className="header-title"><strong>{title}</strong><small>{mobile?(page==='chat'?'你的专属聊天空间':'DeepSeek娘'):page==='chat'?'一直延续的聊天时间线':'DeepSeek娘'}</small></div><div className="header-actions">{runtimeMode==='native'&&boot?.platform==='windows'&&<button className="desktop-pet-entry" onClick={()=>setPage('settings')}>桌宠</button>}<span className={`connection-badge ${boot?.key_status.configured?'ready':''}`}><i/>{boot?.key_status.configured?'密钥已配置':'待配置密钥'}</span><button className="icon-button" aria-label="切换深浅色" onClick={()=>setDark(!dark)}>{dark?'☀':'☾'}</button></div></header>
   <div className="workspace-body">
   {drawer&&<button className="drawer-backdrop" aria-label="关闭侧栏" onClick={()=>setDrawer(false)}/>}
   <aside className={drawer?'open':''}>

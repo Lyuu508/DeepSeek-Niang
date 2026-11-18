@@ -1,6 +1,6 @@
 [package]
 name = "companion-app"
-version = "0.0.5"
+version = "0.0.6"
 edition = "2024"
 rust-version = "1.99"
 publish = false
@@ -28,3 +28,8 @@ serde = { version = "=1.0.229", features = ["derive"] }
 companion-sync = { path = "../../../crates/companion-sync" }
 
 tauri-plugin-notification = "=2.8.1"
+
+[target.'cfg(windows)'.dependencies]
+tauri = { version = "=2.12.5", features = ["tray-icon"] }
+winreg = "=0.56.0"
+windows-sys = { version = "=0.61.2", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_UI_WindowsAndMessaging"] }

@@ -64,6 +64,8 @@ jobs:
           evidence="$RUNNER_TEMP/deepseek-test-evidence"
           python3 scripts/run_logged.py "$evidence/version.txt" python3 scripts/version.py
           python3 scripts/run_logged.py "$evidence/rust-tests.txt" cargo test --workspace --locked
+          rustc --edition 2024 --test apps/companion/src-tauri/src/desktop_pet/gait.rs -o "$RUNNER_TEMP/desktop-pet-gait-tests"
+          python3 scripts/run_logged.py "$evidence/desktop-pet-gait-tests.txt" "$RUNNER_TEMP/desktop-pet-gait-tests"
           python3 scripts/run_logged.py "$evidence/clippy.txt" cargo clippy --workspace --all-targets --locked -- -D warnings
           python3 scripts/run_logged.py "$evidence/schema.txt" python3 scripts/check_schema.py
           python3 scripts/run_logged.py "$evidence/python-tests.txt" python3 -m unittest discover -s tests -p 'test_*.py'
@@ -76,6 +78,7 @@ jobs:
         run: |
           npm exec --workspace @deepseek/companion -- playwright install --with-deps chromium
           python3 scripts/run_logged.py "$RUNNER_TEMP/deepseek-test-evidence/ui-tests.txt" npm run test:ui
+          COMPANION_PET_EVIDENCE_DIR="$RUNNER_TEMP/deepseek-test-evidence/desktop-pet-ui" python3 scripts/run_logged.py "$RUNNER_TEMP/deepseek-test-evidence/desktop-pet-ui.txt" node tests/browser/desktop-pet.cjs
           VITE_COMPANION_TEST_PACKAGE=1 COMPANION_TEST_ARTIFACT_DIR="$RUNNER_TEMP/deepseek-test-evidence/ui-isolated" python3 scripts/run_logged.py "$RUNNER_TEMP/deepseek-test-evidence/ui-isolated-tests.txt" npm run test:ui
       - name: Retain test reports and sanitized logs
         if: always()

@@ -19,6 +19,10 @@ type ActivityRow = (
     Option<String>,
 );
 
+pub(crate) fn heartbeat_is_fresh(now: i64, heartbeat: i64) -> bool {
+    now >= heartbeat && now.saturating_sub(heartbeat) <= 90_000
+}
+
 pub fn activity_label(kind: &str) -> &'static str {
     match kind {
         "wake" => "起床",

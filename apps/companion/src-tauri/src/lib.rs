@@ -1,4 +1,6 @@
 mod companion;
+#[cfg(target_os = "windows")]
+mod desktop_pet;
 mod sync;
 use companion_chat::{
     ChatFailure,
@@ -299,7 +301,20 @@ pub fn run() {
             });
             app.manage(host);
             app.manage(AppState(service));
+            #[cfg(target_os = "windows")]
+            desktop_pet::install(app.handle());
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            #[cfg(target_os = "windows")]
+            if window.label() == "main"
+                && let tauri::WindowEvent::CloseRequested { api, .. } = event
+            {
+                api.prevent_close();
+                window.app_handle().exit(0);
+            }
+            #[cfg(not(target_os = "windows"))]
+            let _ = (window, event);
         })
         .invoke_handler(tauri::generate_handler![
             sync::sync_status,
@@ -326,7 +341,21 @@ pub fn run() {
             companion::life_task_control,
             companion::life_diary,
             companion::share_receipt,
-            companion::claim_share_notification
+            companion::claim_share_notification,
+            #[cfg(target_os = "windows")]
+            desktop_pet::desktop_pet_settings,
+            #[cfg(target_os = "windows")]
+            desktop_pet::desktop_pet_configure,
+            #[cfg(target_os = "windows")]
+            desktop_pet::pet_snapshot,
+            #[cfg(target_os = "windows")]
+            desktop_pet::pet_motion,
+            #[cfg(target_os = "windows")]
+            desktop_pet::pet_action,
+            #[cfg(target_os = "windows")]
+            desktop_pet::pet_send,
+            #[cfg(target_os = "windows")]
+            desktop_pet::pet_stop,
         ])
         .run(tauri::generate_context!())
         .expect("native application startup failed");

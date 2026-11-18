@@ -218,7 +218,7 @@ impl Store {
         let host:Option<(String,i64,String)>=self.conn.query_row("SELECT device_id,heartbeat_at_ms,next_activity FROM companion_hosts WHERE persona_id=?1",[p],|r|Ok((r.get(0)?,r.get(1)?,r.get(2)?))).optional()?;
         let online = host
             .as_ref()
-            .is_some_and(|h| now >= h.1 && now - h.1 <= 90000);
+            .is_some_and(|h| life::heartbeat_is_fresh(now, h.1));
         let current:Option<Value>=self.conn.query_row("SELECT a.id,a.kind,a.state,a.started_at_ms,a.scheduled_end_at_ms,a.updated_at_ms,a.elapsed_ms,a.progress_milli,a.task_id,a.plan_id,t.last_error FROM companion_activities a LEFT JOIN task_queue t ON t.id=a.task_id WHERE a.persona_id=?1 ORDER BY a.started_at_ms DESC,a.id DESC LIMIT 1",[p],|r|{let kind=r.get::<_,String>(1)?;Ok(json!({"id":r.get::<_,String>(0)?,"kind":kind,"label":format!("虚拟{}",life::activity_label(&kind)),"state":r.get::<_,String>(2)?,"started_at_ms":r.get::<_,i64>(3)?,"scheduled_end_at_ms":r.get::<_,i64>(4)?,"updated_at_ms":r.get::<_,i64>(5)?,"elapsed_ms":r.get::<_,i64>(6)?,"progress_milli":r.get::<_,i64>(7)?,"task_id":r.get::<_,Option<String>>(8)?,"plan_id":r.get::<_,Option<String>>(9)?,"error_code":r.get::<_,Option<String>>(10)?,"execution_kind":"virtual"}))}).optional()?;
         let day = (now + prefs.timezone_offset_minutes * 60000).div_euclid(86400000);
         let diary = self.life_diary(p, day)?;
