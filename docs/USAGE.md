@@ -1,17 +1,19 @@
 # 使用说明
 
-本文面向 v0.0.5 测试版。第一次使用可按顺序阅读；已有用户请先看[升级与数据保护](#升级与数据保护)。
+本文面向 v0.0.6 测试版。第一次使用可按顺序阅读；已有用户请先看[升级与数据保护](#升级与数据保护)。
 
 ## 下载与安装
 
 | 设备 | 安装入口 | 要求 |
 | --- | --- | --- |
-| Windows 电脑 | [中文 EXE 安装程序](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.5/DeepSeek-Niang_0.0.5_windows-x64-setup.exe) · [详细步骤](INSTALL_WINDOWS.md) | Windows 10/11 x64；WebView2 |
-| Android 手机 | [ARM64 APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.5/DeepSeek-Niang_0.0.5_android-arm64-isolated-test.apk) · [详细步骤](INSTALL_ANDROID.md) | Android 10+、ARM64 |
+| Windows 电脑 | [中文 EXE 安装程序](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.6/DeepSeek-Niang_0.0.6_windows-x64-setup.exe) · [详细步骤](INSTALL_WINDOWS.md) | Windows 10/11 x64；WebView2 |
+| Android 手机 | [ARM64 APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.6/DeepSeek-Niang_0.0.6_android-arm64-isolated-test.apk) · [详细步骤](INSTALL_ANDROID.md) | Android 10+、ARM64 |
 
-无需下载源码 ZIP 或安装 Rust、Node.js、Python。使用电脑和手机时，请让两端都处于 v0.0.5。当前不提供 iOS、macOS 或 Linux 安装包。
+无需下载源码 ZIP 或安装 Rust、Node.js、Python。使用电脑和手机时，请让两端都处于 v0.0.6。当前不提供 iOS、macOS 或 Linux 安装包。
 
-安装前对照 [SHA256SUMS.txt](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.5/SHA256SUMS.txt) 核对文件。Windows 采用自签名测试证书，系统可能仍提示未知发布者；不要关闭系统防护，也不要导入不明根证书。
+安装前对照 [SHA256SUMS.txt](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.6/SHA256SUMS.txt) 核对文件。Windows 采用自签名测试证书，系统可能仍提示未知发布者；不要关闭系统防护，也不要导入不明根证书。
+
+在 Windows 顶部打开「桌宠」，勾选「显示桌宠」即可使用。[桌宠操作](phases/05-desktop-pet.md)
 
 ## 首次配置聊天
 
@@ -34,7 +36,7 @@
 
 ## 连接电脑与手机
 
-1. 确认两端均为 v0.0.5，手机与电脑处于可互访的局域网。电脑可用网线，手机连同一路由器的普通 Wi-Fi；访客网络或设备隔离可能阻断连接。
+1. 确认两端均为 v0.0.6，手机与电脑处于可互访的局域网。电脑可用网线，手机连同一路由器的普通 Wi-Fi；访客网络或设备隔离可能阻断连接。
 2. 电脑进入“局域网同步”，点击“连接手机”生成短期二维码。只向自己信任的手机展示。
 3. 手机进入连接页点击“扫一扫”，允许相机并扫描电脑上的二维码。等待真实同步结果，不以“设备已发现”代替成功。
 4. 核对同一人格的聊天和记忆，必要时使用“手动同步”。离线后本地已有记录仍可查看，重新连通并打开应用后再补传。模型聊天仍需互联网。
@@ -67,7 +69,7 @@ Windows 应用运行时，具有执行权限的电脑推进虚拟日常；手机
 
 升级前记录两端版本，完全退出旧进程。Windows 保留当前用户应用数据目录的完整副本，而非只复制运行中的 `companion.sqlite3`；数据库可能还有 WAL 文件。备份应受访问控制，不上传 GitHub。Android 自动云备份被禁用，当前没有一键完整加密导出工具；系统不允许导出时保留旧安装和数据，不 root 或绕过沙箱。
 
-首次打开旧库会在私有目录执行一致性备份及事务迁移；这不等于独立、离机或加密备份。v0.0.5 使用 schema 8，具体机制见[迁移说明](PHASE4_MIGRATION.md)。Windows 自签名安装和窗口出现已有 Hosted runner 检查，不代表用户旧安装覆盖已验证。
+首次打开旧库会在私有目录执行一致性备份及事务迁移；这不等于独立、离机或加密备份。v0.0.6 使用 schema 8，具体机制见[迁移说明](PHASE4_MIGRATION.md)。Windows 自签名安装和窗口出现已有 Hosted runner 检查，不代表用户旧安装覆盖已验证。
 
 升级后若有新聊天，不要直接用旧备份覆盖或安装旧版强行降级。遇到错误先停止操作，保存当前库、相关 WAL 和已有备份，核对后再恢复；本版没有一键无损降级。
 

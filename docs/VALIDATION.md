@@ -1,5 +1,13 @@
 # 验证范围与待核实问题
 
+## v0.0.6 发布证据
+
+Windows EXE 和 Android APK 来自同一提交 `5e80ce8bb1333ade52ee64a4efe33569aabbc253`。两个公开下载均返回 HTTP 200，文件大小与 SHA-256 和发布报告一致。[同源 CI](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44232561567) · [签名发布](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44233536958) · [构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.6/BUILD-RESULTS.json)
+
+GitHub Windows runner 实际安装并启动主客户端，确认已安装文件包含桌宠入口和动画。原生启动截图显示聊天首页和桌宠按钮。Linux 146 项及 Windows 147 项 Rust 测试通过，另有 3 项走动算法及 7 项桌宠浏览器夹具检查。[原生启动截图](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.6/windows-installed-window.png)
+
+Android ARM64 APK 的签名与 v0.0.5 test2 一致。Windows 用户设备上的透明点击、多屏、走动与覆盖安装以及 Android 实机运行仍待体验验证。[桌宠验收](phases/05-desktop-pet.md)
+
 ## v0.0.5 发布证据
 
 发布源码：`9248ffa1a91a5636bc5c25202a11cc1de50f0820`，Windows 与 Android 报告一致。查看[构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.5/BUILD-RESULTS.json)、[同源 CI](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43817794325)和[签名发布运行](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/43819179372)。本文描述已发布版本，不把本次文档分支的检查当成重新构建安装包。

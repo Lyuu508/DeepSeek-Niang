@@ -79,6 +79,21 @@
       "androidCertificateSha256": "fefb57342751c7bd5ef8271e4a8b09f8702c0285e0120e8407b557d20dbbf153",
       "windowsCertificateSha256": "069f0150a9698a8178bdaf7dfea13f5509185aa69b9ba940f5473edbafa8af62",
       "physicalWindowsAndroidTested": false
+    },
+    {
+      "version": "0.0.6",
+      "androidVersionCode": 1006,
+      "tag": "v0.0.6",
+      "commit": "5e80ce8bb1333ade52ee64a4efe33569aabbc253",
+      "distribution": "persisted-test2-update",
+      "releaseId": 449504738,
+      "ciRun": 44232561567,
+      "publishRun": 44233536958,
+      "androidApplicationId": "io.local.deepseekcompanion.test2",
+      "androidCertificateSha256": "fefb57342751c7bd5ef8271e4a8b09f8702c0285e0120e8407b557d20dbbf153",
+      "windowsCertificateSha256": "069f0150a9698a8178bdaf7dfea13f5509185aa69b9ba940f5473edbafa8af62",
+      "windowsDesktopPetBundled": true,
+      "physicalWindowsAndroidTested": false
     }
   ]
 }
