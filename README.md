@@ -6,6 +6,8 @@
 
 当前版本为 **v0.0.8 测试版**。已有自动化测试和原生构建记录，真实设备、家庭网络及真实 API 体验待验收。
 
+v0.0.9 加入人格回收站、自定义对话风格、声明式插件和设备字号，优化 Windows 界面与 Android 竖屏聊天。两端同步需使用相同数据版本。[界面与图标](docs/V009_UI.md) · [回收站与迁移](docs/V009_RECYCLE_MIGRATION.md) · [插件开发](docs/PLUGIN_DEVELOPMENT.md)
+
 v0.0.6 的桌宠已整合到 Windows 主客户端。透明角色能在桌面上自动走动，也支持直接拖动、点击挥手和双击聊天。[使用与验收](docs/phases/05-desktop-pet.md) · [dsh-pet 动画署名](apps/companion/src/desktop-pet/media/NOTICE.md)
 
 Windows 侧栏「视频中心」支持用户授权的本地视频分析，需要本机 FFmpeg、Ollama/Qwen3-VL。带音轨时使用本机 Whisper。[视频中心准备与使用](docs/phases/06-video-understanding.md)

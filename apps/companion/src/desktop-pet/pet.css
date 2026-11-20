@@ -16,35 +16,35 @@ button, textarea { font: inherit; }
 button { cursor: pointer; color: inherit; border: 0; background: none; }
 button:disabled { opacity: .45; cursor: default; }
 button:focus-visible, textarea:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
-.pet { --actor-offset: 0px; position: relative; width: 224px; height: 190px; color: var(--ink); font-size: 12px; user-select: none; }
+.pet { --actor-offset: 0px; position: relative; width: 224px; height: 190px; color: var(--ink); font-size:0.75rem; user-select: none; }
 .pet[data-expanded="true"] { --actor-offset: 216px; height: 406px; }
 .pet-status, .pet-tools, .pet-panel { position: absolute; background: var(--surface); border: 1px solid var(--edge); }
 .pet-status { z-index: 1; top: calc(var(--actor-offset) + 3px); left: 23px; width: 178px; height: 30px; border-radius: 10px; padding: 1px 8px; display: grid; text-align: center; line-height: 13px; }
 .pet-status strong, .pet-status span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pet-status strong { font-size: 11px; }
-.pet-status span { color: var(--muted); font-size: 10px; }
+.pet-status strong { font-size:0.6875rem; }
+.pet-status span { color: var(--muted); font-size:0.625rem; }
 .pet-face { position: absolute; top: calc(var(--actor-offset) + 7px); left: 37px; width: 150px; height: 150px; padding: 0; cursor: grab; touch-action: none; }
 .pet-face:active { cursor: grabbing; }
 .pet-face:focus-visible { outline-offset: -19px; border-radius: 38px; }
 .pet-character { display: grid; place-items: center; width: 100%; height: 100%; pointer-events: none; }
 .pet-character[data-facing="right"] .pet-sprite { transform: scaleX(-1); }
 .pet-sprite { display: block; width: 100%; height: 100%; object-fit: contain; -webkit-user-drag: none; }
-.pet-initial { display: grid; place-items: center; width: 85px; height: 85px; border-radius: 50%; background: var(--surface); border: 1px solid var(--edge); color: var(--blue); font-weight: 700; font-size: 29px; }
-.pet-expression { position: absolute; right: 19px; top: 32px; min-width: 22px; padding: 1px 3px; border-radius: 8px; background: var(--surface); color: var(--blue); font-size: 16px; font-weight: 700; pointer-events: none; }
+.pet-initial { display: grid; place-items: center; width: 85px; height: 85px; border-radius: 50%; background: var(--surface); border: 1px solid var(--edge); color: var(--blue); font-weight: 700; font-size:1.8125rem; }
+.pet-expression { position: absolute; right: 19px; top: 32px; min-width: 22px; padding: 1px 3px; border-radius: 8px; background: var(--surface); color: var(--blue); font-size:1rem; font-weight: 700; pointer-events: none; }
 .pet-share { position: absolute; right: 26px; top: 38px; width: 10px; height: 10px; border-radius: 50%; border: 1px solid white; background: #24b1d2; }
 .pet-voice { position: absolute; left: 7px; top: 41px; display: flex; align-items: center; justify-content: center; gap: 2px; width: 26px; height: 24px; border: 1px solid var(--edge); border-radius: 10px; background: var(--surface); color: var(--blue); pointer-events: none; }
 .pet-voice i { display: block; width: 3px; border-radius: 2px; background: currentColor; }
 .pet-tools { z-index: 1; top: calc(var(--actor-offset) + 147px); left: 20px; width: 184px; height: 34px; border-radius: 13px; display: grid; grid-template-columns: 31px 52px 52px 1fr; align-items: center; padding: 2px 3px; }
 .pet-tools button, .pet-panel button { border-radius: 8px; padding: 3px 5px; min-height: 24px; }
 .pet-tools button:hover, .pet-panel button:hover { background: var(--edge); }
-.pet-tools .pet-drag { cursor: grab; font-size: 16px; padding: 1px; }
+.pet-tools .pet-drag { cursor: grab; font-size:1rem; padding: 1px; }
 .pet-panel { top: 4px; left: 4px; width: 216px; height: 207px; border-radius: 14px; padding: 7px 10px 9px; overflow: auto; scrollbar-width: thin; }
 .pet-panel-title { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
 .pet-panel-title strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pet-panel-title button { font-size: 16px; line-height: 1; }
+.pet-panel-title button { font-size:1rem; line-height: 1; }
 .pet-panel p { margin: 4px 0; overflow-wrap: anywhere; }
 .pet-panel progress { width: 100%; height: 8px; accent-color: var(--blue); }
-.pet-muted, .pet-panel small { color: var(--muted); font-size: 10px; }
+.pet-muted, .pet-panel small { color: var(--muted); font-size:0.625rem; }
 .pet-form textarea { width: 100%; min-height: 44px; resize: none; background: transparent; border: 1px solid var(--edge); border-radius: 6px; padding: 4px 7px; color: var(--ink); user-select: auto; }
 .pet-form-actions { display: flex; gap: 6px; align-items: center; }
 .pet-panel .pet-accent { background: var(--edge); color: var(--blue); font-weight: 600; }

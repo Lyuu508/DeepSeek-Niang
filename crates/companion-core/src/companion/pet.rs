@@ -99,6 +99,7 @@ pub struct PetActivity {
 
 #[derive(Debug, Serialize)]
 pub struct PetSnapshot {
+    pub font_scale: u8,
     pub persona_id: String,
     pub name: String,
     pub builtin_avatar: bool,
@@ -253,6 +254,7 @@ impl Store {
             |row| row.get(0),
         )?;
         Ok(PetSnapshot {
+            font_scale: self.font_scale()?,
             persona_id: persona.id,
             name: persona.name,
             builtin_avatar: persona.avatar_resource == "deepseek-niang" && persona.is_builtin,

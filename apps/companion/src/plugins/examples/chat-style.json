@@ -1,0 +1,30 @@
+{
+  "author": "DeepSeek娘 AI Companion",
+  "license": "CC0-1.0",
+  "version": "1.0.0",
+  "supportedPlatforms": [
+    "windows",
+    "android"
+  ],
+  "requiredApiVersion": 1,
+  "id": "example.reply-style",
+  "name": "简洁聊天风格",
+  "description": "为已授权的人格优先回答当前话题，减少重复总结。",
+  "entry": {
+    "kind": "chat_style",
+    "preset": "brief"
+  },
+  "permissions": [
+    "chat_style"
+  ],
+  "configSchema": [
+    {
+      "key": "concise",
+      "label": "进一步缩短回复",
+      "kind": "toggle",
+      "default": false,
+      "choices": []
+    }
+  ],
+  "checksum": "074921dbaf4c97947d4f4e1286de285a8595ec9b3d3da603ac001558fab860da"
+}

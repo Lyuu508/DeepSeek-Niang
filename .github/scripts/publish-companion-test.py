@@ -1,4 +1,4 @@
-"""Verify and publish the authorized v0.0.8 test installers."""
+"""Verify and publish the authorized v0.0.9 test installers."""
 import argparse
 import hashlib
 import json
@@ -10,12 +10,13 @@ import subprocess
 import sys
 import time
 import urllib.request
+import zipfile
 
 ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'scripts'))
 import version
 
-VERSION='0.0.8'
+VERSION='0.0.9'
 TAG='v'+VERSION
 APP_ID='io.local.deepseekcompanion.test2'
 STAGE='source and test validation'
@@ -58,10 +59,12 @@ def validate_pair(windows,android,sha):
         'system_voice_wav_generated', 'runner_has_no_usable_system_voice',
         'runner_system_synthesis_failed', 'runner_system_synthesis_timed_out'}
     assert windows['signing'].get('application_identifier')=='io.local.deepseekcompanion'
-    assert android['version_code']==1008 and android['application_id']==APP_ID
+    assert windows['signing']['interface_bundled'] and windows['signing']['installer_and_application_icons_readable']
+    assert android['version_code']==1009 and android['application_id']==APP_ID
     assert android['signature_verified'] and android['test_signer_persistence_guaranteed']
     assert android['offline_voice_bridge_bundled'] and android['microphone_permission_declared']
-    assert android['upgrade_compatible_with_test2_v0_0_7'] and not android['production_upgrade_compatible']
+    assert android['interface_bundled'] and android['launcher_resources_verified']
+    assert android['upgrade_compatible_with_test2_v0_0_8'] and not android['production_upgrade_compatible']
     assert not android['physical_device_tested'] and not windows['physical_device_tested']
 def automation(tests):
     logs={p.name:p.read_text() for p in tests.glob('*.txt')}
@@ -81,8 +84,31 @@ def automation(tests):
     assert gait and int(gait[1])>=3
     assert 'real_media_reads_both_halves_and_continuous_audio ... ok' in logs['rust-tests.txt']
     assert 'guide_has_real_notes_and_silence_between_them ... ok' in logs['rust-tests.txt']
+    assert 'real_tls_persona_recycle_restore_and_delete_survive_offline_edits ... ok' in logs['rust-tests.txt']
+    assert 'schema9_recycle_upgrade_backs_up_and_rolls_back_before_retry ... ok' in logs['rust-tests.txt']
+    layout=read(tests/'v009-ui'/'layout-results.json')
+    baseline=read(ROOT/'docs/validation-v009/before.json')
+    assert len(layout['checks'])==5 and len(layout['mobile'])==6 and 'fixture' in layout['scope']
+    assert all(not frame['overflow'] and frame['nav']==53 for frame in layout['mobile'])
+    old=next(frame for frame in baseline['mobile'] if (frame['width'],frame['height'])==(375,812))
+    new=next(frame for frame in layout['mobile'] if (frame['width'],frame['height'])==(375,812))
+    assert new['message_px'] >= old['message_px']+100
+    ui['v009-ui']={**layout,'passed':len(layout['checks']),'baseline':baseline}
     return {'real_media_decoding_fixture':True,'rust':rust,'python':int(py[1]),'node':int(node[1]),'desktop_pet_gait':int(gait[1]),
+            'real_tls_persona_recycle_fixture':True,'portrait_375x812_chat_px':{'before':old['message_px'],'after':new['message_px']},
             'ui_fixture':{mode:item['passed'] for mode,item in ui.items()}},logs,ui
+def package_ui(tests,output):
+    baseline=ROOT/'docs/validation-v009'
+    after=tests/'v009-ui'
+    with zipfile.ZipFile(output/'UI-EVIDENCE.zip','w',compression=zipfile.ZIP_DEFLATED) as archive:
+        for name in ['before.json','android-before.png','windows-before.png']:
+            archive.write(baseline/name,name)
+        for name in ['layout-results.json','android-after.png','windows-after.png','windows-dark.png',
+                     'android-keyboard-resized.png','font-scale-140.png','dialogue-free.png','plugins.png',
+                     'persona-management.png','persona-trash-confirm.png','persona-recycle.png',
+                     'persona-restored.png','persona-delete-confirm.png','persona-empty-confirm.png']:
+            archive.write(after/name,name)
+    shutil.copyfile(ROOT/'assets/branding/android-mask-preview.png',output/'ANDROID-ICON-MASKS.png')
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('artifacts',type=Path);parser.add_argument('tests',type=Path);parser.add_argument('output',type=Path);parser.add_argument('--ci-run',type=int,required=True)
     args=parser.parse_args()
@@ -90,7 +116,7 @@ def main():
     sha=run(['git','rev-parse','HEAD'],cwd=ROOT).decode().strip()
     assert sha==os.environ['EXPECTED_SOURCE_SHA']
     assert api('commits/main')['sha']==sha,'main moved; rebuild the latest source rather than publishing an older candidate'
-    assert version.check()=={'version':VERSION,'androidVersionCode':1008}
+    assert version.check()=={'version':VERSION,'androidVersionCode':1009}
     ci=api('actions/runs/'+str(args.ci_run))
     assert ci['head_sha']==sha and ci['conclusion']=='success' and ci['head_branch']=='main'
     windows_path=one(args.artifacts,'windows-build.json');android_path=one(args.artifacts,'android-build.json')
@@ -118,12 +144,12 @@ def main():
         shutil.copyfile(android_path.parent/name,output/name)
     references=read(android_path.parent/'ANDROID-SIGNING-REFERENCES.json')
     previous=references['previous_test2']
-    assert previous['version']=='0.0.7' and previous['version_code']==1007 and previous['application_id']==APP_ID
+    assert previous['version']=='0.0.8' and previous['version_code']==1008 and previous['application_id']==APP_ID
     assert previous['signer_certificate_sha256']==android['signer_certificate_sha256']=='fefb57342751c7bd5ef8271e4a8b09f8702c0285e0120e8407b557d20dbbf153'
     assert 'Verified using' in previous['apksigner_output'] and re.fullmatch('[0-9a-f]{64}',previous['sha256'])
     assert public_win['windows_certificate_sha256']=='069f0150a9698a8178bdaf7dfea13f5509185aa69b9ba940f5473edbafa8af62'
     write(output/'SIGNING-IDENTITIES.json',public_win)
-    report={'version':VERSION,'android_version_code':1008,'source_commit':sha,'ci_run':args.ci_run,
+    report={'version':VERSION,'android_version_code':1009,'source_commit':sha,'ci_run':args.ci_run,
         'signing_workflow_run':os.environ['GITHUB_RUN_ID'],'distribution':'persisted-test2-update',
         'windows':windows,'android':android,'tests':counts,'files':files,
         'physical_windows_android_tested':False,'home_ethernet_wifi_tested':False,'real_deepseek_api_tested':False,
@@ -133,8 +159,11 @@ def main():
     (output/'SHA256SUMS.txt').write_text(''.join(value+'  '+name+'\n' for name,value in sorted(files.items())))
     (output/'AUTOMATED-TEST-RESULTS.txt').write_text('\n\n'.join(name+'\n'+body for name,body in sorted(logs.items())))
     write(output/'UI-TEST-RESULTS.json',{'source_commit':sha,'scope':'explicit UI fixtures; not real devices','runs':ui})
+    package_ui(args.tests,output)
     for source,name in [
-        ('docs/phases/07-voice-singing.md','INSTALL-AND-ACCEPTANCE.md'),
+        ('docs/V009_UI.md','INSTALL-AND-ACCEPTANCE.md'),
+        ('docs/V009_RECYCLE_MIGRATION.md','RECYCLE-MIGRATION.md'),
+        ('docs/PLUGIN_DEVELOPMENT.md','PLUGIN-DEVELOPMENT.md'),
         ('apps/companion/src/desktop-pet/media/NOTICE.md','ANIMATION-CREDITS.md'),
         ('CHANGELOG.md','CHANGELOG.md'),
     ]:
@@ -145,16 +174,19 @@ def main():
             content=path.read_text(encoding='utf-8-sig')
             assert not re.search(r'-----BEGIN (?:RSA |EC |ENCRYPTED )?PRIVATE KEY-----|github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{20,}',content),'Private material pattern; publication blocked'
     repo=os.environ['GH_REPO'];base='https://github.com/'+repo+'/releases/download/'+TAG+'/'
-    body=f"""DeepSeek娘 {VERSION} 本机语音测试版。两端主客户端的「设置」提供语音与麦克风配置。可在聊天中点击「朗读」或「语音输入」。Windows 桌宠根据实际播放音量提示发声。
+    body=f"""DeepSeek娘 {VERSION} 测试版。改进 Windows 和 Android 界面，加入可调字号、人格回收站、可选对话风格和本地插件管理。
 
 - [Windows 中文主客户端 EXE]({base}{windows['file']})
 - [Android ARM64 APK]({base}{android['file']})
 - [SHA-256 校验]({base}SHA256SUMS.txt) · [构建结果]({base}BUILD-RESULTS.json)
-- [本机准备与实测范围]({base}INSTALL-AND-ACCEPTANCE.md) · [桌宠动画署名]({base}ANIMATION-CREDITS.md)
+- [界面与竖屏测量截图]({base}UI-EVIDENCE.zip) · [Android 图标遮罩预览]({base}ANDROID-ICON-MASKS.png)
+- [实机验收]({base}INSTALL-AND-ACCEPTANCE.md) · [回收站与迁移]({base}RECYCLE-MIGRATION.md) · [插件开发]({base}PLUGIN-DEVELOPMENT.md)
 
-主客户端提供本机离线朗读、语音输入和原创元音唱段。语音转写先填入输入框。Windows 录音转写需要已安装的 whisper-cli 与模型，Android 语音输入需要 Android 12 或更新版本和设备离线普通话识别能力。两端音色由本机系统提供，音色和播放偏好按人格保存在本机。
+Android Launcher 图标用原始海滩图铺满系统可见区。手机聊天顶部、输入区和底栏更紧凑。Windows 按钮从鼠标进入位置展开柔和渐变。字号保存在当前设备。
 
-Windows 安装器在 Windows runner 安装并启动。Android 保持 v0.0.7 test2 签名，已经过 APK 内容和签名核验。实体设备麦克风、语音音质和真实 DeepSeek 对话待用户设备验收。唱段为按七个音符合成的元音。
+回收站可以用同一人格 ID 找回聊天、关系和记忆。永久清理需要再次确认，并向已配对设备传播删除状态。两端一起升级可继续同步。插件权限在本机授权，示例包含聊天风格和本地提醒。
+
+Windows 安装器在 Windows runner 安装并启动。Android 保持 v0.0.8 test2 签名，已经过 APK 内容和签名核验。实体设备、家庭局域网和真实 DeepSeek 对话待验收。
 
 [源码](https://github.com/{repo}/commit/{sha}) · [同源 CI](https://github.com/{repo}/actions/runs/{args.ci_run})
 """
@@ -167,7 +199,7 @@ Windows 安装器在 Windows runner 安装并启动。Android 保持 v0.0.7 test
         assert tag.returncode!=0 and '404' in tag.stderr,'Version tag already exists; never move it'
         mark('create unpublished release by official REST API')
         payload=Path(os.environ['RUNNER_TEMP'])/'companion-release-draft.json'
-        write(payload,{'tag_name':TAG,'target_commitish':sha,'name':f'{VERSION}测试版 · 本机语音','draft':True,'prerelease':True,'body':body})
+        write(payload,{'tag_name':TAG,'target_commitish':sha,'name':f'{VERSION}测试版 · 界面与人格管理','draft':True,'prerelease':True,'body':body})
         prior=json.loads(run(['gh','api','--method','POST',f'repos/{repo}/releases','--input',payload]))
     release_id=prior['id']
     existing_assets={a['name']:a for a in prior['assets']}

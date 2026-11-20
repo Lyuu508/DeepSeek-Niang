@@ -20,6 +20,7 @@ type Reply<T> = Result<T, &'static str>;
 
 struct Active {
     id: String,
+    persona: String,
     cancel: CancellationToken,
 }
 
@@ -31,6 +32,16 @@ pub struct VideoHost {
 }
 
 impl VideoHost {
+    pub fn stop_inactive_personas(&self) {
+        if let Ok(active) = self.active.lock()
+            && let Some(job) = active.as_ref()
+            && let Ok(store) = self.runner.store.lock()
+            && store.persona(&job.persona).is_err()
+        {
+            job.cancel.cancel();
+        }
+    }
+
     pub fn new(store: Arc<Mutex<Store>>, scratch: PathBuf, clock: Instant) -> Self {
         // The Store's process lock is held before cleaning abandoned per-run scratch.
         if let Ok(items) = std::fs::read_dir(&scratch) {
@@ -250,6 +261,7 @@ pub async fn video_control(
             let cancel = CancellationToken::new();
             *active = Some(Active {
                 id,
+                persona: persona.clone(),
                 cancel: cancel.clone(),
             });
             drop(store);

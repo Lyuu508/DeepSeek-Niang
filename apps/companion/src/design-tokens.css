@@ -1,0 +1,50 @@
+:root {
+  font-size: var(--ui-font-size, 100%);
+  --theme-blue: #426fbd;
+  --theme-lavender: #9c9ad9;
+  --bg: #f2f7ff;
+  --surface: #fffefa;
+  --text: #273b57;
+  --muted: #5d718c;
+  --line: #dce7f5;
+  --blue: var(--theme-blue);
+  --soft: color-mix(in srgb, var(--theme-blue) 10%, var(--surface));
+  --bubble: #f4f7fc;
+  --shadow: 0 8px 28px #243f6910;
+  --focus: color-mix(in srgb, var(--blue) 64%, var(--surface));
+  --danger: #9f344e;
+  --radius-small: .6rem;
+  --radius-control: .8rem;
+  --radius-card: 1.15rem;
+  --radius-dialog: 1.45rem;
+  --radius-round: 50%;
+  --font-ui: .875rem;
+  --font-chat: .9375rem;
+  --font-caption: .75rem;
+  --font-heading: 1.4rem;
+  --motion-duration: 270ms;
+  --motion-ease: cubic-bezier(.22, .72, .26, 1);
+  --surface-alpha: 88%;
+  --control-tint: color-mix(in srgb, var(--surface) var(--surface-alpha), var(--button-tone, var(--blue)));
+  --control-hover: color-mix(in srgb, var(--surface) 70%, var(--button-tone, var(--blue)));
+  --control-pressed: color-mix(in srgb, var(--surface) 60%, var(--button-tone, var(--blue)));
+  --control-shadow: 0 2px 6px color-mix(in srgb, var(--text) 10%, transparent);
+}
+
+[data-theme=dark] {
+  color-scheme: dark;
+  --theme-blue: #a7c6ff;
+  --theme-lavender: #c1b4ed;
+  --bg: #111c2d;
+  --surface: #18273b;
+  --text: #e7edfa;
+  --muted: #a1b2c9;
+  --line: #30435f;
+  --bubble: #202f46;
+  --danger: #ff9eb5;
+  --shadow: 0 6px 24px #070e1b36;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --motion-duration: 0ms; }
+}

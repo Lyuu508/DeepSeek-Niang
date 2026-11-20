@@ -1,7 +1,12 @@
 //! Production replication: durable transaction outbox and per-field logical registers.
 //! The network crate authenticates both the TLS peer and every origin signature.
 //! Legacy laboratory import is never called by this adapter.
-use crate::{Error, Result, storage::Store};
+use crate::{
+    Error, Result,
+    event::sha256_hex,
+    recycle::{self, Decision, ERASED_HISTORY, LIFECYCLE},
+    storage::Store,
+};
 use rusqlite::{Connection, OptionalExtension, params, types::Value as SqlValue};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -11,12 +16,13 @@ use uuid::Uuid;
 pub const PAGE: usize = 64;
 pub const MAX_WIRE: usize = 4 * 1024 * 1024;
 // Dependency order for initial bootstrap. Device rows carry public metadata only.
-const TABLES: &[(&str, &str)] = &[
+pub(crate) const TABLES: &[(&str, &str)] = &[
     ("local_profiles", "id"),
     ("devices", "id"),
     ("conversations", "id"),
     ("personas", "id"),
     ("conversation_personas", "conversation_id"),
+    (LIFECYCLE, "persona_id"),
     ("persona_chat_preferences", "persona_id"),
     ("persona_states", "persona_id"),
     ("sync_events", "event_id"),
@@ -51,7 +57,7 @@ const TABLES: &[(&str, &str)] = &[
     ("companion_proactive", "id"),
     ("companion_receipts", "proactive_id,device_id"),
 ];
-fn key_fields(table: &str) -> Result<Vec<&str>> {
+pub(crate) fn key_fields(table: &str) -> Result<Vec<&str>> {
     Ok(TABLES
         .iter()
         .find(|(t, _)| *t == table)
@@ -191,7 +197,29 @@ impl Change {
         for id in [&self.id, &self.origin] {
             Uuid::parse_str(id).map_err(|_| Error::Invalid("sync UUID"))?;
         }
-        if self.key != row_key(&self.table, &self.row)?
+        let key = if self.table == ERASED_HISTORY {
+            let id = self.row["persona_id"]
+                .as_str()
+                .ok_or(Error::Invalid("erased persona"))?;
+            let digest = self.row["wire_sha256"]
+                .as_str()
+                .ok_or(Error::Invalid("erased digest"))?;
+            Uuid::parse_str(id).map_err(|_| Error::Invalid("erased persona"))?;
+            if digest.len() != 64
+                || !digest
+                    .bytes()
+                    .all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
+                || self.row.as_object().map_or(0, |r| r.len()) != 2
+                || self.deleted
+                || !self.fields.is_empty()
+            {
+                return Err(Error::Invalid("erased history shape"));
+            }
+            json!([id]).to_string()
+        } else {
+            row_key(&self.table, &self.row)?
+        };
+        if self.key != key
             || self.fields.len() > 100
             || serde_json::to_vec(self)?.len() > 256 * 1024
         {
@@ -213,9 +241,11 @@ pub struct Peer {
 }
 impl Store {
     pub fn lan_outbox_count(&self) -> Result<i64> {
-        Ok(self
-            .conn
-            .query_row("SELECT count(*) FROM lan_outbox", [], |r| r.get(0))?)
+        Ok(self.conn.query_row(
+            "SELECT (SELECT count(*) FROM lan_outbox)+(SELECT count(*) FROM lan_erasure_queue)",
+            [],
+            |r| r.get(0),
+        )?)
     }
     pub fn lan_enabled(&self) -> Result<bool> {
         Ok(self
@@ -293,6 +323,47 @@ impl Store {
     /// Sign only durable local changes. Both sequence assignment and outbox removal are atomic.
     pub fn lan_capture(&mut self, sign: impl Fn(&[u8]) -> Result<String>) -> Result<()> {
         let tx = self.conn.transaction()?;
+        let erasures = {
+            let mut s = tx.prepare(
+                "SELECT e.id,e.seq,e.clock,q.persona_id,q.wire_sha256 FROM lan_erasure_queue q
+                JOIN lan_events e ON e.id=q.event_id WHERE e.origin=?1 ORDER BY e.seq LIMIT 512",
+            )?;
+            s.query_map([&self.device_id], |r| {
+                Ok((
+                    r.get::<_, String>(0)?,
+                    r.get::<_, i64>(1)?,
+                    r.get::<_, i64>(2)?,
+                    r.get::<_, String>(3)?,
+                    r.get::<_, String>(4)?,
+                ))
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?
+        };
+        for (id, seq, clock, persona, digest) in erasures {
+            let mut masked = Change {
+                version: 2,
+                id,
+                origin: self.device_id.clone(),
+                seq,
+                clock,
+                table: ERASED_HISTORY.into(),
+                key: json!([persona]).to_string(),
+                row: json!({"persona_id":persona,"wire_sha256":digest}),
+                fields: BTreeMap::new(),
+                deleted: false,
+                signature: String::new(),
+            };
+            masked.validate()?;
+            masked.signature = sign(&masked.signing_bytes()?)?;
+            tx.execute(
+                "UPDATE lan_events SET wire=?2 WHERE id=?1",
+                params![masked.id, serde_json::to_string(&masked)?],
+            )?;
+            tx.execute(
+                "DELETE FROM lan_erasure_queue WHERE event_id=?1",
+                [&masked.id],
+            )?;
+        }
         if !tx.query_row("SELECT initialized FROM lan_control WHERE id=1", [], |r| {
             r.get::<_, bool>(0)
         })? {
@@ -392,7 +463,7 @@ impl Store {
             let current = flatten(&row)?;
             let fields = current
                 .into_iter()
-                .filter(|(k, v)| previous.get(k) != Some(v))
+                .filter(|(k, v)| table == LIFECYCLE || previous.get(k) != Some(v))
                 .collect::<BTreeMap<_, _>>();
             if !fields.is_empty() || deleted {
                 let (seq, clock): (i64, i64) = tx.query_row(
@@ -469,7 +540,11 @@ impl Store {
                 break;
             }
             total += wire.len();
-            page.push(serde_json::from_str(&wire)?);
+            match serde_json::from_str(&wire) {
+                Ok(event) => page.push(event),
+                Err(_) if erased_digest(&wire).is_some() => break,
+                Err(error) => return Err(error.into()),
+            }
         }
         Ok(page)
     }
@@ -490,18 +565,45 @@ impl Store {
             if e.origin != peer || e.origin == self.device_id {
                 return Err(Error::Untrusted);
             }
-            let old: Option<String> = tx
+            let old: Option<(String,String,i64,i64,String)> = tx
                 .query_row(
-                    "SELECT wire FROM lan_events WHERE id=?1 OR (origin=?2 AND seq=?3)",
+                    "SELECT id,origin,seq,clock,wire FROM lan_events WHERE id=?1 OR (origin=?2 AND seq=?3)",
                     params![e.id, e.origin, e.seq],
-                    |r| r.get(0),
+                    |r| Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?)),
                 )
                 .optional()?;
-            if let Some(old) = old {
-                if serde_json::from_str::<Change>(&old)? != *e {
+            if let Some((id, origin, seq, clock, old)) = old {
+                if (id.as_str(), origin.as_str(), seq, clock)
+                    != (e.id.as_str(), e.origin.as_str(), e.seq, e.clock)
+                {
                     return Err(Error::Conflict);
                 }
-                continue;
+                let incoming = serde_json::to_string(e)?;
+                if incoming == old {
+                    continue;
+                }
+                let known_digest = erased_digest(&old);
+                let incoming_digest = e.row["wire_sha256"].as_str();
+                if known_digest.as_deref().is_some_and(|d| {
+                    if e.table == ERASED_HISTORY {
+                        incoming_digest == Some(d)
+                    } else {
+                        sha256_hex(incoming.as_bytes()) == d
+                    }
+                }) {
+                    continue;
+                }
+                if e.table == ERASED_HISTORY
+                    && incoming_digest.is_some_and(|d| d == sha256_hex(old.as_bytes()))
+                {
+                    // A signed replacement keeps the original origin, sequence and checksum.
+                    tx.execute(
+                        "UPDATE lan_events SET wire=?2 WHERE id=?1",
+                        params![e.id, incoming],
+                    )?;
+                    continue;
+                }
+                return Err(Error::Conflict);
             }
             let next: i64 = tx.query_row(
                 "SELECT coalesce(max(seq),0)+1 FROM lan_events WHERE origin=?1",
@@ -511,10 +613,31 @@ impl Store {
             if e.seq != next {
                 return Err(Error::Invalid("CHECKPOINT_GAP"));
             }
-            validate_row(&tx, e, &self.device_id)?;
-            merge_cells(&tx, e)?;
-            project(&tx, e)?;
-            save_event(&tx, e)?;
+            if e.table == ERASED_HISTORY {
+                save_event(&tx, e)?;
+            } else if e.table == LIFECYCLE {
+                validate_row(&tx, e, &self.device_id)?;
+                import_lifecycle(&tx, e)?;
+                save_event(&tx, e)?;
+            } else if let Some(persona) = recycle::erased_owner(&tx, &e.table, &e.key, &e.row)? {
+                recycle::remember_key(&tx, &e.table, &e.key, &persona)?;
+                let digest = sha256_hex(serde_json::to_string(e)?.as_bytes());
+                tx.execute(
+                    "INSERT INTO lan_events(id,origin,seq,clock,wire) VALUES(?1,?2,?3,?4,?5)",
+                    params![
+                        e.id,
+                        e.origin,
+                        e.seq,
+                        e.clock,
+                        recycle::erased_wire(&digest)
+                    ],
+                )?;
+            } else {
+                validate_row(&tx, e, &self.device_id)?;
+                merge_cells(&tx, e)?;
+                project(&tx, e)?;
+                save_event(&tx, e)?;
+            }
             let observed = e
                 .clock
                 .max(
@@ -550,6 +673,45 @@ impl Store {
         Ok(s.query_map([],|r|Ok(json!({"entity":r.get::<_,String>(0)?,"key":r.get::<_,String>(1)?,"field":r.get::<_,String>(2)?,"event":r.get::<_,String>(3)?,"value":r.get::<_,String>(4)?})))?.collect::<std::result::Result<_,_>>()?)
     }
 }
+fn erased_digest(wire: &str) -> Option<String> {
+    let value: Value = serde_json::from_str(wire).ok()?;
+    if value["table"] == ERASED_HISTORY {
+        value["row"]["wire_sha256"].as_str().map(str::to_owned)
+    } else {
+        value["erased_digest"].as_str().map(str::to_owned)
+    }
+}
+
+fn import_lifecycle(db: &Connection, event: &Change) -> Result<()> {
+    let next: Decision = serde_json::from_value(event.row.clone())?;
+    recycle::validate_decision(db, &next)?;
+    let latest = recycle::read_decision(db, &next.persona_id)?;
+    let terminal = next.state == "permanently_deleted";
+    let already_deleted = latest.is_some_and(|d| d.state == "permanently_deleted");
+    if already_deleted && !terminal {
+        return Ok(());
+    }
+    let previous: Option<(i64,String,String)> = db.query_row(
+        "SELECT clock,origin,event_id FROM lan_cells WHERE table_name=?1 AND row_key=?2 AND field='state'",
+        params![LIFECYCLE,event.key], |r| Ok((r.get(0)?,r.get(1)?,r.get(2)?)),
+    ).optional()?;
+    // Compare the decision as a unit, independently of concurrent edits to the persona row.
+    if (!terminal || already_deleted)
+        && previous.is_some_and(|p| {
+            (p.0, p.1.as_str(), p.2.as_str())
+                >= (event.clock, event.origin.as_str(), event.id.as_str())
+        })
+    {
+        return Ok(());
+    }
+    db.execute(
+        "DELETE FROM lan_cells WHERE table_name=?1 AND row_key=?2",
+        params![LIFECYCLE, event.key],
+    )?;
+    merge_cells(db, event)?;
+    recycle::enact(db, &next)
+}
+
 fn flatten(row: &Value) -> Result<BTreeMap<String, Value>> {
     let mut fields = BTreeMap::new();
     if let Some(obj) = row.as_object() {
@@ -558,6 +720,7 @@ fn flatten(row: &Value) -> Result<BTreeMap<String, Value>> {
                 let value: Value =
                     serde_json::from_str(v.as_str().ok_or(Error::Invalid("settings JSON"))?)?;
                 let allowed = [
+                    "dialogue",
                     "model",
                     "temperature",
                     "max_tokens",
@@ -663,6 +826,18 @@ fn validate_row(db: &Connection, e: &Change, local: &str) -> Result<()> {
     let flat = flatten(&e.row)?;
     if e.fields.iter().any(|(k, v)| flat.get(k) != Some(v)) {
         return Err(Error::Invalid("invalid change fields"));
+    }
+    if e.table == LIFECYCLE && (e.deleted || e.fields != flat) {
+        return Err(Error::Invalid("incomplete persona lifecycle decision"));
+    }
+    if e.table == "personas"
+        && let Some(id) = e.row["id"].as_str()
+        && let Some(decision) = recycle::read_decision(db, id)?
+        && (e.row["profile_id"] != decision.profile_id
+            || e.row["main_conversation_id"] != decision.main_conversation_id
+            || e.row["is_builtin"] != json!(0))
+    {
+        return Err(Error::Untrusted);
     }
     if e.table == "devices" && e.row["id"] == local {
         return Err(Error::Untrusted);
@@ -1237,6 +1412,204 @@ mod migration_tests {
             }
             b.lan_import(&a.device_id, &page).unwrap();
         }
+    }
+    #[test]
+    fn recycle_bidirectional_restore_and_terminal_erasure_fence_offline_edits() {
+        use crate::recycle::RecycleAction;
+        let mut desktop = Store::open(":memory:").unwrap();
+        let mut phone = Store::open(":memory:").unwrap();
+        desktop.set_device_platform("windows").unwrap();
+        phone.set_device_platform("android").unwrap();
+        paired(&mut desktop, &phone);
+        paired(&mut phone, &desktop);
+        let original = desktop.create_persona("临时人格螺壳", "喜欢河流").unwrap();
+        let survivor = desktop.create_persona("保留人格", "喜欢看云").unwrap();
+        let p = &original.id;
+        let memory = Uuid::new_v4().to_string();
+        let keep = Uuid::new_v4().to_string();
+        desktop
+            .put_persona_memory(p, &memory, "合成删除标识螺壳")
+            .unwrap();
+        desktop
+            .put_persona_memory(&survivor.id, &keep, "保留性格夹具")
+            .unwrap();
+        let chat = crate::chat::StartChat {
+            request_id: Uuid::new_v4().to_string(),
+            conversation_id: original.main_conversation_id.clone(),
+            text: Some("谢谢你陪我练习。螺壳夹具聊天".into()),
+            regenerate_user_id: None,
+        };
+        let settings = desktop.persona_settings(p).unwrap();
+        desktop.begin_chat(&chat, &settings).unwrap();
+        desktop
+            .finish_chat(&chat.request_id, "夹具回复。", "complete", None, None, None)
+            .unwrap();
+        let bond = desktop.bond_snapshot(p).unwrap().applied_events;
+        let before = desktop.chat_messages(&chat.conversation_id).unwrap();
+        capture(&mut phone);
+        replicate(&mut desktop, &mut phone);
+        replicate(&mut phone, &mut desktop);
+        desktop.select_persona(p).unwrap();
+        phone.select_persona(p).unwrap();
+        desktop
+            .change_recycle(RecycleAction::Trash {
+                persona_id: p.clone(),
+            })
+            .unwrap();
+        assert!(desktop.persona(p).is_err());
+        assert_ne!(desktop.active_persona_id().unwrap(), *p);
+        assert!(desktop.begin_chat(&chat, &settings).is_err());
+        let mut offline = phone.persona_settings(p).unwrap();
+        offline.character_name = "离线修改的名字".into();
+        phone.save_persona_settings(p, &offline).unwrap();
+        replicate(&mut phone, &mut desktop);
+        assert!(desktop.persona(p).is_err());
+        replicate(&mut desktop, &mut phone);
+        assert_ne!(phone.active_persona_id().unwrap(), *p);
+        let trash = phone.recycled_personas().unwrap().pop().unwrap();
+        assert_eq!(trash.persona.name, "离线修改的名字");
+        phone
+            .change_recycle(RecycleAction::Restore { entry: trash.entry })
+            .unwrap();
+        replicate(&mut phone, &mut desktop);
+        assert_eq!(desktop.persona(p).unwrap().id, *p);
+        let after = desktop.chat_messages(&chat.conversation_id).unwrap();
+        assert_eq!(
+            before.iter().map(|m| &m.id).collect::<Vec<_>>(),
+            after.iter().map(|m| &m.id).collect::<Vec<_>>()
+        );
+        assert_eq!(desktop.bond_snapshot(p).unwrap().applied_events, bond);
+        assert_eq!(desktop.memories_for_persona(p).unwrap()[0].id, memory);
+        phone
+            .change_recycle(RecycleAction::Trash {
+                persona_id: p.clone(),
+            })
+            .unwrap();
+        replicate(&mut phone, &mut desktop);
+        let both = desktop.recycled_personas().unwrap().pop().unwrap();
+        let peer = phone.recycled_personas().unwrap().pop().unwrap();
+        desktop
+            .change_recycle(RecycleAction::Purge {
+                entries: vec![both.entry],
+            })
+            .unwrap();
+        // The phone makes a new restore and edit before learning about deletion.
+        phone
+            .change_recycle(RecycleAction::Restore { entry: peer.entry })
+            .unwrap();
+        phone
+            .put_persona_memory(p, &Uuid::new_v4().to_string(), "离线新写入螺壳")
+            .unwrap();
+        replicate(&mut phone, &mut desktop);
+        assert!(desktop.persona(p).is_err());
+        replicate(&mut desktop, &mut phone);
+        replicate(&mut phone, &mut desktop);
+        replicate(&mut desktop, &mut phone);
+        for store in [&desktop, &phone] {
+            assert!(store.persona(p).is_err() && store.recycled_personas().unwrap().is_empty());
+            assert_eq!(
+                store.memories_for_persona(&survivor.id).unwrap()[0].id,
+                keep
+            );
+            assert_eq!(store.diagnostics().unwrap().integrity, "ok");
+            let leaked: i64 = store
+                .conn
+                .query_row(
+                    "SELECT count(*) FROM lan_events WHERE wire LIKE '%螺壳%'",
+                    [],
+                    |r| r.get(0),
+                )
+                .unwrap();
+            assert_eq!(leaked, 0);
+        }
+        let mut newcomer = Store::open(":memory:").unwrap();
+        paired(&mut newcomer, &desktop);
+        replicate(&mut desktop, &mut newcomer);
+        assert!(newcomer.persona(p).is_err());
+        for event in desktop.lan_export(0).unwrap() {
+            assert!(!serde_json::to_string(&event).unwrap().contains("螺壳"));
+        }
+        assert!(newcomer.persona(&survivor.id).is_ok());
+    }
+
+    #[test]
+    fn recycle_batch_is_transactional_and_confirmation_is_revision_bound() {
+        use crate::recycle::RecycleAction;
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("v10.sqlite3");
+        let mut s = Store::open(&path).unwrap();
+        let builtin = s.active_persona_id().unwrap();
+        assert!(
+            s.change_recycle(RecycleAction::Trash {
+                persona_id: builtin
+            })
+            .is_err()
+        );
+        let a = s.create_persona("合成甲", "好奇").unwrap();
+        let b = s.create_persona("合成乙", "温柔").unwrap();
+        for p in [&a, &b] {
+            s.change_recycle(RecycleAction::Trash {
+                persona_id: p.id.clone(),
+            })
+            .unwrap();
+        }
+        s.set_font_scale(140).unwrap();
+        drop(s);
+        let mut s = Store::open(&path).unwrap();
+        let entries = s
+            .recycled_personas()
+            .unwrap()
+            .into_iter()
+            .map(|p| p.entry)
+            .collect::<Vec<_>>();
+        assert_eq!(entries.len(), 2);
+        assert_eq!(s.font_scale().unwrap(), 140);
+        assert!(s.set_font_scale(151).is_err());
+        let before = s.lan_outbox_count().unwrap();
+        s.conn
+            .execute_batch(&format!(
+                "CREATE TRIGGER inject_purge_failure BEFORE DELETE ON personas
+           WHEN old.id='{}' BEGIN SELECT RAISE(ABORT,'fixture write failure'); END",
+                entries[1].persona_id
+            ))
+            .unwrap();
+        assert!(
+            s.change_recycle(RecycleAction::Purge {
+                entries: entries.clone()
+            })
+            .is_err()
+        );
+        assert_eq!(s.recycled_personas().unwrap().len(), 2);
+        assert_eq!(s.lan_outbox_count().unwrap(), before);
+        s.conn
+            .execute_batch("DROP TRIGGER inject_purge_failure")
+            .unwrap();
+        s.change_recycle(RecycleAction::Restore {
+            entry: entries[1].clone(),
+        })
+        .unwrap();
+        assert!(
+            s.change_recycle(RecycleAction::Purge {
+                entries: entries.clone()
+            })
+            .is_err()
+        );
+        assert_eq!(
+            s.change_recycle(RecycleAction::Purge {
+                entries: vec![entries[0].clone()]
+            })
+            .unwrap()
+            .len(),
+            1
+        );
+        assert!(
+            s.change_recycle(RecycleAction::Purge {
+                entries: vec![entries[0].clone()]
+            })
+            .is_err()
+        );
+        assert!(s.persona(&entries[1].persona_id).is_ok());
+        assert_eq!(s.diagnostics().unwrap().integrity, "ok");
     }
     #[test]
     fn evidence_life_tasks_and_public_preferences_sync_without_credentials_or_live_leases() {

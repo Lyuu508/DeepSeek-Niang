@@ -6,7 +6,10 @@ import standing from './media/standing.png';
 import idle from './media/idle.webp';
 import walk from './media/walk.webp';
 import wave from './media/wave.webp';
+import '../design-tokens.css';
 import './pet.css';
+import '../button-motion.css';
+import { installButtonMotion } from '../button-motion';
 
 type Pane = 'activity' | 'chat' | 'menu';
 const sprites = { standing, idle, walk, wave };
@@ -55,6 +58,7 @@ function Pet() {
   const dragged = useRef(false);
 
   const apply = useCallback((state: PetSnapshot) => {
+    document.documentElement.style.setProperty('--ui-font-size', `${state.font_scale ?? 100}%`);
     lastState.current = state;
     setSnapshot(state);
     setOffline(false);
@@ -297,4 +301,5 @@ function Pet() {
   </main>;
 }
 
+installButtonMotion();
 createRoot(document.getElementById('pet-root')!).render(isTauri() ? <Pet /> : <p className="pet-preview">请从 Windows 应用设置打开桌宠。</p>);

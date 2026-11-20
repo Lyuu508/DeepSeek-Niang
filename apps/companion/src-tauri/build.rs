@@ -1,6 +1,13 @@
 fn main() {
     // Once an application has a second WebView, every custom command needs an explicit audience.
     let commands = &[
+        "set_font_scale",
+        "list_recycled_personas",
+        "change_recycled_personas",
+        "inspect_plugin",
+        "list_plugins",
+        "change_plugin",
+        "due_plugin_reminders",
         "sync_status",
         "sync_command",
         "bootstrap",

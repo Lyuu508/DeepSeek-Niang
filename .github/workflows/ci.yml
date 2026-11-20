@@ -86,6 +86,7 @@ jobs:
           python3 scripts/run_logged.py "$RUNNER_TEMP/deepseek-test-evidence/ui-tests.txt" npm run test:ui
           COMPANION_PET_EVIDENCE_DIR="$RUNNER_TEMP/deepseek-test-evidence/desktop-pet-ui" python3 scripts/run_logged.py "$RUNNER_TEMP/deepseek-test-evidence/desktop-pet-ui.txt" node tests/browser/desktop-pet.cjs
           COMPANION_VOICE_EVIDENCE_DIR="$RUNNER_TEMP/deepseek-test-evidence/voice-ui" python3 scripts/run_logged.py "$RUNNER_TEMP/deepseek-test-evidence/voice-ui.txt" node tests/browser/voice.cjs
+          COMPANION_V009_EVIDENCE="$RUNNER_TEMP/deepseek-test-evidence/v009-ui" python3 scripts/run_logged.py "$RUNNER_TEMP/deepseek-test-evidence/v009-ui.txt" node tests/browser/v009.cjs
           VITE_COMPANION_TEST_PACKAGE=1 COMPANION_TEST_ARTIFACT_DIR="$RUNNER_TEMP/deepseek-test-evidence/ui-isolated" python3 scripts/run_logged.py "$RUNNER_TEMP/deepseek-test-evidence/ui-isolated-tests.txt" npm run test:ui
       - name: Retain test reports and sanitized logs
         if: always()

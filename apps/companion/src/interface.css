@@ -1,0 +1,165 @@
+.app {
+  background: radial-gradient(ellipse at top right, color-mix(in srgb, var(--theme-lavender) 12%, transparent), transparent 62%), var(--bg);
+}
+.app > header { background: color-mix(in srgb, var(--surface) 90%, var(--bg)); }
+.app .avatar { border-radius: var(--radius-control); }
+.app .avatar.small { width: clamp(28px, 2.1rem, 52px); height: clamp(28px, 2.1rem, 52px); }
+.app .settings-card, .app .companion-rail, .app .composer { border-radius: var(--radius-card); box-shadow: var(--shadow); }
+.app .bubble {
+  border-radius: var(--radius-card) var(--radius-card) var(--radius-card) var(--radius-small);
+  font-size: var(--font-chat);
+  line-height: 1.66;
+  overflow-wrap: anywhere;
+}
+.app .message.user .bubble { border-radius: var(--radius-card) var(--radius-card) var(--radius-small) var(--radius-card); }
+.app .key-row, .app .button-row, .app .card-heading, .app .message-meta { min-width: 0; flex-wrap: wrap; }
+.app .settings-content :where(input:not([type=checkbox]):not([type=range]), textarea, select) { max-width: 100%; }
+.app .pair-modal { border-radius: var(--radius-dialog); background: var(--surface); }
+.composer-tools { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: .35rem; }
+.composer-tools .voice-controls { flex: 1 1 160px; padding: 0; }
+.composer-privacy { font-size: var(--font-caption); color: var(--muted); max-width: 40ch; }
+.composer-privacy summary { cursor: pointer; padding: .32rem .25rem; }
+.composer-privacy p { margin: .35rem .25rem; }
+.app[data-platform=desktop] :where(.composer textarea, .settings-content textarea) { min-height: 4rem; }
+
+.app[data-platform=android] > header {
+  flex: none;
+  height: 48px;
+  min-height: 48px;
+  align-items: center;
+  padding: 2px 12px;
+  gap: 10px;
+  border: 0;
+  background: linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--bg) 82%, var(--surface)));
+}
+.app[data-platform=android] .header-actions { margin-left: auto; }
+.app[data-platform=android][data-page=chat] .header-title,
+.app[data-platform=android][data-page=chat] .test-build-banner { display: none; }
+.app[data-platform=android] .header-title > small { display: none; }
+.app[data-platform=android] header :where(.menu-toggle,.icon-button) {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border: 0;
+  border-radius: var(--radius-round);
+  background: transparent;
+  padding: 0;
+}
+.app[data-platform=android] .phone-menu-avatar .avatar.small { width: 38px; height: 38px; border-radius: var(--radius-round); }
+.app[data-platform=android] header .icon-button {
+  background: radial-gradient(circle closest-side, var(--soft) 85%, transparent 89%);
+}
+.app[data-platform=android] .message-scroll { padding: 6px 12px 8px; }
+.app[data-platform=android] .message { margin: .55rem 0 .8rem; }
+.app[data-platform=android] .bubble { padding: .54rem .76rem; }
+.app[data-platform=android] .message-meta { gap: .32rem; }
+.app[data-platform=android] .message-foot { display: flex; align-items: center; flex-wrap: wrap; gap: .32rem; }
+.app[data-platform=android] .composer-area { padding: 4px 9px 5px; }
+.app[data-platform=android] .composer { padding: 3px; border-radius: var(--radius-card); }
+.app[data-platform=android] .composer-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: end;
+  gap: 4px;
+}
+.app[data-platform=android] .composer textarea {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-height: max(44px, 1.8rem);
+  max-height: min(6rem, 22dvh);
+  field-sizing: content;
+  padding: .55em .1rem;
+  line-height: 1.45;
+  resize: none;
+  overflow-y: auto;
+}
+.app[data-platform=android] .composer-toolbar { margin: 0; padding: 0; }
+.app[data-platform=android] .composer-row :where(.composer-more, .send-button, .stop-button) {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: var(--radius-round);
+}
+.composer-row :where(.composer-more, .send-button, .stop-button) > span { line-height: 1; }
+.app[data-platform=android] .composer-row button > span {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-round);
+  background: var(--soft);
+  color: var(--blue);
+  font-size: 1.15rem;
+}
+.app[data-platform=android] .composer-row .send-button > span { background: var(--blue); color: var(--surface); }
+.app[data-platform=android] .composer-row .stop-button > span { color: var(--danger); font-size: .975rem; }
+.app[data-platform=android] .composer-tools { margin: 3px .35rem; }
+.app[data-platform=android] .mobile-nav { padding: 4px 8px; min-height: 53px; background: var(--surface); }
+.app[data-platform=android] .mobile-nav button {
+  flex: 1 1 0; min-width: 0; min-height: 44px; gap: 2px; font-size: .6875rem;
+  border-radius: var(--radius-control);
+}
+.app[data-platform=android] .mobile-nav svg { width: 18px; height: 18px; }
+.app[data-platform=android][data-ime=true] .mobile-nav { display: none; }
+.app[data-platform=android] button:not(:disabled):active { filter: brightness(.96); }
+
+.font-settings input[type=range] { width: 100%; flex: 1 0 100%; accent-color: var(--blue); }
+.font-settings output { float: right; color: var(--blue); }
+.font-settings button[aria-pressed=true] { color: var(--blue); border-color: var(--blue); }
+.app .persona-tile { min-width: 0; border-radius: var(--radius-card); }
+.persona-tile > div { min-width: 0; overflow-wrap: anywhere; }
+.persona-summary { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.persona-menu { grid-column: 1/-1; font-size: var(--font-caption); line-height: 1.6; min-width: 0; }
+.persona-menu summary { cursor: pointer; padding: .4rem 0; color: var(--blue); }
+.persona-menu button { margin: .2rem .35rem .2rem 0; padding: .45rem .6rem; border: 1px solid var(--line); border-radius: var(--radius-control); }
+.app .danger { color: var(--danger); }
+.confirmation {
+  width: min(28rem, calc(100vw - 1.5rem));
+  max-height: calc(var(--viewport-height, 100dvh) - 1.5rem);
+  overflow: auto;
+  margin: auto;
+  padding: 1.2rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-dialog);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  overscroll-behavior: contain;
+}
+.confirmation::backdrop { background: #182c5270; }
+.confirmation h2 { font-size: var(--font-heading); line-height: 1.35; margin: 0 0 .6rem; }
+.confirmation-body { font-size: var(--font-ui); line-height: 1.65; overflow-wrap: anywhere; }
+.confirmation-body > .avatar { width: 3rem; height: 3rem; }
+.confirmation-body ul { margin: .35rem 0; padding-left: 1.5rem; }
+.confirmation-body p { margin: .6em 0; }
+.confirmation-actions { display: flex; flex-wrap: wrap; justify-content: end; gap: .5rem; margin-top: .8rem; }
+.confirmation-actions button { border: 1px solid var(--line); padding: .55rem .75rem; min-height: 44px; background: var(--soft); color: var(--blue); border-radius: var(--radius-control); }
+.confirmation-actions .danger { background: color-mix(in srgb, var(--surface) 87%, var(--danger)); border-color: var(--danger); }
+.dialogue-fields { margin: .8rem 0 0; min-width: 0; padding: .8rem; border-radius: var(--radius-control); border: 1px solid var(--line); }
+.dialogue-fields legend { padding: 0 .4rem; color: var(--blue); font-weight: 600; }
+.dialogue-sliders { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr)); gap: .5rem; }
+.dialogue-sliders input { width: 100%; padding: 0; accent-color: var(--blue); }
+.plugin-card, .plugin-card fieldset { min-width: 0; overflow-wrap: anywhere; }
+.plugin-card fieldset { margin: .7rem 0; border: 1px solid var(--line); border-radius: var(--radius-control); padding: .8rem; }
+.plugin-card legend { color: var(--blue); padding: 0 .4rem; }
+.plugin-details > summary { color: var(--blue); cursor: pointer; padding: .55rem 0; }
+.plugin-fields, .plugin-run { display: grid; gap: .5rem; }
+.plugin-run time { color: var(--blue); font-weight: 650; font-variant-numeric: tabular-nums; }
+.plugin-preview { display: grid; grid-template-columns: auto minmax(0,1fr); gap: .32rem .75rem; margin: .5rem 0; }
+.plugin-preview dd { margin: 0; overflow-wrap: anywhere; }
+.plugin-reminder { display: flex; align-items: center; justify-content: space-between; gap: .55rem; }
+.plugin-reminder span { overflow-wrap: anywhere; }
+
+@media (max-height: 480px) {
+  .app[data-platform=android] .welcome { padding: .55rem 0; }
+  .app[data-platform=android] .welcome .avatar { width: 44px; height: 44px; }
+  .app[data-platform=android] .suggestions { display: none; }
+}

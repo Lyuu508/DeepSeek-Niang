@@ -1,0 +1,59 @@
+{
+  "scope": "Chromium browser fixture; native IPC and keyboard geometry simulated",
+  "mobile": [
+    {
+      "width": 360,
+      "height": 800,
+      "header": 66,
+      "nav": 63,
+      "composer": 206,
+      "message_px": 435,
+      "overflow": false
+    },
+    {
+      "width": 375,
+      "height": 812,
+      "header": 66,
+      "nav": 63,
+      "composer": 206,
+      "message_px": 447,
+      "overflow": false
+    },
+    {
+      "width": 393,
+      "height": 852,
+      "header": 66,
+      "nav": 63,
+      "composer": 206,
+      "message_px": 487,
+      "overflow": false
+    },
+    {
+      "width": 412,
+      "height": 915,
+      "header": 66,
+      "nav": 63,
+      "composer": 206,
+      "message_px": 550,
+      "overflow": false
+    },
+    {
+      "width": 1024,
+      "height": 768,
+      "header": 66,
+      "nav": 63,
+      "composer": 194,
+      "message_px": 415,
+      "overflow": false
+    },
+    {
+      "width": 812,
+      "height": 375,
+      "header": 66,
+      "nav": 63,
+      "composer": 194,
+      "message_px": 24,
+      "overflow": false
+    }
+  ]
+}

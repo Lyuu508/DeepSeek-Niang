@@ -144,6 +144,93 @@ fn two_independent_profiles_preserve_personas_chats_memories_and_offline_backfil
     b.stop();
 }
 #[test]
+fn real_tls_persona_recycle_restore_and_delete_survive_offline_edits() {
+    use companion_core::recycle::RecycleAction;
+    let pc = service_named("Windows 回收站夹具");
+    let phone = service_named("Android 回收站夹具");
+    pc.store
+        .lock()
+        .unwrap()
+        .set_device_platform("windows")
+        .unwrap();
+    phone
+        .store
+        .lock()
+        .unwrap()
+        .set_device_platform("android")
+        .unwrap();
+    let persona = pc
+        .store
+        .lock()
+        .unwrap()
+        .create_persona("合成可回收人格", "喜欢画画")
+        .unwrap();
+    let p = &persona.id;
+    synthetic_chat(
+        &pc,
+        &persona.main_conversation_id,
+        "我在合成回收站夹具写了消息。",
+    );
+    pc.capture().unwrap();
+    phone.capture().unwrap();
+    let code = pc
+        .make_invite(vec![format!("127.0.0.1:{}", pc.port)], true)
+        .unwrap();
+    phone.pair_scanned(&code.text).unwrap();
+    phone.tick().unwrap();
+    assert_eq!(phone.store.lock().unwrap().persona(p).unwrap().id, *p);
+    pc.store
+        .lock()
+        .unwrap()
+        .change_recycle(RecycleAction::Trash {
+            persona_id: p.clone(),
+        })
+        .unwrap();
+    phone.tick().unwrap();
+    {
+        let mut s = phone.store.lock().unwrap();
+        let entry = s.recycled_personas().unwrap().pop().unwrap().entry;
+        s.change_recycle(RecycleAction::Restore { entry }).unwrap();
+    }
+    phone.tick().unwrap();
+    assert_eq!(pc.store.lock().unwrap().persona(p).unwrap().id, *p);
+    phone
+        .store
+        .lock()
+        .unwrap()
+        .change_recycle(RecycleAction::Trash {
+            persona_id: p.clone(),
+        })
+        .unwrap();
+    phone.tick().unwrap();
+    {
+        let mut s = pc.store.lock().unwrap();
+        let entry = s.recycled_personas().unwrap().pop().unwrap().entry;
+        s.change_recycle(RecycleAction::Purge {
+            entries: vec![entry],
+        })
+        .unwrap();
+    }
+    {
+        let mut s = phone.store.lock().unwrap();
+        let entry = s.recycled_personas().unwrap().pop().unwrap().entry;
+        s.change_recycle(RecycleAction::Restore { entry }).unwrap();
+        s.put_persona_memory(p, &uuid::Uuid::new_v4().to_string(), "断线后的合成夹具记忆")
+            .unwrap();
+    }
+    for _ in 0..3 {
+        phone.tick().unwrap();
+    }
+    for device in [&pc, &phone] {
+        let s = device.store.lock().unwrap();
+        assert!(s.persona(p).is_err() && s.recycled_personas().unwrap().is_empty());
+        assert_eq!(s.diagnostics().unwrap().integrity, "ok");
+    }
+    pc.stop();
+    phone.stop();
+}
+
+#[test]
 fn signatures_tamper_duplicates_gaps_unknown_origin_and_revocation() {
     let a = service();
     let b = service();

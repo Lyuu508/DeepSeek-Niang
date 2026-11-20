@@ -13,6 +13,8 @@ use companion_chat::{
 use companion_core::{
     chat::{ChatMessage, ChatSettings, PreparedChat, StartChat, UsageSummary},
     persona::{Persona, PersonaSummary},
+    plugins::{Action as PluginAction, DueReminder, Plugin, Preview as PluginPreview},
+    recycle::{RecycleAction, RecycledPersona},
     storage::{Diagnostics, MemoryRecord, Store},
 };
 use companion_secrets::{Secret, SecretStore};
@@ -36,6 +38,7 @@ struct KeyStatus {
 }
 #[derive(Serialize)]
 struct Bootstrap {
+    font_scale: u8,
     version: &'static str,
     platform: &'static str,
     settings: ChatSettings,
@@ -84,7 +87,11 @@ fn vault(_app: &tauri::AppHandle, profile: &str) -> Result<Arc<dyn SecretStore>,
     }
 }
 #[tauri::command]
-async fn bootstrap(state: State<'_, AppState>) -> Result<Bootstrap, ChatFailure> {
+async fn bootstrap(
+    state: State<'_, AppState>,
+    window: tauri::WebviewWindow,
+) -> Result<Bootstrap, ChatFailure> {
+    cancel_inactive(&state, &window);
     let key_status = key_status(&state.0);
     let (active_request, active_conversation) = state
         .0
@@ -98,6 +105,7 @@ async fn bootstrap(state: State<'_, AppState>) -> Result<Bootstrap, ChatFailure>
         .map_err(|_| ChatFailure::new("STORAGE_ERROR"))?;
     let active_persona_id = store.active_persona_id()?;
     Ok(Bootstrap {
+        font_scale: store.font_scale()?,
         personas: store.personas()?,
         persona_summary: store.persona_summary(&active_persona_id)?,
         active_persona_id,
@@ -110,6 +118,95 @@ async fn bootstrap(state: State<'_, AppState>) -> Result<Bootstrap, ChatFailure>
         active_conversation,
         schema_version: store.diagnostics()?.schema_version,
     })
+}
+#[tauri::command]
+fn set_font_scale(percent: u8, state: State<'_, AppState>) -> Result<(), ChatFailure> {
+    Ok(state
+        .0
+        .store
+        .lock()
+        .map_err(|_| ChatFailure::new("STORAGE_ERROR"))?
+        .set_font_scale(percent)?)
+}
+fn cancel_inactive(state: &AppState, _window: &tauri::WebviewWindow) {
+    state.0.cancel_inactive_personas();
+    #[cfg(target_os = "windows")]
+    _window
+        .state::<Arc<video::VideoHost>>()
+        .stop_inactive_personas();
+}
+
+#[tauri::command]
+fn list_recycled_personas(state: State<'_, AppState>) -> Result<Vec<RecycledPersona>, ChatFailure> {
+    Ok(state
+        .0
+        .store
+        .lock()
+        .map_err(|_| ChatFailure::new("STORAGE_ERROR"))?
+        .recycled_personas()?)
+}
+
+#[tauri::command]
+fn change_recycled_personas(
+    action: RecycleAction,
+    state: State<'_, AppState>,
+    window: tauri::WebviewWindow,
+) -> Result<Vec<String>, ChatFailure> {
+    let conversations = state
+        .0
+        .store
+        .lock()
+        .map_err(|_| ChatFailure::new("STORAGE_ERROR"))?
+        .change_recycle(action)?;
+    cancel_inactive(&state, &window);
+    Ok(conversations)
+}
+#[tauri::command]
+fn inspect_plugin(
+    raw: String,
+    source: String,
+    state: State<'_, AppState>,
+) -> Result<PluginPreview, ChatFailure> {
+    Ok(state
+        .0
+        .store
+        .lock()
+        .map_err(|_| ChatFailure::new("STORAGE_ERROR"))?
+        .inspect_plugin(&raw, &source)?)
+}
+#[tauri::command]
+fn list_plugins(persona: String, state: State<'_, AppState>) -> Result<Vec<Plugin>, ChatFailure> {
+    Ok(state
+        .0
+        .store
+        .lock()
+        .map_err(|_| ChatFailure::new("STORAGE_ERROR"))?
+        .list_plugins(&persona)?)
+}
+#[tauri::command]
+fn change_plugin(
+    persona: String,
+    action: PluginAction,
+    state: State<'_, AppState>,
+) -> Result<serde_json::Value, ChatFailure> {
+    Ok(state
+        .0
+        .store
+        .lock()
+        .map_err(|_| ChatFailure::new("STORAGE_ERROR"))?
+        .apply_plugin(&persona, action)?)
+}
+#[tauri::command]
+fn due_plugin_reminders(
+    persona: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<DueReminder>, ChatFailure> {
+    Ok(state
+        .0
+        .store
+        .lock()
+        .map_err(|_| ChatFailure::new("STORAGE_ERROR"))?
+        .due_plugin_reminders(&persona, companion_core::chat::now_ms())?)
 }
 #[tauri::command]
 async fn list_messages(
@@ -338,6 +435,13 @@ pub fn run() {
             let _ = (window, event);
         })
         .invoke_handler(tauri::generate_handler![
+            set_font_scale,
+            list_recycled_personas,
+            change_recycled_personas,
+            inspect_plugin,
+            list_plugins,
+            change_plugin,
+            due_plugin_reminders,
             sync::sync_status,
             sync::sync_command,
             bootstrap,

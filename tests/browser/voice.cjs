@@ -106,6 +106,7 @@ async function open(platform) {
     };
   }, { platform, wav: wave() });
   await page.goto(base);
+  if (platform === 'android') await page.getByRole('button', { name: '输入工具', exact: true }).click();
   await page.getByRole('button', { name: '语音输入', exact: true }).waitFor();
   return { page, external, errors };
 }

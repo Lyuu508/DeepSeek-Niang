@@ -23,6 +23,8 @@ mod tests;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct ChatSettings {
+    #[serde(default)]
+    pub dialogue: crate::dialogue::Dialogue,
     pub model: String,
     pub temperature: f64,
     pub max_tokens: u32,
@@ -35,11 +37,12 @@ pub struct ChatSettings {
 }
 impl Default for ChatSettings {
     fn default() -> Self {
-        Self{model:"deepseek-flash".into(),temperature:0.8,max_tokens:2048,history_turns:20,timeout_seconds:120,include_history:true,character_name:"DeepSeek娘".into(),user_title:"主人".into(),personality:"聪明、温柔、好奇、有幽默感，偶尔调皮。可以自然使用中文互联网流行语和适度吐槽，但不机械撒娇。保持稳定自然的表达，尊重用户的时间和选择。".into()}
+        Self{dialogue:Default::default(),model:"deepseek-flash".into(),temperature:0.8,max_tokens:2048,history_turns:20,timeout_seconds:120,include_history:true,character_name:"DeepSeek娘".into(),user_title:"主人".into(),personality:"聪明、温柔、好奇、有幽默感，偶尔调皮。可以自然使用中文互联网流行语和适度吐槽，但不机械撒娇。保持稳定自然的表达，尊重用户的时间和选择。".into()}
     }
 }
 impl ChatSettings {
     pub fn validate(&self) -> Result<()> {
+        self.dialogue.validate()?;
         if !matches!(self.model.as_str(), "deepseek-flash" | "deepseek-v4-pro")
             || !self.temperature.is_finite()
             || !(0.0..=2.0).contains(&self.temperature)
@@ -71,6 +74,7 @@ impl ChatSettings {
         if let Some(v) = &injection.mood {
             s.push_str(&format!("\n应用提供的短期情绪：{v}"));
         }
+        self.dialogue.append_style(&mut s);
         s
     }
 }

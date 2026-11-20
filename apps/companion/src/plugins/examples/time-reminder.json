@@ -1,0 +1,37 @@
+{
+  "author": "DeepSeek娘 AI Companion",
+  "license": "CC0-1.0",
+  "version": "1.0.0",
+  "supportedPlatforms": [
+    "windows",
+    "android"
+  ],
+  "requiredApiVersion": 1,
+  "id": "example.local-time",
+  "name": "本地时间与提醒",
+  "description": "显示系统时间，并为当前人格保存本机到期提醒。",
+  "entry": {
+    "kind": "time_reminder"
+  },
+  "permissions": [
+    "local_clock",
+    "local_reminder"
+  ],
+  "configSchema": [
+    {
+      "key": "hour12",
+      "label": "使用十二小时制",
+      "kind": "toggle",
+      "default": false,
+      "choices": []
+    },
+    {
+      "key": "minutes",
+      "label": "默认提醒分钟数",
+      "kind": "number",
+      "default": 15,
+      "choices": []
+    }
+  ],
+  "checksum": "7f1cfc21681b576a9b8deea8b08345460350057f508928ec1ddedeab4bef2362"
+}

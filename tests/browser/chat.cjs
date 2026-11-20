@@ -73,7 +73,7 @@ async function configure(page){await settings(page);await page.getByLabel('API K
   await switchTo(page,'DeepSeek娘');assert.equal(await page.locator('.message.user').count(),3);
  });
  await check('mobile sync management stays within the viewport and labels offline use',async()=>{
-  await phone.getByRole('button',{name:'手机连接',exact:true}).click();
+  await menu(phone);await phone.getByRole('button',{name:'局域网同步',exact:true}).click();
   await phone.getByRole('button',{name:'扫一扫',exact:true}).waitFor();
   assert.equal(await phone.getByRole('region',{name:'扫码连接'}).getByRole('button').count(),1);
   assert.equal(await phone.getByRole('button',{name:'连接手机',exact:true}).count(),0);
@@ -127,12 +127,12 @@ async function configure(page){await settings(page);await page.getByLabel('API K
    await phone.setViewportSize(viewport);await phone.getByLabel('发送给当前人格的消息').focus();
    const rect=await phone.getByLabel('发送给当前人格的消息').boundingBox();assert(rect.y>=0&&rect.y+rect.height<=viewport.height);
    assert(await phone.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-   const button=await phone.getByRole('button',{name:'手机连接',exact:true}).boundingBox();assert(button.height>=44&&button.y+button.height<=viewport.height);
+   const button=await phone.getByRole('button',{name:'手机更多',exact:true}).boundingBox();assert(button.height>=44&&button.y+button.height<=viewport.height);
    assert(!(await phone.getByRole('region',{name:'当前人格资料'}).isVisible()));
   }
   await phone.setViewportSize({width:390,height:844});await phone.getByLabel('发送给当前人格的消息').fill('');
   await phone.screenshot({path:path.join(artifact,'phone-chat-redesign-mock.png'),fullPage:true,animations:'disabled'});
-  await phone.getByRole('button',{name:'手机连接',exact:true}).click();
+  await menu(phone);await phone.getByRole('button',{name:'局域网同步',exact:true}).click();
   await phone.screenshot({path:path.join(artifact,'phone-scan-redesign-mock.png'),fullPage:true,animations:'disabled'});
   assert.deepEqual(mobileErrors,[]);
  });
@@ -174,7 +174,7 @@ async function configure(page){await settings(page);await page.getByLabel('API K
   await switchTo(page,'测试角色B');await page.getByRole('button',{name:'本地数据',exact:true}).click();assert.equal(await page.getByText('人格A已修订的重要记忆',{exact:true}).count(),0);
  });
  await check('phone companion page stays inside the viewport and retains its chat identity',async()=>{
-  await phone.getByRole('button',{name:'手机陪伴',exact:true}).click();await phone.getByRole('heading',{name:'我们的关系',exact:true}).waitFor();assert.equal(await phone.getByRole('progressbar').count(),5);
+  await menu(phone);await phone.getByRole('button',{name:'关系与日常',exact:true}).click();await phone.getByRole('heading',{name:'我们的关系',exact:true}).waitFor();assert.equal(await phone.getByRole('progressbar').count(),5);
   assert(await phone.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await phone.screenshot({path:path.join(artifact,'phase3-companion-phone-ui-fixture.png'),animations:'disabled'});
   await phone.getByRole('button',{name:'手机聊天',exact:true}).click();assert.equal(await phone.locator('.message.user').count(),1);assert.deepEqual(mobileErrors,[]);
  });

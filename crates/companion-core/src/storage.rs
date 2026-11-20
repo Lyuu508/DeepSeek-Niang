@@ -28,7 +28,7 @@ pub struct Store {
     pub(crate) authority_epoch: i64,
     _file_lock: Option<std::fs::File>,
 }
-pub const SCHEMA_VERSION: u32 = 9;
+pub const SCHEMA_VERSION: u32 = 10;
 #[derive(Debug, Serialize)]
 pub struct MemoryRecord {
     pub id: String,
@@ -111,6 +111,10 @@ impl Store {
             (
                 9,
                 include_str!("../../../db/migrations/0009_local_video.sql"),
+            ),
+            (
+                10,
+                include_str!("../../../db/migrations/0010_persona_lifecycle.sql"),
             ),
         ];
         for (number, sql) in migrations {
@@ -205,7 +209,8 @@ impl Store {
                 tx.query_row("SELECT count(*) FROM pragma_foreign_key_check", [], |r| {
                     r.get(0)
                 })?;
-            if invalid != 0 || fk != 0 {
+            let integrity: String = tx.query_row("PRAGMA quick_check", [], |r| r.get(0))?;
+            if invalid != 0 || fk != 0 || integrity != "ok" {
                 return Err(Error::Schema);
             }
             tx.commit()?;
@@ -523,7 +528,7 @@ impl Store {
                     .and_then(Value::as_str)
                     .or(existing_owner.as_deref())
                     .unwrap_or(&e.profile_id);
-                crate::persona::owner_exists(tx, persona, &e.profile_id)?;
+                crate::persona::owner_in_profile(tx, persona, &e.profile_id)?;
                 if existing_owner.as_deref().is_some_and(|p| p != persona) {
                     return Err(Error::Untrusted);
                 }
@@ -536,7 +541,7 @@ impl Store {
                     .get("persona_id")
                     .and_then(Value::as_str)
                     .unwrap_or(&e.profile_id);
-                crate::persona::owner_exists(tx, persona, &e.profile_id)?;
+                crate::persona::owner_in_profile(tx, persona, &e.profile_id)?;
                 let old_owner: Option<String> = tx
                     .query_row(
                         "SELECT persona_id FROM memories WHERE id=?1",

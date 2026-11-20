@@ -29,6 +29,7 @@ export interface PetMotion {
 export type PetPose = 'idle' | 'happy' | 'shy' | 'thinking' | 'annoyed' | 'replying' | 'resting' | 'reading';
 
 export interface PetSnapshot {
+  font_scale?: number;
   persona_id: string;
   name: string;
   builtin_avatar: boolean;

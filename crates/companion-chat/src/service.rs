@@ -276,6 +276,26 @@ impl ChatService {
             run.cancel.cancel();
         }
     }
+    /// Stop provider work after a local or synchronized lifecycle transition.
+    pub fn cancel_inactive_personas(&self) {
+        let Ok(active) = self.active.lock() else {
+            return;
+        };
+        if active.runs.is_empty() && active.background.is_none() {
+            return;
+        }
+        let Ok(store) = self.store.lock() else { return };
+        for run in active.runs.values() {
+            if store.permanent_persona(&run.conversation).is_err() {
+                run.cancel.cancel();
+            }
+        }
+        if let Some(run) = &active.background
+            && store.persona(&run.conversation).is_err()
+        {
+            run.cancel.cancel();
+        }
+    }
     pub fn stop(&self, request_id: &str) -> Result<bool, ChatFailure> {
         let state = self.active.lock().map_err(|_| ChatFailure::new("BUSY"))?;
         if let Some(run) = state.runs.get(request_id) {

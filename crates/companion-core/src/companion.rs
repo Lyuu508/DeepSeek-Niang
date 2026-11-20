@@ -170,7 +170,7 @@ impl Store {
     /// Bounded, origin-only processing. A regeneration/replayed sync never adds evidence twice.
     pub fn process_companion_batch(&mut self) -> Result<usize> {
         let rows = {
-            let mut s=self.conn.prepare("SELECT DISTINCT m.id,c.persona_id,m.content,coalesce(m.created_at_ms,0),m.created_lamport FROM messages m JOIN conversation_personas c ON c.conversation_id=m.conversation_id JOIN chat_requests r ON r.user_message_id=m.id WHERE m.origin_device_id=?1 AND m.role='user' AND m.is_deleted=0 AND r.state='complete' AND NOT EXISTS(SELECT 1 FROM companion_processed_sources p WHERE p.message_id=m.id) ORDER BY m.created_lamport,m.id LIMIT 16")?;
+            let mut s=self.conn.prepare("SELECT DISTINCT m.id,c.persona_id,m.content,coalesce(m.created_at_ms,0),m.created_lamport FROM messages m JOIN conversation_personas c ON c.conversation_id=m.conversation_id JOIN chat_requests r ON r.user_message_id=m.id WHERE m.origin_device_id=?1 AND m.role='user' AND m.is_deleted=0 AND r.state='complete' AND NOT EXISTS(SELECT 1 FROM persona_lifecycle l WHERE l.persona_id=c.persona_id AND l.state<>'active') AND NOT EXISTS(SELECT 1 FROM companion_processed_sources p WHERE p.message_id=m.id) ORDER BY m.created_lamport,m.id LIMIT 16")?;
             s.query_map([&self.device_id], |r| {
                 Ok((
                     r.get::<_, String>(0)?,
@@ -225,6 +225,7 @@ impl Store {
             )),
         };
         let mut prompt = self.chat_context(conversation, settings, &injection)?;
+        self.append_plugin_styles(&persona, &mut prompt[0].content)?;
         let life = self.life_snapshot(&persona, now)?;
         let recent = life["today_events"]
             .as_array()

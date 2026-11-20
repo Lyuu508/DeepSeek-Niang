@@ -577,6 +577,95 @@ fn schema7_upgrade_keeps_persona_activity_events_and_consistent_backup() {
     drop(s);
     std::fs::remove_dir_all(dir).unwrap();
 }
+
+#[test]
+fn schema9_recycle_upgrade_backs_up_and_rolls_back_before_retry() {
+    let dir = std::env::temp_dir().join(format!("recycle-upgrade-{}", Uuid::new_v4()));
+    std::fs::create_dir(&dir).unwrap();
+    let path = dir.join("old.sqlite");
+    let (persona, activity) = v7_fixture(&path);
+    let c = rusqlite::Connection::open(&path).unwrap();
+    c.pragma_update(None, "foreign_keys", "OFF").unwrap();
+    for (n, sql) in [
+        (
+            8,
+            include_str!("../../../../../db/migrations/0008_life_tasks.sql"),
+        ),
+        (
+            9,
+            include_str!("../../../../../db/migrations/0009_local_video.sql"),
+        ),
+    ] {
+        c.execute_batch(sql).unwrap();
+        c.execute(
+            "INSERT INTO schema_migrations(version,checksum) VALUES(?1,?2)",
+            params![n, crate::event::sha256_hex(sql.as_bytes())],
+        )
+        .unwrap();
+    }
+    let violations: i64 = c
+        .query_row("SELECT count(*) FROM pragma_foreign_key_check", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    assert_eq!(violations, 0);
+    c.pragma_update(None, "user_version", 9).unwrap();
+    c.execute("CREATE TABLE app_plugins(block_migration INTEGER)", [])
+        .unwrap();
+    drop(c);
+    assert!(Store::open(&path).is_err());
+    let c = rusqlite::Connection::open(&path).unwrap();
+    let rolled_back: bool = c
+        .query_row(
+            "SELECT NOT EXISTS(SELECT 1 FROM sqlite_master WHERE name='persona_lifecycle')",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap();
+    assert!(rolled_back);
+    assert_eq!(
+        c.pragma_query_value(None, "user_version", |r| r.get::<_, i64>(0))
+            .unwrap(),
+        9
+    );
+    c.execute("DROP TABLE app_plugins", []).unwrap();
+    drop(c);
+    let store = Store::open(&path).unwrap();
+    assert_eq!(store.active_persona_id().unwrap(), persona);
+    assert_eq!(
+        store.life_snapshot(&persona, 1000000).unwrap()["current"]["id"],
+        activity
+    );
+    assert_eq!(store.diagnostics().unwrap().schema_version, 10);
+    assert_eq!(store.diagnostics().unwrap().integrity, "ok");
+    let backups = std::fs::read_dir(&dir)
+        .unwrap()
+        .filter_map(|entry| {
+            let path = entry.unwrap().path();
+            (path.extension().is_some_and(|ext| ext == "bak")).then_some(path)
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(backups.len(), 2);
+    for path in backups {
+        let backup = rusqlite::Connection::open(path).unwrap();
+        assert_eq!(
+            backup
+                .pragma_query_value(None, "user_version", |r| r.get::<_, i64>(0))
+                .unwrap(),
+            9
+        );
+        assert_eq!(
+            backup
+                .query_row("SELECT id FROM companion_activities", [], |r| r
+                    .get::<_, String>(0))
+                .unwrap(),
+            activity
+        );
+    }
+    drop(store);
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
 #[test]
 fn failed_schema8_upgrade_rolls_back_all_rebuilds_and_retains_backup() {
     let dir = std::env::temp_dir().join(format!("life-rollback-{}", Uuid::new_v4()));

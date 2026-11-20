@@ -49,6 +49,9 @@ def verify(apk, signed=True, test_package=False, fresh_test=False):
             for name in names if re.fullmatch(r'classes\d*\.dex', name)
         )
         assert voice_bridge, 'On-device voice bridge missing from compiled Android code'
+        native = package.read('lib/arm64-v8a/libcompanion_app_lib.so')
+        assert all(command in native for command in [b'set_font_scale', b'change_recycled_personas',
+            b'inspect_plugin', b'due_plugin_reminders']), 'Compiled interface IPC is missing'
     badging = subprocess.check_output(sdk_command(tools,'aapt2','dump','badging',str(apk)), text=True)
     match = re.search(r"package: name='([^']+)' versionCode='([^']+)' versionName='([^']+)'", badging)
     expected_id = 'io.local.deepseekcompanion.test2' if fresh_test else ('io.local.deepseekcompanion.test' if test_package else 'io.local.deepseekcompanion')
@@ -62,6 +65,9 @@ def verify(apk, signed=True, test_package=False, fresh_test=False):
         assert re.search(rf'android:{setting}\([^)]*\)=(?:false|\(type 0x12\)0x0)(?:\s|$)', manifest), f'Unsafe APK manifest setting: {setting}'
     assert 'android:sharedUserId' not in manifest, 'Shared application UID is not allowed'
     assert 'android.permission.RECORD_AUDIO' in manifest, 'Microphone permission missing from APK'
+    resources = subprocess.check_output(sdk_command(tools,'aapt2','dump','resources',str(apk)), text=True)
+    for icon in ('ic_launcher', 'ic_launcher_round', 'ic_launcher_foreground'):
+        assert re.search(rf'\bmipmap/{icon}\s*$',resources,re.M), f'Launcher resource missing: {icon}'
     for unused in ['android.permission.RECEIVE_BOOT_COMPLETED','android.permission.WAKE_LOCK','app.tauri.notification.LocalNotificationRestoreReceiver','app.tauri.notification.TimedNotificationPublisher']:
         assert unused not in manifest, 'Unexpected notification background capability: '+unused
     certificate = None
@@ -78,6 +84,7 @@ def verify(apk, signed=True, test_package=False, fresh_test=False):
         unsigned = subprocess.run(sdk_command(tools,'apksigner','verify','--print-certs',str(apk)), text=True, capture_output=True)
         assert unsigned.returncode != 0 and not re.search(r'Signer #\d+ certificate', unsigned.stdout), 'Unsigned check mode must not accept a signed APK'
     return {'platform': 'android', 'offline_voice_bridge_bundled': voice_bridge, 'microphone_permission_declared': True,
+            'interface_bundled': True, 'launcher_resources_verified': True,
             'source_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
             'working_tree_clean': not bool(subprocess.check_output(['git','status','--porcelain'],cwd=ROOT,text=True).strip()), 'version': version['version'], 'version_code': version['androidVersionCode'], 'application_id': match[1],
             'abi': 'arm64-v8a', 'file': apk.name, 'bytes': apk.stat().st_size, 'sha256': hashlib.sha256(apk.read_bytes()).hexdigest(),

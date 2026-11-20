@@ -22,6 +22,7 @@ pub struct Persona {
     pub created_at_ms: i64,
     pub revision: i64,
     pub avatar_resource: String,
+    pub personality: String,
 }
 #[derive(Debug, Serialize)]
 pub struct PersonaSummary {
@@ -51,9 +52,11 @@ pub(crate) fn owner_of_thread(
     profile: &str,
 ) -> Result<String> {
     let id: String=db.query_row("SELECT p.id FROM conversation_personas c JOIN personas p ON p.id=c.persona_id WHERE c.conversation_id=?1 AND (p.profile_id=?2 OR p.profile_id IN (SELECT profile_id FROM lan_profiles))",params![conversation,profile],|r|r.get(0)).optional()?.ok_or(Error::Untrusted)?;
-    crate::pairing::resolve(db, &id)
+    let resolved = crate::pairing::resolve(db, &id)?;
+    owner_exists(db, &resolved, profile)?;
+    Ok(resolved)
 }
-pub(crate) fn owner_exists(db: &Connection, persona: &str, profile: &str) -> Result<()> {
+pub(crate) fn owner_in_profile(db: &Connection, persona: &str, profile: &str) -> Result<()> {
     Uuid::parse_str(persona).map_err(|_| Error::Invalid("persona UUID"))?;
     if !db.query_row(
         "SELECT EXISTS(SELECT 1 FROM personas WHERE id=?1 AND (profile_id=?2 OR profile_id IN (SELECT profile_id FROM lan_profiles)))",
@@ -64,9 +67,20 @@ pub(crate) fn owner_exists(db: &Connection, persona: &str, profile: &str) -> Res
     }
     Ok(())
 }
+pub(crate) fn owner_exists(db: &Connection, persona: &str, profile: &str) -> Result<()> {
+    owner_in_profile(db, persona, profile)?;
+    if crate::recycle::read_decision(db, persona)?
+        .is_some_and(|decision| decision.state != "active")
+    {
+        return Err(Error::Untrusted);
+    }
+    Ok(())
+}
 impl Store {
     pub fn personas(&self) -> Result<Vec<Persona>> {
-        let mut s=self.conn.prepare("SELECT id,name,main_conversation_id,is_builtin,created_at_ms,revision,avatar_resource FROM personas WHERE (profile_id=?1 OR profile_id IN (SELECT profile_id FROM lan_profiles)) AND NOT EXISTS(SELECT 1 FROM persona_links WHERE alias_id=personas.id) ORDER BY is_builtin DESC,created_at_ms,id")?;
+        let mut s=self.conn.prepare("SELECT id,name,main_conversation_id,is_builtin,created_at_ms,revision,avatar_resource,
+          coalesce((SELECT json_extract(settings_json,'$.personality') FROM persona_chat_preferences WHERE persona_id=personas.id),'')
+          FROM personas WHERE (profile_id=?1 OR profile_id IN (SELECT profile_id FROM lan_profiles)) AND NOT EXISTS(SELECT 1 FROM persona_links WHERE alias_id=personas.id) AND NOT EXISTS(SELECT 1 FROM persona_lifecycle l WHERE l.persona_id=personas.id AND l.state<>'active') ORDER BY is_builtin DESC,created_at_ms,id")?;
         Ok(s.query_map([&self.profile_id], |r| {
             Ok(Persona {
                 id: r.get(0)?,
@@ -76,6 +90,7 @@ impl Store {
                 created_at_ms: r.get(4)?,
                 revision: r.get(5)?,
                 avatar_resource: r.get(6)?,
+                personality: r.get(7)?,
             })
         })?
         .collect::<std::result::Result<_, _>>()?)
@@ -108,7 +123,12 @@ impl Store {
             ..ChatSettings::default()
         };
         settings.validate()?;
-        if self.personas()?.len() >= 100 {
+        let count: i64 = self.conn.query_row(
+            "SELECT count(*) FROM personas WHERE profile_id=?1",
+            [&self.profile_id],
+            |r| r.get(0),
+        )?;
+        if count >= 100 {
             return Err(Error::Invalid("persona limit"));
         }
         let id = Uuid::new_v4().to_string();

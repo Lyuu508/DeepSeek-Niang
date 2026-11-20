@@ -14,12 +14,18 @@ export interface MemoryRecord { id: string; text: string; version_lamport: numbe
 export type NativeCommand = 'diagnostics' | 'list_memories' | 'save_memory' | 'delete_memory';
 
 export interface ChatFailure { code:string; message:string; retryable:boolean }
+export interface Dialogue {
+  mode:'standard'|'free'|'custom'; tone:'natural'|'gentle'|'calm'|'playful';
+  reply_length:'short'|'balanced'|'detailed'; humor:number; creativity:number; expression:number;
+  roleplay:'daily'|'in_character'|'co_write'; extra_style:string;
+}
 export interface ChatSettings {
+  dialogue?:Dialogue;
   model:string; temperature:number; max_tokens:number; history_turns:number;
   timeout_seconds:number; include_history:boolean;
   character_name:string; user_title:string; personality:string;
 }
-export interface Persona { id:string; name:string; main_conversation_id:string; is_builtin:boolean; created_at_ms:number; revision:number; avatar_resource?:string }
+export interface Persona { id:string; name:string; main_conversation_id:string; is_builtin:boolean; created_at_ms:number; revision:number; avatar_resource?:string; personality?:string }
 export interface PersonaSummary { memory_count:number; activity_count:number; interest_count:number; relationship:Record<string,unknown>; mood:Record<string,unknown>; life:Record<string,unknown> }
 export interface Conversation { id:string; title:string; created_at_ms:number|null; updated_at_ms:number|null; message_count:number }
 export interface ChatMessage {
@@ -33,7 +39,7 @@ export interface PreparedChat { request_id:string; conversation_id:string; user_
 export interface TokenUsage { prompt_tokens:number; completion_tokens:number; total_tokens:number }
 export interface UsageSummary { requests:number; measured_requests:number; prompt_tokens:number; completion_tokens:number }
 export interface KeyStatus { configured:boolean; backend:string; error:ChatFailure|null }
-export interface Bootstrap { version:string; platform:string; settings:ChatSettings; personas:Persona[]; active_persona_id:string; persona_summary:PersonaSummary; key_status:KeyStatus; usage:UsageSummary; active_request:string|null; active_conversation:string|null; schema_version:number }
+export interface Bootstrap { font_scale?:number; version:string; platform:string; settings:ChatSettings; personas:Persona[]; active_persona_id:string; persona_summary:PersonaSummary; key_status:KeyStatus; usage:UsageSummary; active_request:string|null; active_conversation:string|null; schema_version:number }
 export type ChatEvent =
  | {type:'started';request:PreparedChat;user:ChatMessage;message:ChatMessage}
  | {type:'delta';request_id:string;conversation_id:string;message_id:string;content:string;revision:number}

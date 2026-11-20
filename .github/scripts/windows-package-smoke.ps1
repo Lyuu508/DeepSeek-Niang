@@ -67,6 +67,7 @@ if ($InstalledApps.Count -ne 1) { throw 'Installed application not found' }
 $DesktopPetBundled = $false
 $LocalVideoBundled = $false
 $VoiceBundled = $false
+$InterfaceBundled = $false
 if (Test-Path 'apps/companion/pet.html') {
     if ($Config.identifier -ne 'io.local.deepseekcompanion') { throw 'Expected the main Windows installation identity' }
     $InstalledPayload = [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($InstalledApps[0].FullName))
@@ -89,7 +90,17 @@ if (Test-Path 'apps/companion/pet.html') {
         }
         $VoiceBundled = $true
     }
+    foreach ($Command in @('set_font_scale', 'change_recycled_personas', 'inspect_plugin', 'due_plugin_reminders')) {
+        if (-not $InstalledPayload.Contains($Command)) { throw "Missing interface command in installed client: $Command" }
+    }
+    $InterfaceBundled = $true
 }
+Add-Type -AssemblyName System.Drawing
+$ExeIcon = [System.Drawing.Icon]::ExtractAssociatedIcon($InstalledApps[0].FullName)
+$NsisIcon = [System.Drawing.Icon]::ExtractAssociatedIcon($Installer)
+if (-not $ExeIcon -or -not $NsisIcon) { throw 'Expected program and installer icons' }
+$ExeIcon.Dispose()
+$NsisIcon.Dispose()
 $VoiceResult = 'unavailable'
 if ($VoiceBundled) {
     $Probe = Start-Process -FilePath $InstalledApps[0].FullName -ArgumentList '--self-test-voice' -PassThru
@@ -156,6 +167,8 @@ public static class CompanionWindowCapture {
         desktop_pet_bundled = $DesktopPetBundled
         local_video_bundled = $LocalVideoBundled
         voice_bundled = $VoiceBundled
+        interface_bundled = $InterfaceBundled
+        installer_and_application_icons_readable = $true
         native_voice_probe = $VoiceResult
         application_identifier = $Config.identifier
         window_title = $WindowTitle

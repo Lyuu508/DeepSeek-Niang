@@ -1,0 +1,45 @@
+:is(.app[data-platform=desktop], .pet) button:not(.drawer-backdrop, .pet-face) {
+  --button-tone: var(--blue);
+  --control-tint: color-mix(in srgb, var(--surface) var(--surface-alpha), var(--button-tone));
+  --control-hover: color-mix(in srgb, var(--surface) 70%, var(--button-tone));
+  --control-pressed: color-mix(in srgb, var(--surface) 59%, var(--button-tone));
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(125deg, var(--surface), var(--control-tint));
+  color: var(--text);
+  border-radius: var(--radius-control);
+  box-shadow: var(--control-shadow);
+  transition: background-color var(--motion-duration), color var(--motion-duration), box-shadow var(--motion-duration);
+}
+.pet button.pet-status { position: absolute; }
+:is(.app[data-platform=desktop], .pet) :is(button.danger, button.stop-button, button[data-danger=true]) {
+  --button-tone: var(--danger);
+  color: var(--danger);
+}
+.app[data-platform=desktop] :is(button.primary, button.send-button, button.selected, button[aria-current=true]) {
+  color: var(--blue);
+  background: linear-gradient(125deg, var(--soft), var(--control-tint));
+}
+:is(.app, .pet) button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+@media (hover: hover) and (pointer: fine) {
+  :is(.app[data-platform=desktop], .pet) button:not(.drawer-backdrop, .pet-face, :disabled)::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(circle at var(--hover-x, 50%) var(--hover-y, 50%), var(--control-hover), var(--control-tint));
+    clip-path: circle(0% at var(--hover-x, 50%) var(--hover-y, 50%));
+    opacity: 0;
+    transition: clip-path var(--motion-duration) var(--motion-ease), opacity var(--motion-duration) var(--motion-ease);
+  }
+  :is(.app[data-platform=desktop], .pet) button:not(.drawer-backdrop, .pet-face, :disabled):hover::before {
+    clip-path: circle(145% at var(--hover-x, 50%) var(--hover-y, 50%));
+    opacity: 1;
+  }
+}
+:is(.app[data-platform=desktop], .pet) button:not(.drawer-backdrop, .pet-face, :disabled):active::before {
+  background: var(--control-pressed);
+}

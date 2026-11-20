@@ -26,7 +26,7 @@ class BrandingPolicy(unittest.TestCase):
         source = (ROOT / "scripts/check-branding.mjs").as_uri()
         return subprocess.run(["node", "--input-type=module", "-e", f"import {{checkBranding}} from {json.dumps(source)}; checkBranding(process.argv[1]);", str(root)], capture_output=True, text=True)
 
-    def test_original_bytes_ico_sizes_and_adaptive_safe_area(self):
+    def test_original_bytes_ico_sizes_and_adaptive_full_bleed(self):
         from PIL import Image
         with tempfile.TemporaryDirectory() as folder:
             root, original = self.fixture(folder)
@@ -39,8 +39,13 @@ class BrandingPolicy(unittest.TestCase):
                 self.assertEqual(image.ico.sizes(), {(n, n) for n in [16, 24, 32, 48, 64, 128, 256]})
             with Image.open(root / "assets/branding/android/mipmap-mdpi/ic_launcher_foreground.png") as image:
                 self.assertEqual(image.size, (108, 108))
-                left, top, right, bottom = image.getbbox()
-                self.assertLessEqual(((right - left) ** 2 + (bottom - top) ** 2) ** .5, 66)
+                self.assertEqual(image.getextrema()[3], (255, 255))
+                self.assertEqual(image.getpixel((0, 54)), image.getpixel((18, 54)))
+                self.assertEqual(image.getpixel((107, 54)), image.getpixel((89, 54)))
+                self.assertEqual(image.getpixel((54, 0)), image.getpixel((54, 18)))
+                self.assertEqual(image.getpixel((54, 107)), image.getpixel((54, 89)))
+            with Image.open(root / "assets/branding/android/drawable-mdpi/deepseek_splash_icon.png") as image:
+                self.assertEqual(image.getbbox(), (31, 31, 77, 77))
             # Rerunning with the identical original is safe and deterministic.
             again = module("prepare_branding").prepare(original, root)
             self.assertEqual(again["derived_sha256"], manifest["derived_sha256"])

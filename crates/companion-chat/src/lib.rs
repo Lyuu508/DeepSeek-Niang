@@ -48,6 +48,15 @@ impl ChatFailure {
                 true,
             ),
             "CANCELLED" => ("生成已停止。", false),
+            "PERSONA_PROTECTED" => ("默认人格和最后一个可用人格受到保护。", false),
+            "PERSONA_RECYCLE_CHANGED" => ("回收站内容已变化，请刷新并重新确认。", false),
+            "PERSONA_TRASHED" => ("人格已移入回收站，生成已结束。", false),
+            "PLUGIN_INVALID" => ("插件清单格式、版本、路径或权限不受支持。", false),
+            "PLUGIN_CHECKSUM" => ("插件清单的 SHA-256 与内容不符。", false),
+            "PLUGIN_CHANGED" => ("请检查插件版本、校验值和当前平台后重新操作。", false),
+            "PLUGIN_CONFIG" => ("插件配置无效或已达到本机数量上限。", false),
+            "PLUGIN_PERMISSION" => ("请启用插件并确认需要的权限。", false),
+            "PLUGIN_PERSONA_CHANGED" => ("当前人格已切换。请核对人格后再操作。", false),
             "BUSY" => ("已有回复正在生成，请先停止或等待完成。", false),
             "DATA_VERSION_CONFLICT" => (
                 "这条数据已更新。请刷新后核对；当前内容和待确认修订均已保留。",
@@ -80,6 +89,17 @@ impl From<companion_core::Error> for ChatFailure {
             companion_core::Error::Invalid("CONTEXT_BUDGET_EXCEEDED") => {
                 Self::new("CONTEXT_BUDGET_EXCEEDED")
             }
+            companion_core::Error::Invalid(
+                code @ ("PERSONA_PROTECTED" | "PERSONA_RECYCLE_CHANGED"),
+            ) => Self::new(code),
+            companion_core::Error::Invalid(
+                code @ ("PLUGIN_INVALID"
+                | "PLUGIN_CHECKSUM"
+                | "PLUGIN_CHANGED"
+                | "PLUGIN_CONFIG"
+                | "PLUGIN_PERMISSION"
+                | "PLUGIN_PERSONA_CHANGED"),
+            ) => Self::new(code),
             companion_core::Error::Invalid(_) | companion_core::Error::Conflict => {
                 Self::new("INVALID_INPUT")
             }
