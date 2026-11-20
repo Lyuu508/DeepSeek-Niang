@@ -1,0 +1,77 @@
+name: Android v0.0.10 installed-package check
+on:
+  push:
+    branches: [codex/v0.0.10-android-runtime-check]
+    paths:
+      - .github/workflows/android-v010-runtime-check.yml
+      - tests/browser/android-v010-installed.cjs
+permissions:
+  contents: read
+jobs:
+  emulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ANDROID_SERIAL: emulator-5554
+      COMPANION_NATIVE_EVIDENCE: ${{ runner.temp }}/android-v010-runtime
+      APK_DIRECTORY: ${{ runner.temp }}/deepseek-apks
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407
+        with:
+          cmdline-tools-version: '12266719'
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+      - name: Verify and retain the published APKs for this run
+        run: |
+          mkdir -p "$APK_DIRECTORY" "$COMPANION_NATIVE_EVIDENCE"
+          for version in 0.0.9 0.0.10; do
+            url="https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v$version/DeepSeek-Niang_${version}_android-arm64-isolated-test.apk"
+            curl --fail --silent --show-error --location --max-time 120 "$url" --output "$APK_DIRECTORY/$version.apk"
+          done
+          cd "$APK_DIRECTORY"
+          sha256sum --check <<'SHA256SUMS'
+          775dceecc41dd524a5cec162798c874c84063b938e943219901d90c2f5d7ee85  0.0.9.apk
+          6c338ce469f4f6cbe14f343a1073040cd00a33f4f8044a12ee5edcbfdb404626  0.0.10.apk
+          SHA256SUMS
+      - name: Boot the official Google APIs emulator image
+        run: |
+          test -c /dev/kvm
+          if ! test -r /dev/kvm || ! test -w /dev/kvm; then
+            sudo setfacl -m "u:$(id -un):rw" /dev/kvm
+          fi
+          package='system-images;android-35;google_apis;x86_64'
+          sdkmanager --install emulator "$package"
+          printf 'no\n' | avdmanager create avd --name ocean-v010 --package "$package"
+          "$ANDROID_HOME/emulator/emulator" -avd ocean-v010 -port 5554 -no-snapshot -no-window -noaudio -no-boot-anim -gpu swiftshader_indirect -memory 3072 -cores 2 > "$RUNNER_TEMP/android-emulator.log" 2>&1 &
+          timeout 240 adb wait-for-device || { tail -30 "$RUNNER_TEMP/android-emulator.log"; exit 1; }
+          for attempt in {1..120}; do
+            if [[ "$(adb shell getprop sys.boot_completed)" = 1 ]]; then break; fi
+            sleep 2
+          done
+          test "$(adb shell getprop sys.boot_completed)" = 1
+          adb shell input keyevent 82
+          adb shell wm size 750x1624
+          adb shell wm density 320
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+          adb shell getprop ro.product.cpu.abilist
+      - name: Verify installation, upgrade, and screens in the Android WebView
+        run: |
+          npm ci --ignore-scripts
+          node tests/browser/android-v010-installed.cjs
+      - name: Preserve native Android evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: android-v010-runtime-${{ github.run_attempt }}
+          path: ${{ env.COMPANION_NATIVE_EVIDENCE }}/
+          if-no-files-found: warn
+          retention-days: 30
