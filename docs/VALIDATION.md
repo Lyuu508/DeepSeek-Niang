@@ -1,5 +1,17 @@
 # 验证范围与待核实问题
 
+## v0.0.10 发布证据
+
+两端从 `b4f56f55b4cbf567c0b57194a0936cc7c8eeb664` 构建。同一 Windows 自签名测试证书及 Android test2 证书通过核对。公开下载已复验 27 个附件。Windows runner 安装并启动后取得应用窗口截图。Android ARM64 的包名、1010 版本代码、签名、原图标和新素材均通过核验。[构建结果](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.10/BUILD-RESULTS.json) · [原生 Windows 截图](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.10/windows-installed-window.png) · [CI](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44778883247)
+
+Linux 162 项与 Windows 163 项 Rust 测试、25 项 Python 检查、5 项同步模型检查通过。两端各 9 个页面完成深浅色巡检，保留 47 张浏览器截图，覆盖字号、视频、回收站与确认弹窗。[截图包](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.10/UI-EVIDENCE.zip) · [自动化报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.10/AUTOMATED-TEST-RESULTS.txt)
+
+375×812 的浏览器测量延续 v0.0.9 的 650px 可见聊天区，底栏为 53px。截图包中 `before.json` 的 447px 来自 v0.0.9 竖屏优化前的历史基线。[v0.0.9 测量](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.9/BUILD-RESULTS.json) · [v0.0.10 测量](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.10/UI-TEST-RESULTS.json)
+
+Android 35 模拟器以 ARM64 兼容层运行，已用公开签名包完成 v0.0.9 到 v0.0.10 的覆盖安装。升级保留了测试文件与 `companion.sqlite3` 路径，实际 WebView 渲染了聊天和人格管理。[聊天截图](validation-v010/android-native-chat.png) · [人格截图](validation-v010/android-native-personas.png) · [模拟器运行](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44787209751/job/136465104526)
+
+模拟器启动曾延迟渲染并显示 `OPERATION_FAILED`，之后读取到了默认人格。Android 33 对照镜像只提供 x86_64 ABI，安装 ARM64 包失败。最后一次补测中，ADB 截图命令退出，聊天输入和原生 KeyStore 自测还未完成。实体设备覆盖升级、Android 实体设备界面和输入法、家庭局域网、真实 DeepSeek 与设备麦克风待验收。[补测记录](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44787988758) · [验收范围](V010_OCEAN_UI.md#验收范围)
+
 ## v0.0.9 发布证据
 
 两端使用提交 `7728043708e0d35267e348be533064abe3718faa`。Windows EXE 已在 GitHub Windows runner 安装并启动，安装器、应用图标与原签名通过检查。Android ARM64 APK 验证了遮罩资源、包名、1009 版本号与 v0.0.8 test2 证书。公开下载已核对 25 项附件的 SHA-256。[构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.9/BUILD-RESULTS.json) · [同源 CI](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44716167090) · [签名发布](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44718040176)

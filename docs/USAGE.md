@@ -1,17 +1,17 @@
 # 使用说明
 
-本文面向 v0.0.9 测试版。首次安装可按顺序操作，已有用户可从升级说明开始。[升级与数据保护](#升级与数据保护)
+本文面向 v0.0.10 测试版。首次安装可按顺序操作，已有用户可从升级说明开始。[升级与数据保护](#升级与数据保护)
 
 ## 下载与安装
 
 | 设备 | 安装入口 | 要求 |
 | --- | --- | --- |
-| Windows 电脑 | [中文 EXE 安装程序](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.9/DeepSeek-Niang_0.0.9_windows-x64-setup.exe) · [详细步骤](INSTALL_WINDOWS.md) | Windows 10/11 x64，WebView2 |
-| Android 手机 | [ARM64 APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.9/DeepSeek-Niang_0.0.9_android-arm64-isolated-test.apk) · [详细步骤](INSTALL_ANDROID.md) | Android 10+、ARM64 |
+| Windows 电脑 | [中文 EXE 安装程序](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.10/DeepSeek-Niang_0.0.10_windows-x64-setup.exe) · [详细步骤](INSTALL_WINDOWS.md) | Windows 10/11 x64，WebView2 |
+| Android 手机 | [ARM64 APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.10/DeepSeek-Niang_0.0.10_android-arm64-isolated-test.apk) · [详细步骤](INSTALL_ANDROID.md) | Android 10+、ARM64 |
 
-使用上表的安装包即可安装应用。电脑与手机配对时，请让两端都处于 v0.0.9。
+使用上表的安装包即可安装应用。电脑与手机配对时，请让两端都处于 v0.0.10。
 
-安装前核对文件的 SHA-256。Windows 使用自签名测试证书，系统可能提示未知发布者。[SHA-256 校验清单](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.9/SHA256SUMS.txt)
+安装前核对文件的 SHA-256。Windows 使用自签名测试证书，系统可能提示未知发布者。[SHA-256 校验清单](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.10/SHA256SUMS.txt)
 
 在 Windows 顶部打开「桌宠」，勾选「显示桌宠」即可使用。[桌宠操作](phases/05-desktop-pet.md)
 
@@ -40,13 +40,13 @@
 
 ## 聊天风格、字号与人格管理
 
-在设置选择本机字号和当前人格的对话模式。在「人格管理」打开回收站，恢复会保留原人格与数据。对照清理范围后可执行永久删除。[界面与回收站](V009_UI.md) · [清理和同步范围](V009_RECYCLE_MIGRATION.md)
+在设置选择本机字号、海洋配色、深海夜色和当前人格的对话模式。在「人格管理」打开回收站，恢复会保留原人格与数据。对照清理范围后可执行永久删除。[海洋主题](V010_OCEAN_UI.md) · [回收站与同步](V009_RECYCLE_MIGRATION.md)
 
 「插件管理」提供聊天风格和时间提醒示例。安装后可以为设备或当前人格启用，也能撤销权限。[插件说明](PLUGIN_DEVELOPMENT.md)
 
 ## 连接电脑与手机
 
-1. 确认两端均为 v0.0.9，手机与电脑处于可互访的局域网。电脑可用网线，手机可连同一路由器的普通 Wi-Fi。访客网络或设备隔离可能阻断连接。
+1. 确认两端均为 v0.0.10，手机与电脑处于可互访的局域网。电脑可用网线，手机可连同一路由器的普通 Wi-Fi。访客网络或设备隔离可能阻断连接。
 2. 电脑进入“局域网同步”，点击“连接手机”生成短期二维码。只向自己信任的手机展示。
 3. 手机进入连接页点击“扫一扫”，允许相机并扫描电脑上的二维码。等待真实同步结果，不以“设备已发现”代替成功。
 4. 核对同一人格的聊天和记忆，必要时使用“手动同步”。离线后本地已有记录仍可查看，重新连通并打开应用后再补传。模型聊天仍需互联网。
@@ -73,13 +73,13 @@ Windows 应用运行时，具有执行权限的电脑推进虚拟日常；手机
 
 | 已安装的 Android 应用 | 与本版的关系 |
 | --- | --- |
-| v0.0.8 的 `io.local.deepseekcompanion.test2` | 本版同身份、同证书，版本代码从 1008 增至 1009；满足更新条件，真实手机覆盖仍待验收 |
-| 更早的 `.test2` 测试版 | 保持该测试身份；本次发布直接核对的是 v0.0.8，新旧跨度的实际升级仍需单独验证 |
+| v0.0.9 的 `io.local.deepseekcompanion.test2` | 本版同身份、同证书，版本代码从 1009 增至 1010；满足更新条件，真实手机覆盖仍待验收 |
+| 更早的 `.test2` 测试版 | 保持该测试身份；本次发布直接核对的是 v0.0.9，新旧跨度的实际升级仍需单独验证 |
 | v0.0.1 原身份或早期 `.test` | 不能由本版直接覆盖，也不能自动读取旧私有数据；保留旧应用，完整跨身份迁移尚未实现 |
 
 升级前记录两端版本，完全退出旧进程。Windows 保留当前用户应用数据目录的完整副本，而非只复制运行中的 `companion.sqlite3`；数据库可能还有 WAL 文件。备份应受访问控制，不上传 GitHub。Android 自动云备份被禁用，当前没有一键完整加密导出工具；系统不允许导出时保留旧安装和数据，不 root 或绕过沙箱。
 
-v0.0.9 使用 schema 10。从旧 schema 升级时，应用在私有目录执行一致性备份及事务迁移。Windows 签名包已在 runner 安装并启动，旧安装的实际覆盖升级待用户设备验收。[迁移说明](V009_RECYCLE_MIGRATION.md)
+v0.0.10 使用 schema 10。从旧 schema 升级时，应用在私有目录执行一致性备份及事务迁移。Windows 签名包已在 runner 安装并启动，旧安装的实际覆盖升级待用户设备验收。[迁移说明](V009_RECYCLE_MIGRATION.md)
 
 升级后若有新聊天，不要直接用旧备份覆盖或安装旧版强行降级。遇到错误先停止操作，保存当前库、相关 WAL 和已有备份，核对后再恢复；本版没有一键无损降级。
 
