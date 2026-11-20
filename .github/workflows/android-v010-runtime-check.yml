@@ -50,14 +50,28 @@ jobs:
           fi
           package='system-images;android-35;google_apis;x86_64'
           sdkmanager --install emulator "$package"
-          printf 'no\n' | avdmanager create avd --name ocean-v010 --package "$package"
-          "$ANDROID_HOME/emulator/emulator" -avd ocean-v010 -port 5554 -no-snapshot -no-window -noaudio -no-boot-anim -gpu swiftshader_indirect -memory 3072 -cores 2 > "$RUNNER_TEMP/android-emulator.log" 2>&1 &
-          timeout 240 adb wait-for-device || { tail -30 "$RUNNER_TEMP/android-emulator.log"; exit 1; }
-          for attempt in {1..120}; do
-            if [[ "$(adb shell getprop sys.boot_completed)" = 1 ]]; then break; fi
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/ocean-avd"
+          export ANDROID_USER_HOME="$RUNNER_TEMP/ocean-android-user"
+          export ANDROID_EMULATOR_HOME="$ANDROID_USER_HOME"
+          avd_path="$ANDROID_AVD_HOME/ocean-v010.avd"
+          mkdir -p "$ANDROID_AVD_HOME" "$ANDROID_USER_HOME"
+          avdmanager create avd -n ocean-v010 -k "$package" -d pixel_7 -p "$avd_path" --force </dev/null
+          test -f "$avd_path/config.ini"
+          if ! test -f "$ANDROID_AVD_HOME/ocean-v010.ini"; then
+            printf 'avd.ini.encoding=UTF-8\npath=%s\ntarget=android-35\n' "$avd_path" > "$ANDROID_AVD_HOME/ocean-v010.ini"
+          fi
+          emulator="$ANDROID_HOME/emulator/emulator"
+          "$emulator" -list-avds | grep -Fx ocean-v010
+          log="$COMPANION_NATIVE_EVIDENCE/android-emulator.log"
+          adb start-server
+          "$emulator" -avd ocean-v010 -port 5554 -no-snapshot -no-window -noaudio -no-boot-anim -gpu swiftshader_indirect -memory 3072 -cores 2 > "$log" 2>&1 &
+          emulator_pid=$!
+          for attempt in {1..150}; do
+            if [[ "$(adb shell getprop sys.boot_completed 2>/dev/null || true)" = 1 ]]; then break; fi
+            if ! kill -0 "$emulator_pid" 2>/dev/null; then tail -40 "$log"; exit 1; fi
             sleep 2
           done
-          test "$(adb shell getprop sys.boot_completed)" = 1
+          test "$(adb shell getprop sys.boot_completed)" = 1 || { tail -40 "$log"; exit 1; }
           adb shell input keyevent 82
           adb shell wm size 750x1624
           adb shell wm density 320
