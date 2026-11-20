@@ -1,6 +1,8 @@
 # Android 安装说明
 
-当前下载：**v0.0.7 测试版，Android 10+、ARM64**。[下载 APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.7/DeepSeek-Niang_0.0.7_android-arm64-isolated-test.apk)。普通用户不需要 Android Studio、SDK 或 USB 调试。
+**v0.0.8 测试版**适用于运行 Android 10 或更新版本的 ARM64 手机，下载后可直接使用系统安装器。[下载 APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.8/DeepSeek-Niang_0.0.8_android-arm64-isolated-test.apk)
+
+从「设置 → 语音与麦克风」试听朗读和原创唱段。Android 朗读使用系统离线音色。语音输入需要 Android 12 或更新版本和离线普通话识别。[语音使用与验收](phases/07-voice-singing.md)
 
 ## 先确认安装身份
 
@@ -10,14 +12,14 @@
 
 ## 安装步骤
 
-1. 下载 APK，对照同版 [SHA256SUMS.txt](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.7/SHA256SUMS.txt) 校验文件。也可先在电脑计算 SHA-256，再传到手机。
+1. 下载 APK，对照同版 [SHA256SUMS.txt](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.8/SHA256SUMS.txt) 校验文件。也可先在电脑计算 SHA-256，再传到手机。
 2. 按 Android 提示，仅为所用文件管理器或浏览器临时允许安装来源；安装完成后可撤销权限，不关闭系统防护。
 3. 打开正确的“扫码测试版”。在设置中验证安全存储，再在手机本地配置自己的 DeepSeek API Key，或按下文通过可信电脑授权配置。
 4. 检查旧人格、聊天和记忆是否保留；有异常先保留现状并反馈，不重复卸载、降级或重建数据。
 
 ## 连接电脑与独立使用
 
-电脑与手机都更新到 v0.0.7，连接可互访局域网。电脑点击“连接手机”，手机进入连接页点击“扫一扫”，需要相机权限；相机识别在本机进行。扫码也会授权电脑将已有 Key 一次写入本次认证手机安全存储，重新扫码可能更新手机已有配置。二维码本身不含 Key，普通同步不传 Key。完整边界见[连接说明](USAGE.md#连接电脑与手机)。
+电脑与手机都更新到 v0.0.8，连接可互访局域网。电脑点击“连接手机”，手机进入连接页点击“扫一扫”。二维码在手机本机识别，需要相机权限。成功配对后，电脑可通过这次授权的加密连接为手机配置已有的 DeepSeek Key。[连接说明](USAGE.md#连接电脑与手机)
 
 手机 Key 配置成功后可以独立联网聊天，不要求电脑开机。手机查看已同步生活记录，但不独立执行 Windows 生活任务。应用被停止或系统限制时，不保证实时同步或系统通知，没有云推送。
 

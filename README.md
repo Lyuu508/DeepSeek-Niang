@@ -2,13 +2,15 @@
 
 一款面向 Windows 与 Android 的本地优先 AI 陪伴软件，让不同人格拥有各自延续的聊天、记忆与虚拟日常。
 
-**[下载 Windows 版](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.7/DeepSeek-Niang_0.0.7_windows-x64-setup.exe) · [下载 Android 版](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.7/DeepSeek-Niang_0.0.7_android-arm64-isolated-test.apk) · [首次使用](docs/USAGE.md)**
+**[下载 Windows 版](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.8/DeepSeek-Niang_0.0.8_windows-x64-setup.exe) · [下载 Android 版](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.8/DeepSeek-Niang_0.0.8_android-arm64-isolated-test.apk) · [首次使用](docs/USAGE.md)**
 
-当前版本：**v0.0.7 测试版**。已有自动化测试和原生构建记录，真实设备、家庭网络及真实 API 体验仍需进一步验证。
+当前版本为 **v0.0.8 测试版**。已有自动化测试和原生构建记录，真实设备、家庭网络及真实 API 体验待验收。
 
 v0.0.6 的桌宠已整合到 Windows 主客户端。透明角色能在桌面上自动走动，也支持直接拖动、点击挥手和双击聊天。[使用与验收](docs/phases/05-desktop-pet.md) · [dsh-pet 动画署名](apps/companion/src/desktop-pet/media/NOTICE.md)
 
 Windows 侧栏「视频中心」支持用户授权的本地视频分析，需要本机 FFmpeg、Ollama/Qwen3-VL。带音轨时使用本机 Whisper。[视频中心准备与使用](docs/phases/06-video-understanding.md)
+
+两端可从聊天中使用本机朗读和语音输入。在「设置 → 语音与麦克风」为当前人格选择音色，或试听原创元音唱段。[语音试用与设备要求](docs/phases/07-voice-singing.md)
 
 ## 让聊天慢慢积累
 
@@ -49,14 +51,14 @@ Windows 侧栏「视频中心」支持用户授权的本地视频分析，需要
 
 自动记忆和旧聊检索采用本地规则，可能遗漏或未命中。重要信息建议手动核对、保存，不承诺无限记忆。
 
-## 下载 v0.0.7 测试版
+## 下载 v0.0.8 测试版
 
 | 平台 | 安装包 | 系统要求 |
 | --- | --- | --- |
-| Windows | [下载中文主客户端 EXE（内含桌宠）](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.7/DeepSeek-Niang_0.0.7_windows-x64-setup.exe) | Windows 10/11，x64 |
-| Android | [下载 ARM64 APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.7/DeepSeek-Niang_0.0.7_android-arm64-isolated-test.apk) | Android 10 及以上，ARM64 |
+| Windows | [下载中文主客户端 EXE（内含桌宠）](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.8/DeepSeek-Niang_0.0.8_windows-x64-setup.exe) | Windows 10/11，x64 |
+| Android | [下载 ARM64 APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.8/DeepSeek-Niang_0.0.8_android-arm64-isolated-test.apk) | Android 10 及以上，ARM64 |
 
-[版本说明](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.0.7) · [SHA-256 校验清单](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.7/SHA256SUMS.txt) · [签名信息](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.7/SIGNING-IDENTITIES.json)
+[版本说明](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.0.8) · [SHA-256 校验清单](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.8/SHA256SUMS.txt) · [签名信息](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.8/SIGNING-IDENTITIES.json)
 
 普通用户选择 EXE 或 APK 即可，无需下载源码归档、构建日志或开发工具。
 
@@ -69,25 +71,25 @@ Windows 侧栏「视频中心」支持用户授权的本地视频分析，需要
 3. **安装 Android 版。** 按系统提示为所用浏览器或文件管理器临时允许安装 APK。若提示签名冲突，停止并保留旧应用及数据，不要通过卸载来强行安装。
 4. **配置聊天。** 打开“设置”，先验证安全存储，再保存自己的 DeepSeek API Key。密钥由本机系统安全存储保管，不要贴到 Issue、聊天记录或公开截图中。
 5. **开始使用。** 进入默认人格聊天，或通过“人格管理”创建自己的角色；在“本地数据”中核对和管理长期记忆。
-6. **连接另一台设备。** 两端都更新到 v0.0.7，接入可互访的同一局域网。电脑打开“局域网同步”并点击“连接手机”，手机进入连接页点击“扫一扫”。有线电脑与同一路由器下的 Wi-Fi 手机也可尝试配对；访客网络或设备隔离可能阻断连接。
+6. **连接另一台设备。** 两端都更新到 v0.0.8，接入可互访的同一局域网。电脑打开“局域网同步”并点击“连接手机”，手机进入连接页点击“扫一扫”。有线电脑和同一路由器下的 Wi-Fi 手机也可配对。访客网络或设备隔离可能阻断连接。
 7. **按需开启日常与分享。** 在陪伴设置中调整虚拟日常、主动交流、安静时段和通知。新建配置的主动消息与模型生成默认关闭；升级保留原设置。模型生成需要另外开启并设置预算。
 
 **扫码与 API Key：** 电脑生成连接二维码时，会授权将已配置的 Key 一次配置到本次认证的手机；重新扫码可能更新手机已有 Key。二维码本身不包含 Key，请仅向自己的可信手机展示。解除配对不会使已复制的 Key 在 DeepSeek 失效，如需撤销使用权，还需删除或轮换 Key。
 
 更多步骤见[使用说明](docs/USAGE.md)与[常见问题](docs/FAQ.md)。
 
-## v0.0.7 更新重点
+## v0.0.8 更新重点
 
-- Windows 视频中心按时间线分段分析本地文件，显示画面采样、音轨转写、覆盖缺口和摘要。
-- 暂停后可接着处理未完成的片段。完成后可将摘要保存到当前人格的长期记忆。
-- 桌宠显示实际的视频解码、分析和整理状态。
+- 两端主客户端加入离线朗读和语音输入。转写先进入聊天输入框，确认后可以发送。
+- 音色、语速、音量和静音偏好按本机人格保存。试听无需配置 DeepSeek API Key。
+- 原创七音符唱段可试听。Windows 桌宠按实际播放的音量显示发声指示。
 
 [查看完整更新日志](CHANGELOG.md)
 
 ## 测试版限制与注意事项
 
 - **实机体验仍待验收。** 自动化、原生构建及部分安装检查，不等于真实手机、家庭网络和真实 DeepSeek 已全部验证。
-- **虚拟生活不是外部行动。** 当前不会实际浏览网页、观看视频或完成真实课程；电脑应用退出后不继续推进，手机不独立执行电脑端生活任务。
+- **虚拟生活由电脑应用推进。** Windows 应用运行期间会推进生活计划。你可以在视频中心手动导入有权分析的本地文件。
 - **后台送达不保证。** 没有云推送；Android 被停止或系统限制时，同步和通知可能延迟。
 - **记忆与费用有边界。** 自动整理可能遗漏；相关资料加入聊天仍会消耗输入 Token。未知用量或费用不会当作免费。
 - **同步不能替代备份。** 数据库和备份目前未做数据库级加密，删除也不代表历史事件或独立备份中的原文已彻底擦除。
@@ -97,7 +99,7 @@ Windows 侧栏「视频中心」支持用户授权的本地视频分析，需要
 
 ## 后续计划
 
-后续方向包括 B站授权媒体接入、非语音音频分析、语音与歌声，以及可选的 NAS 常驻节点。
+后续方向包括 B站授权媒体接入、非语音音频分析、带歌词的自然歌声，以及可选的 NAS 常驻节点。
 
 [查看开发计划](DEVELOPMENT_PLAN.md)
 

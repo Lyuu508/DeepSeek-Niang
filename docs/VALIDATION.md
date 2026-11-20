@@ -1,5 +1,11 @@
 # 验证范围与待核实问题
 
+## v0.0.8 发布证据
+
+双端安装包从 `6caba0d1259db64b9c3e77e713c5279293b5a0bb` 构建。Windows EXE 在 Windows runner 安装并启动。Android ARM64 APK 核对了语音桥接、麦克风权限、包 ID 与 v0.0.7 test2 签名。两包已从公开下载地址回下载并验证 SHA-256。安装后的 Windows 程序通过 WinRT 系统语音生成了 WAV。 [构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.8/BUILD-RESULTS.json) · [同源 CI](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44695203939) · [签名发布](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44696382185)
+
+Linux 154 项、Windows 155 项 Rust 测试通过，另有 24 项 Python 检查与 5 项同步模型测试。5 项语音浏览器夹具检查覆盖合成麦克风、音频播放、草稿、权限拒绝和焦点丢失。真实麦克风、系统普通话识别、耳机表现、Android 安装后运行及真实 DeepSeek 对话仍待用户设备验收。[语音验收清单](phases/07-voice-singing.md)
+
 ## v0.0.7 发布证据
 
 双端安装包从 `88ec37ef54551c7a05268a0cc54d3eda43d90e2a` 构建并沿用此前的测试签名。已从 GitHub 回下载两包，HTTP 均为 200，文件大小与 SHA-256 匹配。Windows 签名包在 GitHub Windows runner 安装并启动，已安装主程序包含视频中心原生命令。[构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.7/BUILD-RESULTS.json) · [同源 CI](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44689094089) · [签名发布](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44690576994)
