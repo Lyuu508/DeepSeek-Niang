@@ -4,7 +4,7 @@ on:
     branches: [codex/v0.0.10-android-runtime-check]
     paths:
       - .github/workflows/android-v010-runtime-check.yml
-      - tests/browser/android-v010-installed.cjs
+      - tests/browser/android-v010-adb.py
 permissions:
   contents: read
 jobs:
@@ -17,10 +17,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
-        with:
-          node-version: '24'
-          package-manager-cache: false
       - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407
         with:
           cmdline-tools-version: '12266719'
@@ -81,10 +77,9 @@ jobs:
           adb shell settings put global transition_animation_scale 0
           adb shell settings put global animator_duration_scale 0
           adb shell getprop ro.product.cpu.abilist
-      - name: Verify installation, upgrade, and screens in the Android WebView
-        run: |
-          npm ci --ignore-scripts
-          node tests/browser/android-v010-installed.cjs
+      - name: Verify installation, retained app data, and Android screens with ADB
+        timeout-minutes: 6
+        run: python3 tests/browser/android-v010-adb.py
       - name: Preserve native Android evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
