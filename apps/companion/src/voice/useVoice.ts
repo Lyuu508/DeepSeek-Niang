@@ -123,7 +123,8 @@ export function useVoice(
     const onHide = () => { if (document.hidden) stop(); };
     const onBlur = () => {
       // Windows retains playback when the user clicks the desktop pet.
-      if (platform === 'windows' && current.current?.type === 'input') stop();
+      const job = current.current;
+      if (platform === 'windows' && job?.type === 'input' && job.capture) stop();
     };
     window.addEventListener('blur', onBlur);
     window.addEventListener('pagehide', stop);

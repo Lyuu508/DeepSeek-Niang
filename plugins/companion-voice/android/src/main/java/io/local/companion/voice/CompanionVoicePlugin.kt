@@ -2,6 +2,7 @@ package io.local.companion.voice
 
 import android.Manifest
 import android.app.Activity
+import android.app.Application
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -19,8 +20,6 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.speech.tts.Voice
 import android.util.Base64
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import app.tauri.annotation.Command
 import app.tauri.annotation.Permission
 import app.tauri.annotation.PermissionCallback
@@ -59,8 +58,34 @@ class CompanionVoicePlugin(private val host: Activity) : Plugin(host) {
     private var recording: Recording? = null
     private var permission: Invoke? = null
 
+    private val lifecycle = object : Application.ActivityLifecycleCallbacks {
+        override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+        override fun onActivityStarted(activity: Activity) {}
+        override fun onActivityResumed(activity: Activity) {}
+        override fun onActivitySaveInstanceState(activity: Activity, state: Bundle) {}
+
+        override fun onActivityPaused(activity: Activity) {
+            if (activity !== host) return
+            stopPlayback()
+            recording?.let { finishRecording(it, null, "VOICE_CANCELLED") }
+        }
+
+        override fun onActivityStopped(activity: Activity) {
+            if (activity !== host) return
+            permission?.let { reject(it, "VOICE_CANCELLED") }
+            permission = null
+        }
+
+        override fun onActivityDestroyed(activity: Activity) {
+            if (activity !== host) return
+            host.application.unregisterActivityLifecycleCallbacks(this)
+            close()
+        }
+    }
+
     init {
         scratch.listFiles()?.filter { it.name.startsWith("utterance-") }?.forEach { it.delete() }
+        host.application.registerActivityLifecycleCallbacks(lifecycle)
     }
 
     private fun reject(invoke: Invoke, code: String) = invoke.reject(code, code)
@@ -265,7 +290,7 @@ class CompanionVoicePlugin(private val host: Activity) : Plugin(host) {
         }
     }
 
-    private fun hasMicrophone() = ContextCompat.checkSelfPermission(host, Manifest.permission.RECORD_AUDIO) ==
+    private fun hasMicrophone() = host.checkSelfPermission(Manifest.permission.RECORD_AUDIO) ==
         PackageManager.PERMISSION_GRANTED
 
     @PermissionCallback
@@ -361,18 +386,10 @@ class CompanionVoicePlugin(private val host: Activity) : Plugin(host) {
         invoke.resolve()
     }
 
-    override fun onPause(activity: AppCompatActivity) {
+    private fun close() {
         stopPlayback()
-        recording?.let { finishRecording(it, null, "VOICE_CANCELLED") }
-    }
-
-    override fun onStop(activity: AppCompatActivity) {
         permission?.let { reject(it, "VOICE_CANCELLED") }
         permission = null
-    }
-
-    override fun onDestroy(activity: AppCompatActivity) {
-        stopPlayback()
         recording?.let { finishRecording(it, null, "VOICE_CANCELLED") }
         val callback = initializing
         initializing = null
