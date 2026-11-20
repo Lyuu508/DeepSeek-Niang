@@ -18,6 +18,7 @@ import version
 
 VERSION='0.0.10'
 TAG='v'+VERSION
+SOURCE_BASELINE='939d78802e0e5a6c4ce99a938b97ce498a1bb1b0'
 APP_ID='io.local.deepseekcompanion.test2'
 STAGE='source and test validation'
 def mark(value):
@@ -182,7 +183,7 @@ def main():
         ('CHANGELOG.md','CHANGELOG.md'),
     ]:
         shutil.copyfile(ROOT/source,output/name)
-    (output/'CHANGED-FILES.txt').write_bytes(run(['git','diff-tree','--no-commit-id','--name-status','-r',sha],cwd=ROOT))
+    (output/'CHANGED-FILES.txt').write_bytes(run(['git','diff','--name-status',SOURCE_BASELINE,sha],cwd=ROOT))
     assert (output/'CHANGED-FILES.txt').stat().st_size>0
     for path in output.iterdir():
         assert path.is_file() and path.suffix not in ['.jks','.keystore','.p12','.pfx','.key']

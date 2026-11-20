@@ -64,6 +64,8 @@ async function exerciseOcean(pageFor, shot, button) {
     for (const [id,name] of selectors) {
       if (id !== 'chat') await go(id,name);
       if (id === 'settings') {
+        const radius = await page.locator('.settings-index button').first().evaluate(node=>parseFloat(getComputedStyle(node).borderTopLeftRadius));
+        assert(radius >= 8, 'settings navigation must use the shared button radius');
         await button(page,'贝壳紫').click();
         await page.locator('.app[data-palette=shell]').waitFor();
         const contrast = await page.locator('.appearance-palette').evaluate(card => {
