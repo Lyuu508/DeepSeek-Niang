@@ -1,31 +1,33 @@
 # Windows 安装说明
 
-当前下载：**v0.0.6 测试版，Windows 10/11 x64**。[下载中文 EXE](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.6/DeepSeek-Niang_0.0.6_windows-x64-setup.exe)。普通用户不需要安装 Rust、Node.js 或 Python。
+当前下载：**v0.0.7 测试版，Windows 10/11 x64**。[下载中文 EXE](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.7/DeepSeek-Niang_0.0.7_windows-x64-setup.exe)。普通用户不需要安装 Rust、Node.js 或 Python。
 
 ## 安装步骤
 
 1. 已有用户先阅读[升级与数据保护](USAGE.md#升级与数据保护)，退出旧应用，保留当前用户应用数据目录的完整备份，不先卸载或删库。
-2. 下载 EXE 和同版 [SHA256SUMS.txt](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.6/SHA256SUMS.txt)。在文件目录运行：
+2. 下载 EXE 和同版 [SHA256SUMS.txt](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.7/SHA256SUMS.txt)。在文件目录运行：
 
    ```powershell
-   Get-FileHash -Algorithm SHA256 .\DeepSeek-Niang_0.0.6_windows-x64-setup.exe
+   Get-FileHash -Algorithm SHA256 .\DeepSeek-Niang_0.0.7_windows-x64-setup.exe
    ```
 
    与清单逐字核对摘要；不一致时停止使用该文件。
 3. 运行安装器。当前有自签名测试签名，并非公共 CA 信任发布者；不要关闭系统防护或导入不明根证书。
 4. 缺少 WebView2 时，从[微软官方页面](https://developer.microsoft.com/microsoft-edge/webview2/)安装 Evergreen Runtime 后再尝试启动。
 5. 打开“设置”验证安全存储，再输入自己的 DeepSeek API Key。聊天需要互联网和提供商额度；密钥由 Windows Credential Manager 保管。
-6. 使用手机时同时更新手机到 v0.0.6，再按[连接说明](USAGE.md#连接电脑与手机)扫码。扫码会授权给本次认证手机配置电脑已有 Key，请仅向可信手机展示。
+6. 使用手机时同时更新手机到 v0.0.7，再按[连接说明](USAGE.md#连接电脑与手机)扫码。扫码会授权给本次认证手机配置电脑已有 Key，请仅向可信手机展示。
 
 ## 显示桌宠
 
 桌宠随这个 EXE 安装。启动应用后，在顶部打开「桌宠」并勾选「显示桌宠」。移开鼠标后角色会在当前屏幕内走动。[桌宠操作](phases/05-desktop-pet.md)
 
+本机视频分析可在侧栏「视频中心」运行。[工具与模型准备](phases/06-video-understanding.md)
+
 ## 数据与验证边界
 
 应用通过当前用户的 Tauri 应用数据目录保存 `companion.sqlite3`，Windows 标识为 `io.local.deepseekcompanion`。数据库与备份未做库级加密，迁移前一致性备份不替代独立备份；不要直接复制运行中的 WAL 数据库主文件或上传私有目录。
 
-v0.0.6 已在 GitHub Windows runner 安装并启动。启动截图显示聊天界面及右上角桌宠入口，安装检查确认动画随主程序分发。用户设备上的覆盖安装、桌宠走动和实际聊天仍待验收。[原生启动截图](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.6/windows-installed-window.png)
+v0.0.7 已在 GitHub Windows runner 安装并启动。安装检查确认视频中心、桌宠入口及动画随主程序分发。用户设备上的覆盖安装、桌宠走动和实际聊天仍待验收。[原生启动截图](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.7/windows-installed-window.png)
 
 首次使用见[使用说明](USAGE.md)，自行编译见[开发与构建](BUILDING.md)。下方保留 v0.0.1／v0.0.2 历史说明，其中旧签名、下载与“不提供同步”等状态不适用于当前版本。
 

@@ -12,7 +12,7 @@ Windows 客户端支持用户授权的本地视频。分段采样和语音转写
 
 ## 当前版本与完成状态
 
-当前公开测试版为 [v0.0.6](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.0.6)，发布源码为 `5e80ce8bb1333ade52ee64a4efe33569aabbc253`。Windows 安装器内置桌宠，双端签名与下载已核验。
+当前公开测试版为 [v0.0.7](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.0.7)，发布源码为 `88ec37ef54551c7a05268a0cc54d3eda43d90e2a`。Windows 主客户端内置视频中心，双端签名和下载已核验。
 
 | 方向 | 已实现、可测试 | 仍需验收或完善 |
 | --- | --- | --- |
@@ -32,7 +32,7 @@ Windows 客户端支持用户授权的本地视频。分段采样和语音转写
 
 | 方向 | 状态与计划入口 |
 | --- | --- |
-| 真实视频理解 | 仅有算法原型与设计，不具备真实浏览／播放／理解链路，[阶段 6 计划](docs/phases/06-video-understanding.md) |
+| B站媒体与声音理解 | 本地画面、语音分析流程可测试。待核实 B站授权媒体来源与非语音声音模型。[阶段 6](docs/phases/06-video-understanding.md) |
 | 语音与歌声 | 尚未接入，[阶段 7 计划](docs/phases/07-voice-singing.md) |
 | 可选 NAS 节点 | 尚非生产服务，无当前使用前置依赖，[阶段 8 计划](docs/phases/08-nas-migration.md) |
 | 发布与数据保护完善 | 公共可信签名、完整备份恢复和跨身份迁移仍需独立实现与验证，[阶段 9 计划](docs/phases/09-release-optimization.md) |

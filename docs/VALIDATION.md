@@ -1,5 +1,13 @@
 # 验证范围与待核实问题
 
+## v0.0.7 发布证据
+
+双端安装包从 `88ec37ef54551c7a05268a0cc54d3eda43d90e2a` 构建并沿用此前的测试签名。已从 GitHub 回下载两包，HTTP 均为 200，文件大小与 SHA-256 匹配。Windows 签名包在 GitHub Windows runner 安装并启动，已安装主程序包含视频中心原生命令。[构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.7/BUILD-RESULTS.json) · [同源 CI](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44689094089) · [签名发布](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44690576994)
+
+Linux 151 项、Windows 152 项 Rust 测试通过。生成的 16 秒编码视频用于核对首尾画面、连续音轨及文件变更。另用实际媒体与模型接口夹具走通导入、3 段分析、汇总、临时文件清理和显式保存记忆。浏览器夹具验证了视频中心入口和操作状态。
+
+实际 Qwen3-VL 推理和 Whisper 转写质量、用户设备运行及 B站授权媒体接入待验证。[模型和实机验收范围](phases/06-video-understanding.md)
+
 ## v0.0.6 发布证据
 
 Windows EXE 和 Android APK 来自同一提交 `5e80ce8bb1333ade52ee64a4efe33569aabbc253`。两个公开下载均返回 HTTP 200，文件大小与 SHA-256 和发布报告一致。[同源 CI](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44232561567) · [签名发布](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44233536958) · [构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.6/BUILD-RESULTS.json)
