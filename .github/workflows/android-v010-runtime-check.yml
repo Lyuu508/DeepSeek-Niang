@@ -73,6 +73,8 @@ jobs:
           done
           test "$(adb shell getprop sys.boot_completed)" = 1 || { tail -40 "$log"; exit 1; }
           adb shell input keyevent 82
+          adb shell wm dismiss-keyguard
+          adb shell settings put system screen_off_timeout 2147483647
           adb shell wm size 750x1624
           adb shell wm density 320
           adb shell settings put global window_animation_scale 0

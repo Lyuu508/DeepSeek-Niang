@@ -47,7 +47,8 @@ async function installAndOpen(device, version, upgrade = false) {
   const activity = adb('shell', 'cmd', 'package', 'resolve-activity', '--brief', identity).split('\n').at(-1);
   assert(activity.startsWith(`${identity}/`), activity);
   assert.match(adb('shell', 'am', 'start', '-W', '-n', activity), /Status:\s*ok/);
-  await screenshot(null, upgrade ? 'v0.0.10-launched' : 'v0.0.9-launched');
+  report[upgrade ? 'new_activity_started' : 'old_activity_started'] = true;
+  save();
   const page = await (await device.webView({ pkg: identity }, { timeout: 30_000 })).page();
   page.setDefaultTimeout(15_000);
   await page.locator('#chat-input').waitFor();
