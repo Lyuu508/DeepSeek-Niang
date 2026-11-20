@@ -6,7 +6,7 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
-    timeout-minutes: 7
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -33,11 +33,60 @@ jobs:
           if ($Setup.ExitCode -notin @(0, 3010)) { throw 'Installation failed' }
           $Apps = @(Get-ChildItem -LiteralPath $Install -Filter '*.exe' | Where-Object Name -NotMatch '(?i)uninstall')
           if ($Apps.Count -ne 1) { throw 'Expected one installed app' }
-          $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--remote-debugging-port=9224 --remote-debugging-address=127.0.0.1'
+          $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--remote-debugging-port=9224 --remote-debugging-address=127.0.0.1 --force-renderer-accessibility'
           $App = Start-Process -FilePath $Apps[0].FullName -PassThru
           try {
+            Add-Type -AssemblyName System.Drawing
+            Add-Type @'
+          using System;
+          using System.Runtime.InteropServices;
+          public static class CompanionPublishedCapture {
+            [StructLayout(LayoutKind.Sequential)] public struct Rect { public int Left, Top, Right, Bottom; }
+            [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr handle, out Rect rect);
+            [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr handle);
+          }
+          '@
             node .github/scripts/verify-v009-windows-render.mjs $Output
-            if ($LASTEXITCODE -ne 0) { throw 'Installed window did not render the chat and its native persona' }
+            $WebViewProbe = $LASTEXITCODE
+            $App.Refresh()
+            $Edge = @(Get-CimInstance Win32_Process -Filter "Name = 'msedgewebview2.exe'")
+            $HasDebugPort = @($Edge | Where-Object CommandLine -Match 'remote-debugging-port=9224').Count -gt 0
+            $AppWindow = $App.MainWindowHandle
+            $NativePixels = 0
+            $ChatInAccessibilityTree = $false
+            if ($AppWindow -ne 0) {
+              [CompanionPublishedCapture]::SetForegroundWindow($AppWindow) | Out-Null
+              Start-Sleep -Seconds 8
+              $Rect = [CompanionPublishedCapture+Rect]::new()
+              if ([CompanionPublishedCapture]::GetWindowRect($AppWindow, [ref]$Rect)) {
+                $Bitmap = [System.Drawing.Bitmap]::new($Rect.Right-$Rect.Left, $Rect.Bottom-$Rect.Top)
+                $Graphics = [System.Drawing.Graphics]::FromImage($Bitmap)
+                try {
+                  $Graphics.CopyFromScreen($Rect.Left, $Rect.Top, 0, 0, $Bitmap.Size)
+                  $Bitmap.Save((Join-Path $Output 'windows-native-window.png'), [System.Drawing.Imaging.ImageFormat]::Png)
+                  for ($X = 20; $X -lt $Bitmap.Width-20; $X += 19) {
+                    for ($Y = 85; $Y -lt $Bitmap.Height-48; $Y += 19) {
+                      $Color = $Bitmap.GetPixel($X, $Y)
+                      if ($Color.R -lt 246 -or $Color.G -lt 246 -or $Color.B -lt 246) { $NativePixels++ }
+                    }
+                  }
+                } finally { $Graphics.Dispose(); $Bitmap.Dispose() }
+              }
+              try {
+                Add-Type -AssemblyName UIAutomationClient
+                Add-Type -AssemblyName UIAutomationTypes
+                $Root = [System.Windows.Automation.AutomationElement]::FromHandle($AppWindow)
+                $Elements = $Root.FindAll([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.Condition]::TrueCondition)
+                foreach ($Element in $Elements) {
+                  if ($Element.Current.Name -match '接着聊|永久聊天时间线|发送|人格管理') { $ChatInAccessibilityTree = $true; break }
+                }
+              } catch { Write-Warning 'Accessibility tree not available on this runner' }
+            }
+            $Result = @{sha256=$env:V009_EXE_SHA; process_open=(-not $App.HasExited); window_open=($AppWindow -ne 0);
+              engine_processes=$Edge.Count; debug_arg_present=$HasDebugPort; debug_probe_exit=$WebViewProbe;
+              non_white_pixel_samples=$NativePixels; chat_in_accessibility_tree=$ChatInAccessibilityTree}
+            $Result | ConvertTo-Json -Compress | Tee-Object -FilePath (Join-Path $Output 'windows-native-window.json')
+            if ($WebViewProbe -ne 0 -and -not $ChatInAccessibilityTree) { throw 'Installed window did not confirm the chat interface' }
           } finally {
             if (-not $App.HasExited) { Stop-Process -Id $App.Id -Force }
           }

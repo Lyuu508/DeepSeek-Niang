@@ -4,14 +4,19 @@ import { setTimeout as delay } from 'node:timers/promises';
 
 const output = process.argv[2];
 let page;
+let lastTargets = [];
 for (let n = 0; n < 30 && !page; n++) {
   try {
     const targets = await (await fetch('http://127.0.0.1:9224/json/list', { signal: AbortSignal.timeout(900) })).json();
-    page = targets.find(entry => entry.type === 'page' && entry.url.includes('tauri.localhost'));
+    lastTargets = targets.map(({type, url}) => ({type, url: url.split('?')[0]}));
+    page = targets.find(entry => entry.type === 'page' && /(?:tauri\.localhost|^tauri:)/.test(entry.url));
   } catch { /* Wait for the Windows WebView to initialize. */ }
   if (!page) await delay(1000);
 }
-if (!page) throw new Error('The installed app did not expose its WebView target');
+if (!page) {
+  console.log(JSON.stringify({ webview_debug_targets: lastTargets }));
+  throw new Error('The installed app did not expose its WebView target');
+}
 
 const socket = new WebSocket(page.webSocketDebuggerUrl);
 await new Promise((resolve, reject) => {
