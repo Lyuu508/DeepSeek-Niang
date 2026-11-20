@@ -1,3 +1,4 @@
+import { Art, Icon, PageHeader } from './OceanDesign';
 import { invoke } from '@tauri-apps/api/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Bootstrap, ChatFailure, Persona } from '@deepseek/contracts';
@@ -40,6 +41,7 @@ export function PersonaManager({ boot, onSwitch, onRefresh, onError, onSettings,
   const [localError, setLocalError] = useState('');
   const [detail, setDetail] = useState<Persona>();
   const lock = useRef(false);
+  const newName = useRef<HTMLInputElement>(null);
   const refreshTrash = useCallback(async () => setEntries(await invoke<Recycled[]>('list_recycled_personas')), []);
 
   useEffect(() => {
@@ -88,18 +90,19 @@ export function PersonaManager({ boot, onSwitch, onRefresh, onError, onSettings,
   }
 
   return <div className="settings-content persona-manager">
-    <div className="page-heading">
-      <h1>{trashOpen ? '人格回收站' : '人格管理'}</h1>
-      {trashOpen && <p>暂时放在这里的人格，还可以重新找回来哦。</p>}
+    <PageHeader title={trashOpen ? '人格回收站' : '人格管理'} icon={trashOpen?'trash':'persona'}
+      scene={trashOpen?'scene-settings':'scene-chat'} art={trashOpen?'sad':'happy'}
+      description={trashOpen?'暂时放在这里的人格，可以恢复原有记录。':'管理每个人格的设定与聊天空间。'}>
       <div className="button-row">
+        {!trashOpen && <button className="primary" disabled={!nativeAvailable || busy} onClick={()=>newName.current?.focus()}><Icon name="add"/>新建人格</button>}
         {runtimeMode === 'native' && <button disabled={busy} onClick={() => { setTrashOpen(!trashOpen); setNotice(''); setLocalError(''); }}>
           {trashOpen ? '返回人格管理' : '人格回收站'}
         </button>}
         {trashOpen && <button className="danger" disabled={busy || !entries.length}
           onClick={() => setPending({ kind: 'purge', items: [...entries], all: true })}>清空回收站</button>}
       </div>
-    </div>
-    {notice && <p className="notice" role="status">{notice}</p>}
+    </PageHeader>
+    {notice && <div className="notice persona-notice" role="status"><Art name="wave"/><span>{notice}</span></div>}
     {!pending && localError && <p className="inline-error" role="alert">{localError}</p>}
     {trashOpen ? <section className="persona-grid" aria-label="回收站人格">
       {entries.map(item => <article className="persona-tile recycle-tile" key={item.persona.id}>
@@ -107,13 +110,13 @@ export function PersonaManager({ boot, onSwitch, onRefresh, onError, onSettings,
         <div><h2>{item.persona.name}</h2><p className="persona-summary">{item.personality}</p>
           <p><time>{new Date(item.changed_at_ms).toLocaleString()}</time> · {syncText[item.sync_state]}</p></div>
         <div className="button-row">
-          <button disabled={busy} onClick={() => void change({ kind: 'restore', entry: item.entry })}>恢复</button>
+          <button data-tone="success" disabled={busy} onClick={() => void change({ kind: 'restore', entry: item.entry })}>恢复</button>
           <button className="danger" disabled={busy} onClick={() => setPending({ kind: 'purge', items: [item], all: false })}>永久删除</button>
         </div>
       </article>)}
-      {!entries.length && <p className="field-help">回收站为空。</p>}
+      {!entries.length && <div className="ocean-empty recycle-empty"><Art name="resting"/><p>回收站为空。</p></div>}
     </section> : <>
-      <section className="persona-grid">{boot?.personas.map(p => <article className="persona-tile" key={p.id}>
+      <section className="persona-grid">{boot?.personas.map(p => <article className="persona-tile" key={p.id} data-current={boot.active_persona_id===p.id}>
         <Avatar persona={p}/><div><h2>{p.name}</h2>
           <p>{p.is_builtin ? '默认人格' : '自定义人格'}{boot.active_persona_id === p.id ? ' · 使用中' : ''}</p>
           {p.personality && <p className="persona-summary">{p.personality}</p>}
@@ -132,7 +135,7 @@ export function PersonaManager({ boot, onSwitch, onRefresh, onError, onSettings,
       <form className="settings-card" onSubmit={e => { e.preventDefault(); void create(); }}>
         <h2>新增人格</h2>
         <label htmlFor="new-persona-name">人格名称</label>
-        <input id="new-persona-name" value={name} maxLength={32} disabled={!nativeAvailable || busy} onChange={e => setName(e.target.value)}/>
+        <input id="new-persona-name" ref={newName} value={name} maxLength={32} disabled={!nativeAvailable || busy} onChange={e => setName(e.target.value)}/>
         <label htmlFor="new-persona-personality">独立人物设定</label>
         <textarea id="new-persona-personality" value={personality} maxLength={3000} disabled={!nativeAvailable || busy} onChange={e => setPersonality(e.target.value)}/>
         <button className="primary" disabled={!nativeAvailable || busy || !name.trim() || !personality.trim()}>{busy ? '正在创建…' : '创建人格并进入聊天'}</button>
@@ -142,13 +145,13 @@ export function PersonaManager({ boot, onSwitch, onRefresh, onError, onSettings,
       cancelLabel="返回" confirmLabel="编辑设定" busy={false} onCancel={() => setDetail(undefined)}
       onConfirm={() => { const p = detail; setDetail(undefined); void onSwitch(p.id, true); }}/>}
     {pending?.kind === 'trash' && <Confirmation title="主人，真的要把我收起来吗？"
-      body={<><Avatar small/><p>主人，真的要暂时把我放进回收站吗？<br/>
+      art="peeking" body={<><p>主人，真的要暂时把我放进回收站吗？<br/>
         虽然有一点舍不得，但我会乖乖待在那里……<br/>如果以后还想找我聊天，记得把我恢复回来哦。</p>
         {localError && <p className="inline-error" role="alert">{localError}</p>}</>}
       cancelLabel="再想想" confirmLabel="移入回收站" busy={busy} onCancel={() => setPending(undefined)}
       onConfirm={() => void change({ kind: 'trash', persona_id: pending.persona.id })}/>}
     {pending?.kind === 'purge' && <Confirmation title={pending.all ? '确定要清空所有回忆吗？' : '主人，真的要和我告别了吗？'} danger
-      body={<><Avatar small/>
+      art="sad" body={<>
         <p>{pending.all ? '主人，回收站里还有一些暂时收起来的人格呢……' : '主人，这次是真的要把我删掉了吗？'}</p>
         <p>将永久删除 {pending.items.length} 个人格和对应的聊天、记忆、关系、生活记录及人格插件设置。</p>
         <ul>{pending.items.map(item => <li key={item.persona.id}>{item.persona.name}</li>)}</ul>

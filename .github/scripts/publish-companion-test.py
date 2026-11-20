@@ -1,4 +1,4 @@
-"""Verify and publish the authorized v0.0.9 test installers."""
+"""Verify and publish the authorized v0.0.10 test installers."""
 import argparse
 import hashlib
 import json
@@ -16,7 +16,7 @@ ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'scripts'))
 import version
 
-VERSION='0.0.9'
+VERSION='0.0.10'
 TAG='v'+VERSION
 APP_ID='io.local.deepseekcompanion.test2'
 STAGE='source and test validation'
@@ -60,11 +60,13 @@ def validate_pair(windows,android,sha):
         'runner_system_synthesis_failed', 'runner_system_synthesis_timed_out'}
     assert windows['signing'].get('application_identifier')=='io.local.deepseekcompanion'
     assert windows['signing']['interface_bundled'] and windows['signing']['installer_and_application_icons_readable']
-    assert android['version_code']==1009 and android['application_id']==APP_ID
+    assert windows['signing']['window_rendered'] and windows['signing']['ocean_art_bundled']
+    assert android['version_code']==1010 and android['application_id']==APP_ID
     assert android['signature_verified'] and android['test_signer_persistence_guaranteed']
     assert android['offline_voice_bridge_bundled'] and android['microphone_permission_declared']
     assert android['interface_bundled'] and android['launcher_resources_verified']
-    assert android['upgrade_compatible_with_test2_v0_0_8'] and not android['production_upgrade_compatible']
+    assert android['ocean_art_bundled']
+    assert android['upgrade_compatible_with_test2_v0_0_9'] and not android['production_upgrade_compatible']
     assert not android['physical_device_tested'] and not windows['physical_device_tested']
 def automation(tests):
     logs={p.name:p.read_text() for p in tests.glob('*.txt')}
@@ -93,8 +95,16 @@ def automation(tests):
     old=next(frame for frame in baseline['mobile'] if (frame['width'],frame['height'])==(375,812))
     new=next(frame for frame in layout['mobile'] if (frame['width'],frame['height'])==(375,812))
     assert new['message_px'] >= old['message_px']+100
+    ocean=layout['ocean']
+    assert len(ocean['checked'])==2 and {item['platform'] for item in ocean['checked']}=={'android','windows'}
+    assert all(len(item['routes'])==9 and item['light_dark'] and item['installed_art_verified'] for item in ocean['checked'])
+    assert len(set(ocean['screenshots']))==len(ocean['screenshots'])>=45
+    art=json.loads(logs['ocean-art.txt'])
+    assert art['verified']==21 and art['transparent']==16
     ui['v009-ui']={**layout,'passed':len(layout['checks']),'baseline':baseline}
     return {'real_media_decoding_fixture':True,'rust':rust,'python':int(py[1]),'node':int(node[1]),'desktop_pet_gait':int(gait[1]),
+            'ocean_art':art,'ocean_route_checks':sum(len(v['routes']) for v in ocean['checked']),
+            'ocean_screenshots':len(ocean['screenshots']),
             'real_tls_persona_recycle_fixture':True,'portrait_375x812_chat_px':{'before':old['message_px'],'after':new['message_px']},
             'ui_fixture':{mode:item['passed'] for mode,item in ui.items()}},logs,ui
 def package_ui(tests,output):
@@ -108,6 +118,9 @@ def package_ui(tests,output):
                      'persona-management.png','persona-trash-confirm.png','persona-recycle.png',
                      'persona-restored.png','persona-delete-confirm.png','persona-empty-confirm.png']:
             archive.write(after/name,name)
+        for name in read(after/'layout-results.json')['ocean']['screenshots']:
+            assert re.fullmatch(r'(desktop|phone)-[a-z-]+\.png', name)
+            archive.write(after/name,'ocean/'+name)
     shutil.copyfile(ROOT/'assets/branding/android-mask-preview.png',output/'ANDROID-ICON-MASKS.png')
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('artifacts',type=Path);parser.add_argument('tests',type=Path);parser.add_argument('output',type=Path);parser.add_argument('--ci-run',type=int,required=True)
@@ -116,7 +129,7 @@ def main():
     sha=run(['git','rev-parse','HEAD'],cwd=ROOT).decode().strip()
     assert sha==os.environ['EXPECTED_SOURCE_SHA']
     assert api('commits/main')['sha']==sha,'main moved; rebuild the latest source rather than publishing an older candidate'
-    assert version.check()=={'version':VERSION,'androidVersionCode':1009}
+    assert version.check()=={'version':VERSION,'androidVersionCode':1010}
     ci=api('actions/runs/'+str(args.ci_run))
     assert ci['head_sha']==sha and ci['conclusion']=='success' and ci['head_branch']=='main'
     windows_path=one(args.artifacts,'windows-build.json');android_path=one(args.artifacts,'android-build.json')
@@ -144,12 +157,12 @@ def main():
         shutil.copyfile(android_path.parent/name,output/name)
     references=read(android_path.parent/'ANDROID-SIGNING-REFERENCES.json')
     previous=references['previous_test2']
-    assert previous['version']=='0.0.8' and previous['version_code']==1008 and previous['application_id']==APP_ID
+    assert previous['version']=='0.0.9' and previous['version_code']==1009 and previous['application_id']==APP_ID
     assert previous['signer_certificate_sha256']==android['signer_certificate_sha256']=='fefb57342751c7bd5ef8271e4a8b09f8702c0285e0120e8407b557d20dbbf153'
     assert 'Verified using' in previous['apksigner_output'] and re.fullmatch('[0-9a-f]{64}',previous['sha256'])
     assert public_win['windows_certificate_sha256']=='069f0150a9698a8178bdaf7dfea13f5509185aa69b9ba940f5473edbafa8af62'
     write(output/'SIGNING-IDENTITIES.json',public_win)
-    report={'version':VERSION,'android_version_code':1009,'source_commit':sha,'ci_run':args.ci_run,
+    report={'version':VERSION,'android_version_code':1010,'source_commit':sha,'ci_run':args.ci_run,
         'signing_workflow_run':os.environ['GITHUB_RUN_ID'],'distribution':'persisted-test2-update',
         'windows':windows,'android':android,'tests':counts,'files':files,
         'physical_windows_android_tested':False,'home_ethernet_wifi_tested':False,'real_deepseek_api_tested':False,
@@ -161,32 +174,35 @@ def main():
     write(output/'UI-TEST-RESULTS.json',{'source_commit':sha,'scope':'explicit UI fixtures; not real devices','runs':ui})
     package_ui(args.tests,output)
     for source,name in [
-        ('docs/V009_UI.md','INSTALL-AND-ACCEPTANCE.md'),
+        ('docs/V010_OCEAN_UI.md','INSTALL-AND-ACCEPTANCE.md'),
+        ('assets/branding/ocean-art.json','OCEAN-ART-MANIFEST.json'),
         ('docs/V009_RECYCLE_MIGRATION.md','RECYCLE-MIGRATION.md'),
         ('docs/PLUGIN_DEVELOPMENT.md','PLUGIN-DEVELOPMENT.md'),
         ('apps/companion/src/desktop-pet/media/NOTICE.md','ANIMATION-CREDITS.md'),
         ('CHANGELOG.md','CHANGELOG.md'),
     ]:
         shutil.copyfile(ROOT/source,output/name)
+    (output/'CHANGED-FILES.txt').write_bytes(run(['git','diff-tree','--no-commit-id','--name-status','-r',sha],cwd=ROOT))
+    assert (output/'CHANGED-FILES.txt').stat().st_size>0
     for path in output.iterdir():
         assert path.is_file() and path.suffix not in ['.jks','.keystore','.p12','.pfx','.key']
         if path.suffix in ['.md','.txt','.json','.log']:
             content=path.read_text(encoding='utf-8-sig')
             assert not re.search(r'-----BEGIN (?:RSA |EC |ENCRYPTED )?PRIVATE KEY-----|github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{20,}',content),'Private material pattern; publication blocked'
     repo=os.environ['GH_REPO'];base='https://github.com/'+repo+'/releases/download/'+TAG+'/'
-    body=f"""DeepSeek娘 {VERSION} 测试版。改进 Windows 和 Android 界面，加入可调字号、人格回收站、可选对话风格和本地插件管理。
+    body=f"""DeepSeek娘 {VERSION} 海洋主题测试版。Windows 三栏和 Android 竖屏界面更新，包含角色立绘、Q版表情、各页面插画和独立的深海夜色主题。
 
 - [Windows 中文主客户端 EXE]({base}{windows['file']})
 - [Android ARM64 APK]({base}{android['file']})
 - [SHA-256 校验]({base}SHA256SUMS.txt) · [构建结果]({base}BUILD-RESULTS.json)
 - [界面与竖屏测量截图]({base}UI-EVIDENCE.zip) · [Android 图标遮罩预览]({base}ANDROID-ICON-MASKS.png)
-- [实机验收]({base}INSTALL-AND-ACCEPTANCE.md) · [回收站与迁移]({base}RECYCLE-MIGRATION.md) · [插件开发]({base}PLUGIN-DEVELOPMENT.md)
+- [设计与实机验收]({base}INSTALL-AND-ACCEPTANCE.md) · [素材清单]({base}OCEAN-ART-MANIFEST.json) · [修改文件]({base}CHANGED-FILES.txt)
 
-Android Launcher 图标用原始海滩图铺满系统可见区。手机聊天顶部、输入区和底栏更紧凑。Windows 按钮从鼠标进入位置展开柔和渐变。字号保存在当前设备。
+两端的设置、人格管理、回收站、插件、记忆、配对和关于统一使用海洋主题。Android 视频中心展示已保存并同步的摘要，Windows 继续支持本机视频分析。可以选择配色、主题和本机字号。
 
-回收站可以用同一人格 ID 找回聊天、关系和记忆。永久清理需要再次确认，并向已配对设备传播删除状态。两端一起升级可继续同步。插件权限在本机授权，示例包含聊天风格和本地提醒。
+本版继续使用 schema 10、同一安装身份和原有系统凭据存储。永久清理继续需要确认，并向已配对设备传播删除状态。
 
-Windows 安装器在 Windows runner 安装并启动。Android 保持 v0.0.8 test2 签名，已经过 APK 内容和签名核验。实体设备、家庭局域网和真实 DeepSeek 对话待验收。
+Windows 安装器在 Windows runner 安装、启动并取得应用窗口截图。Android 保持 v0.0.9 test2 签名，已核验 APK 内容和签名。实体设备、家庭局域网及真实 DeepSeek 对话待验收。
 
 [源码](https://github.com/{repo}/commit/{sha}) · [同源 CI](https://github.com/{repo}/actions/runs/{args.ci_run})
 """
@@ -199,7 +215,7 @@ Windows 安装器在 Windows runner 安装并启动。Android 保持 v0.0.8 test
         assert tag.returncode!=0 and '404' in tag.stderr,'Version tag already exists; never move it'
         mark('create unpublished release by official REST API')
         payload=Path(os.environ['RUNNER_TEMP'])/'companion-release-draft.json'
-        write(payload,{'tag_name':TAG,'target_commitish':sha,'name':f'{VERSION}测试版 · 界面与人格管理','draft':True,'prerelease':True,'body':body})
+        write(payload,{'tag_name':TAG,'target_commitish':sha,'name':f'{VERSION}测试版 · 海洋主题','draft':True,'prerelease':True,'body':body})
         prior=json.loads(run(['gh','api','--method','POST',f'repos/{repo}/releases','--input',payload]))
     release_id=prior['id']
     existing_assets={a['name']:a for a in prior['assets']}

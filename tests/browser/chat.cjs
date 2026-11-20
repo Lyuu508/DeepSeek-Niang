@@ -137,11 +137,11 @@ async function configure(page){await settings(page);await page.getByLabel('API K
   assert.deepEqual(mobileErrors,[]);
  });
  await check('companion controls show five dimensions and preserve explicit proactive opt in',async()=>{
-  await page.getByRole('button',{name:'关系与日常',exact:true}).click();await page.getByRole('heading',{name:'我们的关系',exact:true}).waitFor();
+  await page.getByRole('navigation',{name:'人格侧栏功能'}).getByRole('button',{name:'关系与日常',exact:true}).click();await page.getByRole('heading',{name:'我们的关系',exact:true}).waitFor();
   assert.equal(await page.getByRole('progressbar').count(),5);assert.equal(await page.getByLabel('开启主动消息',{exact:true}).isChecked(),false);
   await page.getByLabel('开启主动消息',{exact:true}).check();await page.getByLabel('主动消息最小间隔').fill('180');await page.getByLabel('主动消息每日上限').fill('1');
   await page.getByRole('button',{name:'保存陪伴设置',exact:true}).click();await page.getByText('陪伴设置已保存，配对设备同步后生效。',{exact:true}).waitFor();
-  await chat(page);await page.getByRole('button',{name:'关系与日常',exact:true}).click();assert(await page.getByLabel('开启主动消息',{exact:true}).isChecked());
+  await chat(page);await page.getByRole('navigation',{name:'人格侧栏功能'}).getByRole('button',{name:'关系与日常',exact:true}).click();assert(await page.getByLabel('开启主动消息',{exact:true}).isChecked());
   assert.equal(await page.getByLabel('主动消息每日上限').inputValue(),'1');assert.match(await page.locator('.companion-content').innerText(),/不执行网页浏览或媒体理解/);
   await page.locator('.page-scroll').evaluate(el=>{el.scrollTop=0;});await page.screenshot({path:path.join(artifact,'phase3-companion-desktop-ui-fixture.png'),animations:'disabled'});
  });
@@ -155,7 +155,7 @@ async function configure(page){await settings(page);await page.getByLabel('API K
   await page.getByLabel('主动交流模式').selectOption('quiet');
   await page.getByLabel('每日主动分享Token预算').fill('3000');
   await page.getByRole('button',{name:'保存陪伴设置',exact:true}).click();
-  await chat(page);await page.getByRole('button',{name:'关系与日常',exact:true}).click();
+  await chat(page);await page.getByRole('navigation',{name:'人格侧栏功能'}).getByRole('button',{name:'关系与日常',exact:true}).click();
   assert.equal(await page.getByLabel('主动交流模式').inputValue(),'quiet');
   assert.equal(await page.getByLabel('每日主动分享Token预算').inputValue(),'3000');
  });

@@ -10,6 +10,7 @@ import '../design-tokens.css';
 import './pet.css';
 import '../button-motion.css';
 import { installButtonMotion } from '../button-motion';
+import { useAppearance } from '../OceanPages';
 
 type Pane = 'activity' | 'chat' | 'menu';
 const sprites = { standing, idle, walk, wave };
@@ -36,6 +37,7 @@ function currentStatus(state: PetSnapshot | null, offline: boolean): string {
 }
 
 function Pet() {
+  const appearance = useAppearance();
   const [snapshot, setSnapshot] = useState<PetSnapshot | null>(null);
   const [pane, setPane] = useState<Pane | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -213,7 +215,7 @@ function Pet() {
   const name = snapshot?.name ?? 'DeepSeek娘';
   const controls = hovered || !!pane;
   const animation = !animated ? 'standing' : waving ? 'wave' : motion.walking && !hovered && !pane ? 'walk' : 'idle';
-  return <main className="pet" data-pose={pose} data-motion={animated ? 'on' : 'off'} data-expanded={!!pane}
+  return <main className="pet" data-theme={appearance.dark ? 'dark' : 'light'} data-palette={appearance.value.palette} data-pose={pose} data-motion={animated ? 'on' : 'off'} data-expanded={!!pane}
     onPointerEnter={() => hover(true)} onPointerLeave={() => hover(false)}
     onKeyDown={event => { if (event.key === 'Escape' && !event.nativeEvent.isComposing && pane) void display(null); }}
     onContextMenu={event => { if ((event.target as HTMLElement).closest('textarea')) return; event.preventDefault(); void display(pane === 'menu' ? null : 'menu'); }}>

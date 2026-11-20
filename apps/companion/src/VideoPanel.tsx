@@ -1,3 +1,4 @@
+import { Art, PageHeader } from './OceanDesign';
 import { invoke } from '@tauri-apps/api/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -126,7 +127,7 @@ export function VideoPanel({ personaId, onMemories }: { personaId: string; onMem
   }
 
   return <div className="video-center">
-    <div className="page-heading"><h1>视频中心</h1><p>本机授权视频的画面分析与语音转写</p></div>
+    <PageHeader title="视频中心" icon="video" scene="scene-video" art="thinking" description="本机授权视频的画面分析与语音转写"/>
     <section className="settings-card">
       <h2>导入视频</h2>
       <label>本地画面模型
@@ -160,6 +161,7 @@ export function VideoPanel({ personaId, onMemories }: { personaId: string; onMem
       </details>
       {error && <p className="inline-error" role="alert">{error}</p>}
     </section>
+    {!video && <section className="settings-card ocean-empty"><Art name="waiting"/><p>导入视频后可在这里查看任务和分析时间线。</p></section>}
     {video && <section className="settings-card">
       <label>本机任务<select value={video.id} onChange={event => setSelected(event.target.value)}>
         {videos.map(item => <option key={item.id} value={item.id}>{item.title}</option>)}

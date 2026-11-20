@@ -1,3 +1,4 @@
+import { Art, PageHeader } from '../OceanDesign';
 import { useEffect, useId, useRef, useState } from 'react';
 import { Confirmation } from '../Confirmation';
 import { failure, runtimeMode } from '../native';
@@ -168,7 +169,7 @@ export function PluginManager({ persona, name }: { persona: string; name: string
   };
   const preview = candidate?.preview;
   return <div className="settings-content plugin-manager">
-    <div className="page-heading"><h1>插件管理</h1><p>当前人格 {name}</p></div>
+    <PageHeader title="插件管理" description={name ? `当前人格 · ${name}` : undefined} icon="plugin" art="thinking" scene="scene-plugins"/>
     <section className="settings-card">
       <h2>导入本地插件</h2>
       <label htmlFor={fileId}>选择 JSON 清单</label>
@@ -190,8 +191,9 @@ export function PluginManager({ persona, name }: { persona: string; name: string
     </section>
     {notice && <p className="notice" role="status">{notice}</p>}
     {problem && !preview && <p className="inline-error" role="alert">{problem}</p>}
+    {!plugins.length && <section className="settings-card ocean-empty"><Art name="waiting"/><p>已安装的插件会显示在这里。</p></section>}
     {plugins.map(plugin => <PluginCard key={plugin.manifest.id + plugin.manifest.checksum} plugin={plugin} personaName={name} busy={busy} perform={perform}/>)}
-    {candidate && preview && <Confirmation title={preview.manifest.name} cancelLabel="关闭预览"
+    {candidate && preview && <Confirmation art="thinking" title={preview.manifest.name} cancelLabel="关闭预览"
       confirmLabel={preview.operation === 'update' ? '确认更新' : '确认安装'} busy={busy}
       canConfirm={preview.compatible && preview.operation !== 'installed'}
       onCancel={() => setCandidate(undefined)}

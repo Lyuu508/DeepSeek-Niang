@@ -1,50 +1,101 @@
 :root {
   font-size: var(--ui-font-size, 100%);
-  --theme-blue: #426fbd;
-  --theme-lavender: #9c9ad9;
-  --bg: #f2f7ff;
-  --surface: #fffefa;
-  --text: #273b57;
-  --muted: #5d718c;
-  --line: #dce7f5;
-  --blue: var(--theme-blue);
-  --soft: color-mix(in srgb, var(--theme-blue) 10%, var(--surface));
-  --bubble: #f4f7fc;
-  --shadow: 0 8px 28px #243f6910;
-  --focus: color-mix(in srgb, var(--blue) 64%, var(--surface));
-  --danger: #9f344e;
-  --radius-small: .6rem;
-  --radius-control: .8rem;
-  --radius-card: 1.15rem;
-  --radius-dialog: 1.45rem;
+  --theme-blue: #465ab5;
+  --theme-lavender: #8e88e7;
+  --theme-sky: #87b9ef;
+  --theme-cream: #fffaf2;
+  --theme-rose: #e7afce;
+  --theme-gold: #e5c281;
+  --bg: #eaf0ff;
+  --surface: #fdfdff;
+  --text: #1e2752;
+  --muted: #566487;
+  --line: #ced8f1;
+  --button-accent: #505ac8;
+  --button-accent-end: #685ac4;
+  --button-on-accent: #fff;
+  --bubble: color-mix(in srgb, var(--theme-lavender) 12%, var(--surface));
+  --bubble-user: color-mix(in srgb, var(--theme-lavender) 23%, var(--surface));
+  --shadow: 0 8px 22px color-mix(in srgb, var(--blue) 12%, transparent);
+  --shadow-deep: 0 16px 44px #11194638;
+  --scrim: #11173386;
+  --focus: color-mix(in srgb, var(--blue) 78%, var(--surface));
+  --success: #215d50;
+  --danger: #9a2e50;
+  --radius-small: .68rem;
+  --radius-control: .9rem;
+  --radius-card: 1.27rem;
+  --radius-dialog: 1.48rem;
   --radius-round: 50%;
-  --font-ui: .875rem;
-  --font-chat: .9375rem;
-  --font-caption: .75rem;
-  --font-heading: 1.4rem;
+  --font-ui: .9rem;
+  --font-chat: .9575rem;
+  --font-caption: .755rem;
+  --font-heading: 1.55rem;
+  --font-display: clamp(1.15rem, 3.6vw, 1.85rem);
   --motion-duration: 270ms;
+  --motion-quick: 150ms;
   --motion-ease: cubic-bezier(.22, .72, .26, 1);
-  --surface-alpha: 88%;
-  --control-tint: color-mix(in srgb, var(--surface) var(--surface-alpha), var(--button-tone, var(--blue)));
-  --control-hover: color-mix(in srgb, var(--surface) 70%, var(--button-tone, var(--blue)));
-  --control-pressed: color-mix(in srgb, var(--surface) 60%, var(--button-tone, var(--blue)));
-  --control-shadow: 0 2px 6px color-mix(in srgb, var(--text) 10%, transparent);
+  --surface-alpha: 87%;
+  --art-tone: 1;
 }
-
 [data-theme=dark] {
   color-scheme: dark;
-  --theme-blue: #a7c6ff;
-  --theme-lavender: #c1b4ed;
-  --bg: #111c2d;
-  --surface: #18273b;
-  --text: #e7edfa;
-  --muted: #a1b2c9;
-  --line: #30435f;
-  --bubble: #202f46;
-  --danger: #ff9eb5;
-  --shadow: 0 6px 24px #070e1b36;
+  --theme-blue: #b4c5ff;
+  --theme-lavender: #a99bf6;
+  --theme-sky: #769acc;
+  --theme-cream: #f6dfbd;
+  --theme-rose: #edaed1;
+  --theme-gold: #ddbb7c;
+  --bg: #10172f;
+  --surface: #1a2444;
+  --text: #eef0ff;
+  --muted: #b7c4e4;
+  --line: #364879;
+  --bubble: #232f54;
+  --bubble-user: #303f76;
+  --button-accent: #6670d2;
+  --button-accent-end: #725ec9;
+  --focus: #becdff;
+  --danger: #ffb2cb;
+  --success: #91dcc8;
+  --shadow: 0 8px 22px #05091645;
+  --shadow-deep: 0 16px 44px #00061d70;
+  --art-tone: .66;
 }
-
+[data-palette=shell] {
+  --theme-blue: #685398;
+  --theme-lavender: #ae8fdf;
+  --button-accent: #7150b1;
+  --button-accent-end: #8956ae;
+}
+[data-palette=shell][data-theme=dark] {
+  --theme-blue: #dac4ff;
+  --theme-lavender: #ab90e6;
+  --button-accent: #7758b3;
+  --button-accent-end: #905ca6;
+}
+[data-palette=seafoam] {
+  --theme-blue: #256b73;
+  --theme-lavender: #80b3c7;
+  --button-accent: #206677;
+  --button-accent-end: #336584;
+}
+[data-palette=seafoam][data-theme=dark] {
+  --theme-blue: #9ce3de;
+  --theme-lavender: #7cc5d3;
+  --button-accent: #236772;
+  --button-accent-end: #3d668e;
+}
+:root, [data-theme], [data-palette] {
+  --blue: var(--theme-blue);
+  --soft: color-mix(in srgb, var(--theme-blue) 11%, var(--surface));
+  --glass: color-mix(in srgb, var(--surface) 91%, transparent);
+  --glass-highlight: color-mix(in srgb, var(--surface) 76%, transparent);
+  --control-tint: color-mix(in srgb, var(--surface) var(--surface-alpha), var(--button-tone, var(--blue)));
+  --control-hover: color-mix(in srgb, var(--surface) 68%, var(--button-tone, var(--blue)));
+  --control-pressed: color-mix(in srgb, var(--surface) 61%, var(--button-tone, var(--blue)));
+  --control-shadow: 0 2px 6px color-mix(in srgb, var(--text) 10%, transparent);
+}
 @media (prefers-reduced-motion: reduce) {
-  :root { --motion-duration: 0ms; }
+  :root { --motion-duration: 0ms; --motion-quick: 0ms; }
 }

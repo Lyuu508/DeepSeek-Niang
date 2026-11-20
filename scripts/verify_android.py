@@ -52,6 +52,8 @@ def verify(apk, signed=True, test_package=False, fresh_test=False):
         native = package.read('lib/arm64-v8a/libcompanion_app_lib.so')
         assert all(command in native for command in [b'set_font_scale', b'change_recycled_personas',
             b'inspect_plugin', b'due_plugin_reminders']), 'Compiled interface IPC is missing'
+        for asset in ['portrait-full.webp','avatar-chibi.webp','peeking.webp','scene-night.webp']:
+            assert ('branding/ocean/'+asset).encode() in native, f'Missing installed art asset: {asset}'
     badging = subprocess.check_output(sdk_command(tools,'aapt2','dump','badging',str(apk)), text=True)
     match = re.search(r"package: name='([^']+)' versionCode='([^']+)' versionName='([^']+)'", badging)
     expected_id = 'io.local.deepseekcompanion.test2' if fresh_test else ('io.local.deepseekcompanion.test' if test_package else 'io.local.deepseekcompanion')
@@ -84,7 +86,7 @@ def verify(apk, signed=True, test_package=False, fresh_test=False):
         unsigned = subprocess.run(sdk_command(tools,'apksigner','verify','--print-certs',str(apk)), text=True, capture_output=True)
         assert unsigned.returncode != 0 and not re.search(r'Signer #\d+ certificate', unsigned.stdout), 'Unsigned check mode must not accept a signed APK'
     return {'platform': 'android', 'offline_voice_bridge_bundled': voice_bridge, 'microphone_permission_declared': True,
-            'interface_bundled': True, 'launcher_resources_verified': True,
+            'interface_bundled': True, 'launcher_resources_verified': True, 'ocean_art_bundled': True,
             'source_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
             'working_tree_clean': not bool(subprocess.check_output(['git','status','--porcelain'],cwd=ROOT,text=True).strip()), 'version': version['version'], 'version_code': version['androidVersionCode'], 'application_id': match[1],
             'abi': 'arm64-v8a', 'file': apk.name, 'bytes': apk.stat().st_size, 'sha256': hashlib.sha256(apk.read_bytes()).hexdigest(),

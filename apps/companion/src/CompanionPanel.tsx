@@ -1,3 +1,4 @@
+import { PageHeader, moodArt } from './OceanDesign';
 import {LifePanel} from './LifePanel';
 import {enableNotifications} from './notifications';
 import {useEffect,useState} from 'react';
@@ -19,7 +20,8 @@ export function CompanionPanel({data,onRefresh,onError,onMemories,compact=false}
  if(!data||!preferences)return <div className="settings-content"><h1>关系与日常</h1><p>{nativeAvailable?'正在读取当前人格的记录…':'请使用原生客户端查看持久记录。'}</p></div>;
  const {relationship:bond,mood,life,daily_usage:usage}=data;
  return <div className={`settings-content companion-content ${compact?'rail-settings':''}`}>
-  <div className="page-heading"><h1>慢慢熟悉，一起生活</h1><p>关系变化有来源，记忆可以核对。普通问候不会固定增加好感。</p></div>
+  <PageHeader title="慢慢熟悉，一起生活" description="查看关系、情绪和虚拟日常，调整陪伴偏好。"
+   icon="bond" art={compact?undefined:moodArt(data)} scene={compact?undefined:'scene-chat'}/>
   {runtimeMode==='mock'&&<p className="notice">以下是 UI 夹具，未验证真实情绪、SQLite、调度或模型回复。</p>}
   {notice&&<p className="notice" role="status">{notice}</p>}
   {data.worker?.error_code&&<p className="notice inline-error" role="status">有一部分记忆或日常处理尚待重试，原聊天已保留。请稍后刷新检查。</p>}

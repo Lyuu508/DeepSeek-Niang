@@ -78,6 +78,7 @@ jobs:
           python3 scripts/run_logged.py "$evidence/sync-model.txt" node --test tests/sync-model.test.mjs
           python3 scripts/run_logged.py "$evidence/frontend.txt" npm run build
           python3 scripts/run_logged.py "$evidence/branding.txt" node scripts/check-branding.mjs
+          python3 scripts/run_logged.py "$evidence/ocean-art.txt" node scripts/check-ocean-art.mjs
       - name: Browser regression tests (explicit fixture)
         env:
           COMPANION_TEST_ARTIFACT_DIR: ${{ runner.temp }}/deepseek-test-evidence/ui

@@ -4,6 +4,7 @@ const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 const { chromium } = require('playwright');
+const { exerciseOcean } = require('./ocean-evidence.cjs');
 
 const root = path.resolve(__dirname, '../..');
 const output = process.env.COMPANION_V009_EVIDENCE || path.join(root, '.cache/v009');
@@ -51,13 +52,33 @@ async function pageFor(platform, [width, height]) {
         if (cmd === 'select_persona') return fixtureApi.selectPersona(args.id);
         if (cmd === 'create_persona') return fixtureApi.createPersona(args.name,args.personality);
         if (cmd === 'save_chat_settings') return fixtureApi.saveSettings(args.personaId,args.settings);
-        if (cmd === 'companion_snapshot') return fixtureApi.companion(args.personaId);
+        if (cmd === 'companion_snapshot') {
+          const data = await fixtureApi.companion(args.personaId);
+          data.memories = [...data.memories, {
+            id:'fixture-video-memory', text:'本地视频《海边的船》的抽帧与语音分析摘要：镜头中出现一艘小船。',
+            version:1, revision:'fixture-video-v1', kind:'episodic', pinned:false, api_allowed:false,
+            owner_locked:true, source_kind:'manual', importance_milli:480, source_message_id:null,
+            created_at_ms:1795184460000, updated_at_ms:1795184460000,
+          }];
+          return data;
+        }
+        if (cmd === 'diagnostics') return fixtureApi.diagnostics();
+        if (cmd === 'video_list') return [{
+          id:'video-1', title:'海边的船', duration_ms:24000, state:'completed', has_audio:true,
+          error:null, updated_at_ms:1795184460000, decoded_ms:24000, visual_ms:24000, audio_ms:24000,
+          samples:8, memory_saved:true, summary:'镜头中出现一艘小船。',
+          segments:[{ interval:{start_ms:0,end_ms:24000}, state:'completed', evidence:null }],
+        }];
+        if (cmd === 'sync_status') {
+          const { syncFixture } = await import('/src/sync-fixture.ts');
+          return syncFixture.status();
+        }
         if (cmd === 'list_messages') return [{
           id: 'layout-user', role: 'user', state: 'complete', selected: true, revision: 1, created_at_ms: 1795184400000,
           content: '今天在海边散步，风很舒服。',
         }, {
           id: 'layout-assistant', role: 'assistant', state: 'complete', selected: true, revision: 1, created_at_ms: 1795184460000,
-          user_message_id: 'layout-user', content: '听起来是个适合慢慢走的下午。你最喜欢海边的什么声音？',
+          user_message_id: 'layout-user', content: '听起来是个适合慢慢走的下午。你最喜欢海边的什么声音？\n\n\x60\x60\x60ts\nconst tide = "平静";\n\x60\x60\x60',
         }];
         if (cmd === 'voice_preferences') return { voice_id: '', speed_percent: 100, volume_percent: 75, muted: false, follow_mood: false };
         if (cmd === 'voice_voices') return [];
@@ -295,6 +316,7 @@ async function exercisePhone() {
   }
   assert.deepEqual(errors, []);
   await page.close();
+  if (!baseline) report.ocean = await exerciseOcean(pageFor, shot, button);
   fs.writeFileSync(path.join(output, baseline ? 'before.json' : 'layout-results.json'), JSON.stringify(report, null, 2) + '\n');
   console.log(JSON.stringify(report));
 })().catch(error => { console.error(error); process.exitCode = 1; })

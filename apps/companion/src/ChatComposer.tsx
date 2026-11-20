@@ -1,3 +1,4 @@
+import { Icon } from './OceanDesign';
 import { useState, type RefObject } from 'react';
 import { VoiceControls } from './voice/VoiceControls';
 import type { VoiceController } from './voice/useVoice';
@@ -32,7 +33,7 @@ export function ChatComposer(props: Props) {
       onKeyDown={event => { if (event.key === 'Escape' && !event.nativeEvent.isComposing) setOpen(false); }}>
       <div className="composer-row">
         {mobile && <button type="button" className="composer-more" aria-label="输入工具" aria-expanded={open}
-          onClick={() => setOpen(value => !value)}><span aria-hidden="true">{open ? '−' : '+'}</span></button>}
+          onClick={() => setOpen(value => !value)}><span aria-hidden="true"><Icon name={open?'close':'add'}/></span></button>}
         <label className="sr-only" htmlFor="chat-input">发送给当前人格的消息</label>
         <textarea id="chat-input" ref={props.field} rows={mobile ? 1 : 3} value={props.draft} maxLength={8000}
           placeholder={props.connected ? `和${props.name ?? '她'}说说吧…` : '原生应用连接后即可聊天'}
@@ -47,10 +48,10 @@ export function ChatComposer(props: Props) {
           {!mobile && <span>Enter 发送 · Shift + Enter 换行</span>}
           {generation
             ? <button type="button" className="stop-button" aria-label={stoppedLabel} disabled={!generation.started} onClick={props.onStop}>
-              <span aria-hidden="true">■</span>{!mobile && ` ${stoppedLabel}`}
+              <span aria-hidden="true"><Icon name="stop"/></span>{!mobile && ` ${stoppedLabel}`}
             </button>
             : <button className="send-button" aria-label="发送消息" disabled={!props.canSend || !props.draft.trim()}>
-              <span aria-hidden="true">{mobile ? '↑' : '发送 ↑'}</span>
+              <span aria-hidden="true">{!mobile && '发送 '}<Icon name="send"/></span>
             </button>}
         </div>
       </div>

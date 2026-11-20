@@ -27,12 +27,12 @@ class CompanionReleasePolicy(unittest.TestCase):
                  'signing':{'authenticode_signed':True,'installed_process_started':True,'installer_language_verified':True,
                             'publicly_trusted_publisher':False,'desktop_pet_bundled':True,'local_video_bundled':True,
                             'voice_bundled':True,'native_voice_probe':'system_voice_wav_generated','application_identifier':'io.local.deepseekcompanion',
-                            'interface_bundled':True,'installer_and_application_icons_readable':True}}
+                            'interface_bundled':True,'installer_and_application_icons_readable':True,'window_rendered':True,'ocean_art_bundled':True}}
         android={'source_commit':sha,'version':policy.VERSION,'working_tree_clean':True,'physical_device_tested':False,
-                 'version_code':1009,'application_id':policy.APP_ID,'signature_verified':True,
-                 'test_signer_persistence_guaranteed':True,'upgrade_compatible_with_test2_v0_0_8':True,'production_upgrade_compatible':False,
+                 'version_code':1010,'application_id':policy.APP_ID,'signature_verified':True,
+                 'test_signer_persistence_guaranteed':True,'upgrade_compatible_with_test2_v0_0_9':True,'production_upgrade_compatible':False,
                  'offline_voice_bridge_bundled':True,'microphone_permission_declared':True,
-                 'interface_bundled':True,'launcher_resources_verified':True}
+                 'interface_bundled':True,'launcher_resources_verified':True,'ocean_art_bundled':True}
         policy.validate_pair(windows,android,sha)
         for changed in [{'source_commit':'b'*40},{'version_code':1002},{'application_id':'io.local.deepseekcompanion'},
                         {'signature_verified':False},{'test_signer_persistence_guaranteed':False},{'production_upgrade_compatible':True},

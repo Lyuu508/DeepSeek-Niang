@@ -1,12 +1,12 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "DeepSeek娘",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "identifier": "io.local.deepseekcompanion",
   "build": {
     "beforeDevCommand": "node ../../scripts/check-branding.mjs && npm run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "node ../../scripts/check-branding.mjs && npm run build",
+    "beforeBuildCommand": "node ../../scripts/check-branding.mjs && node ../../scripts/check-ocean-art.mjs && npm run build",
     "frontendDist": "../dist"
   },
   "app": {
@@ -40,7 +40,7 @@
     ],
     "android": {
       "minSdkVersion": 29,
-      "versionCode": 1009
+      "versionCode": 1010
     },
     "windows": {
       "nsis": {

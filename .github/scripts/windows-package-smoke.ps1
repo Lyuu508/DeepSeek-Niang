@@ -94,6 +94,9 @@ if (Test-Path 'apps/companion/pet.html') {
         if (-not $InstalledPayload.Contains($Command)) { throw "Missing interface command in installed client: $Command" }
     }
     $InterfaceBundled = $true
+    foreach ($Asset in @('portrait-full.webp','avatar-chibi.webp','peeking.webp','scene-night.webp')) {
+        if (-not $InstalledPayload.Contains('branding/ocean/' + $Asset)) { throw "Missing installed scene or character: $Asset" }
+    }
 }
 Add-Type -AssemblyName System.Drawing
 $ExeIcon = [System.Drawing.Icon]::ExtractAssociatedIcon($InstalledApps[0].FullName)
@@ -129,9 +132,7 @@ try {
     }
     if ($Process.MainWindowHandle -eq 0) { throw 'Installed app never opened a native window' }
     $WindowTitle = $Process.MainWindowTitle
-    try {
-      if ($Process.MainWindowHandle -ne 0) {
-        Add-Type -AssemblyName System.Drawing
+    Add-Type -AssemblyName System.Drawing
         Add-Type @'
 using System;
 using System.Runtime.InteropServices;
@@ -139,22 +140,40 @@ public static class CompanionWindowCapture {
   [StructLayout(LayoutKind.Sequential)] public struct Rect { public int Left, Top, Right, Bottom; }
   [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr handle, out Rect rect);
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr handle);
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern int GetSystemMetrics(int index);
 }
 '@
+    $Screen = [System.Drawing.Rectangle]::new(0,0,[CompanionWindowCapture]::GetSystemMetrics(0),[CompanionWindowCapture]::GetSystemMetrics(1))
+    for ($Attempt = 0; $Attempt -lt 22 -and -not $Screenshot; $Attempt++) {
+        Start-Sleep -Seconds 2
+        $Process.Refresh()
+        if ($Process.HasExited) { throw "Installed application exited before rendering: $($Process.ExitCode)" }
         [CompanionWindowCapture]::SetForegroundWindow($Process.MainWindowHandle) | Out-Null
-        Start-Sleep -Seconds 5
+        if ([CompanionWindowCapture]::GetForegroundWindow() -ne $Process.MainWindowHandle) { continue }
         $Bounds = [CompanionWindowCapture+Rect]::new()
-        if ([CompanionWindowCapture]::GetWindowRect($Process.MainWindowHandle, [ref]$Bounds)) {
-            $Bitmap = [System.Drawing.Bitmap]::new($Bounds.Right-$Bounds.Left, $Bounds.Bottom-$Bounds.Top)
-            $Graphics = [System.Drawing.Graphics]::FromImage($Bitmap)
-            try {
-                $Graphics.CopyFromScreen($Bounds.Left, $Bounds.Top, 0, 0, $Bitmap.Size)
+        if (-not [CompanionWindowCapture]::GetWindowRect($Process.MainWindowHandle, [ref]$Bounds)) { continue }
+        $WindowRect = [System.Drawing.Rectangle]::FromLTRB($Bounds.Left, $Bounds.Top, $Bounds.Right, $Bounds.Bottom)
+        $Visible = [System.Drawing.Rectangle]::Intersect($WindowRect,$Screen)
+        if ($Visible.Width -lt 280 -or $Visible.Height -lt 300) { continue }
+        $Bitmap = [System.Drawing.Bitmap]::new($Visible.Width,$Visible.Height)
+        $Graphics = [System.Drawing.Graphics]::FromImage($Bitmap)
+        try {
+            $Graphics.CopyFromScreen($Visible.Left, $Visible.Top, 0, 0, $Bitmap.Size)
+            $Colors = [System.Collections.Generic.HashSet[int]]::new()
+            for ($Y = 2; $Y -le 8; $Y++) {
+                for ($X = 1; $X -le 9; $X++) {
+                    $Sample = $Bitmap.GetPixel([int]($X*$Visible.Width/10),[int]($Y*$Visible.Height/10))
+                    $Colors.Add($Sample.ToArgb()) | Out-Null
+                }
+            }
+            if ($Colors.Count -ge 9) {
                 $Bitmap.Save((Join-Path $Output 'windows-installed-window.png'), [System.Drawing.Imaging.ImageFormat]::Png)
                 $Screenshot = $true
-            } finally { $Graphics.Dispose(); $Bitmap.Dispose() }
-        }
+            }
+        } finally { $Graphics.Dispose(); $Bitmap.Dispose() }
     }
-    } catch { Write-Warning "Window screenshot unavailable: $($_.Exception.GetType().Name)"; $Screenshot = $false }
+    if (-not $Screenshot) { throw 'Installed window did not produce a nonblank foreground screenshot' }
     $Report = [ordered]@{
         version = $Config.version
         build_commit = (git rev-parse HEAD)
@@ -168,6 +187,8 @@ public static class CompanionWindowCapture {
         local_video_bundled = $LocalVideoBundled
         voice_bundled = $VoiceBundled
         interface_bundled = $InterfaceBundled
+        ocean_art_bundled = $InterfaceBundled
+        window_rendered = $Screenshot
         installer_and_application_icons_readable = $true
         native_voice_probe = $VoiceResult
         application_identifier = $Config.identifier

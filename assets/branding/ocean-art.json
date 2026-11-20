@@ -1,0 +1,218 @@
+{
+  "version": 1,
+  "reference": "用户三视图为角色唯一标准。桌面和手机概念图供布局与配色参考。",
+  "origin": "通过当前会话的图像生成工具生成。WebP 由生成源分切、裁剪和编码得到。",
+  "original_brand_manifest": "assets/branding/manifest.json",
+  "assets": {
+    "avatar-standard": {
+      "path": "apps/companion/public/branding/ocean/avatar-standard.webp",
+      "width": 288,
+      "height": 339,
+      "format": "webp",
+      "transparent": true,
+      "role": "标准头像 · 人格卡片和头像图鉴",
+      "sha256": "1dc165130786dcc73f234560203d88f3fb1550ee32e4b06a19647cd30d56e4b1",
+      "bytes": 28486
+    },
+    "avatar-chibi": {
+      "path": "apps/companion/public/branding/ocean/avatar-chibi.webp",
+      "width": 322,
+      "height": 339,
+      "format": "webp",
+      "transparent": true,
+      "role": "Q版头像 · 聊天、导航与当前人格",
+      "sha256": "0b68ea5bfc0b817300b3ff5634bdfe86e84936b115ff71feb64526fcbc5e9c57",
+      "bytes": 31928
+    },
+    "happy": {
+      "path": "apps/companion/public/branding/ocean/happy.webp",
+      "width": 308,
+      "height": 339,
+      "format": "webp",
+      "transparent": true,
+      "role": "开心 · 人格管理横幅、真实开心或兴奋状态",
+      "sha256": "e233d18c68a0a875e38371bc3398e7f2dfe3105603e0b7a8b8820cd32409327f",
+      "bytes": 31936
+    },
+    "shy": {
+      "path": "apps/companion/public/branding/ocean/shy.webp",
+      "width": 305,
+      "height": 339,
+      "format": "webp",
+      "transparent": true,
+      "role": "害羞 · 当前情绪与图鉴",
+      "sha256": "622d746d030282ec84a26a9454efc4f9030c03ba9f7599da6fc52fc707555adf",
+      "bytes": 31870
+    },
+    "sad": {
+      "path": "apps/companion/public/branding/ocean/sad.webp",
+      "width": 304,
+      "height": 339,
+      "format": "webp",
+      "transparent": true,
+      "role": "委屈 · 人格回收站及永久删除确认",
+      "sha256": "3f749ca6a6e5b6779af7a822f79e2a55a057fc1cc0c3ef79ca64493cd4971d6b",
+      "bytes": 31930
+    },
+    "angry": {
+      "path": "apps/companion/public/branding/ocean/angry.webp",
+      "width": 297,
+      "height": 339,
+      "format": "webp",
+      "transparent": true,
+      "role": "生气 · 当前情绪与图鉴",
+      "sha256": "e8ee5f66b604f603935cf515c5fbb5011b39fc6a923a43f76387ed374cfbe971",
+      "bytes": 30700
+    },
+    "thinking": {
+      "path": "apps/companion/public/branding/ocean/thinking.webp",
+      "width": 302,
+      "height": 339,
+      "format": "webp",
+      "transparent": true,
+      "role": "思考 · 插件检查、扫码、记忆、视频",
+      "sha256": "2fc0b8c2da336c075d6febae7830235342c67333dfb4f9be459c1a796f9805b8",
+      "bytes": 32398
+    },
+    "sleepy": {
+      "path": "apps/companion/public/branding/ocean/sleepy.webp",
+      "width": 300,
+      "height": 339,
+      "format": "webp",
+      "transparent": true,
+      "role": "困倦 · 当前情绪与图鉴",
+      "sha256": "6b23d658a6a62bd6363d236f29d8fb7f5ee7e188c11b5e6eff42b3f4a8db648e",
+      "bytes": 31028
+    },
+    "sleeping": {
+      "path": "apps/companion/public/branding/ocean/sleeping.webp",
+      "width": 434,
+      "height": 352,
+      "format": "webp",
+      "transparent": true,
+      "role": "抱鲸睡觉 · 导航装饰及已运行的虚拟休息",
+      "sha256": "82b530673bfa16189b822dbd3d4a2be6d3fdc7695845b225125009a7de794877",
+      "bytes": 47156
+    },
+    "peace": {
+      "path": "apps/companion/public/branding/ocean/peace.webp",
+      "width": 386,
+      "height": 434,
+      "format": "webp",
+      "transparent": true,
+      "role": "比耶 · 角色图鉴",
+      "sha256": "419262d27d67879425c6d62360b281947fa47eda33544710c74c866deedaa616",
+      "bytes": 53398
+    },
+    "wave": {
+      "path": "apps/companion/public/branding/ocean/wave.webp",
+      "width": 434,
+      "height": 417,
+      "format": "webp",
+      "transparent": true,
+      "role": "挥手 · 设置、连接及恢复提示",
+      "sha256": "7c120b11d51d0d3718801ef7d48a8df2a893fedbd06648bfbacdaf4a0fb40516",
+      "bytes": 55754
+    },
+    "resting": {
+      "path": "apps/companion/public/branding/ocean/resting.webp",
+      "width": 434,
+      "height": 368,
+      "format": "webp",
+      "transparent": true,
+      "role": "趴桌 · 回收站空状态",
+      "sha256": "b1693686b05208da62473bf419454b8903769cabfbfc5dddd0a2e11763ace76f",
+      "bytes": 46092
+    },
+    "peeking": {
+      "path": "apps/companion/public/branding/ocean/peeking.webp",
+      "width": 434,
+      "height": 320,
+      "format": "webp",
+      "transparent": true,
+      "role": "探头 · 空聊天、移入回收站弹窗",
+      "sha256": "ae36af2c7d5b6ecba112c6e3e3d2da92f894f2458f70177fed2e1ba8e9b3e3c3",
+      "bytes": 37626
+    },
+    "waiting": {
+      "path": "apps/companion/public/branding/ocean/waiting.webp",
+      "width": 407,
+      "height": 434,
+      "format": "webp",
+      "transparent": true,
+      "role": "等待 · 读取历史、视频、插件空状态",
+      "sha256": "dd83bb3b66e57921e3268eadd7339c800d1774e3600646126f3961f4a4098b86",
+      "bytes": 55884
+    },
+    "portrait-full": {
+      "path": "apps/companion/public/branding/ocean/portrait-full.webp",
+      "width": 562,
+      "height": 1064,
+      "format": "webp",
+      "transparent": true,
+      "role": "全身立绘 · 关于",
+      "sha256": "44a1ad5c4c941102f811203b1ea55751c812ad52832ae002ad2c6df9c94c3fb0",
+      "bytes": 116714
+    },
+    "portrait-half": {
+      "path": "apps/companion/public/branding/ocean/portrait-half.webp",
+      "width": 694,
+      "height": 616,
+      "format": "webp",
+      "transparent": true,
+      "role": "半身立绘 · 电脑角色状态面板",
+      "sha256": "aa5fbf744a642dd1d92eedc9745c5f2f4e02ad6d5d2af012a237b1e4d5f443bb",
+      "bytes": 89084
+    },
+    "scene-chat": {
+      "path": "apps/companion/public/branding/ocean/scene-chat.webp",
+      "width": 830,
+      "height": 465,
+      "format": "webp",
+      "transparent": false,
+      "role": "鲸云、薄帘与晴空 · 聊天和角色面板",
+      "sha256": "4a1b4528443864b6a691a7a28e542fb0560c798cf53eed4bbee37239f199b425",
+      "bytes": 24716
+    },
+    "scene-settings": {
+      "path": "apps/companion/public/branding/ocean/scene-settings.webp",
+      "width": 830,
+      "height": 465,
+      "format": "webp",
+      "transparent": false,
+      "role": "珍珠泡泡和蓝白天空 · 设置、记忆、配对与回收站",
+      "sha256": "86aeced7672f1fc3131e8ebcd3b632554d56a5abab6b978758198872cac399df",
+      "bytes": 17188
+    },
+    "scene-plugins": {
+      "path": "apps/companion/public/branding/ocean/scene-plugins.webp",
+      "width": 830,
+      "height": 465,
+      "format": "webp",
+      "transparent": false,
+      "role": "海洋科技插画 · 插件中心",
+      "sha256": "21c54876a78b4e8648c1e0322906146fb61d74cf0a33083ae4113e64014ab7e4",
+      "bytes": 15504
+    },
+    "scene-video": {
+      "path": "apps/companion/public/branding/ocean/scene-video.webp",
+      "width": 830,
+      "height": 465,
+      "format": "webp",
+      "transparent": false,
+      "role": "星光海浪 · 视频中心和聊天页底部",
+      "sha256": "a7cd575289fdaac687ab26c574371910a18571b9ab8492a756dc3b3f94319f32",
+      "bytes": 19818
+    },
+    "scene-night": {
+      "path": "apps/companion/public/branding/ocean/scene-night.webp",
+      "width": 1050,
+      "height": 591,
+      "format": "webp",
+      "transparent": false,
+      "role": "深海鲸云与星光 · 深色主题聊天和角色面板",
+      "sha256": "685534f29e44af6d940b07ee88f1ba1d2e3ce12f606ff9fe98c1d06b99e21650",
+      "bytes": 37152
+    }
+  }
+}

@@ -340,7 +340,7 @@ dependencies = [
 
 [[package]]
 name = "companion-core"
-version = "0.0.9"
+version = "0.0.10"
 dependencies = [
  "rusqlite",
  "serde",
@@ -353,7 +353,7 @@ dependencies = [
 
 [[package]]
 name = "companion-secrets"
-version = "0.0.9"
+version = "0.0.10"
 dependencies = [
  "thiserror 2.0.21",
  "uuid",
@@ -363,7 +363,7 @@ dependencies = [
 
 [[package]]
 name = "companion-sync"
-version = "0.0.9"
+version = "0.0.10"
 dependencies = [
  "companion-core",
  "companion-secrets",
@@ -3105,7 +3105,7 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-companion-keystore"
-version = "0.0.9"
+version = "0.0.10"
 dependencies = [
  "companion-secrets",
  "companion-sync",
