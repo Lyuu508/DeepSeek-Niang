@@ -11,8 +11,13 @@ jobs:
   emulator:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        api: [33, 35]
     env:
       ANDROID_SERIAL: emulator-5554
+      ANDROID_API: ${{ matrix.api }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -44,7 +49,7 @@ jobs:
           if ! test -r /dev/kvm || ! test -w /dev/kvm; then
             sudo setfacl -m "u:$(id -un):rw" /dev/kvm
           fi
-          package='system-images;android-35;google_apis;x86_64'
+          package="system-images;android-$ANDROID_API;google_apis;x86_64"
           sdkmanager --install emulator "$package"
           export ANDROID_AVD_HOME="$RUNNER_TEMP/ocean-avd"
           export ANDROID_USER_HOME="$RUNNER_TEMP/ocean-android-user"
@@ -54,7 +59,7 @@ jobs:
           avdmanager create avd -n ocean-v010 -k "$package" -d pixel_7 -p "$avd_path" --force </dev/null
           test -f "$avd_path/config.ini"
           if ! test -f "$ANDROID_AVD_HOME/ocean-v010.ini"; then
-            printf 'avd.ini.encoding=UTF-8\npath=%s\ntarget=android-35\n' "$avd_path" > "$ANDROID_AVD_HOME/ocean-v010.ini"
+            printf 'avd.ini.encoding=UTF-8\npath=%s\ntarget=android-%s\n' "$avd_path" "$ANDROID_API" > "$ANDROID_AVD_HOME/ocean-v010.ini"
           fi
           emulator="$ANDROID_HOME/emulator/emulator"
           "$emulator" -list-avds | grep -Fx ocean-v010
@@ -86,7 +91,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          name: android-v010-runtime-${{ github.run_attempt }}
+          name: android-v010-runtime-api${{ matrix.api }}-${{ github.run_attempt }}
           path: ${{ env.COMPANION_NATIVE_EVIDENCE }}/
           if-no-files-found: warn
           retention-days: 30

@@ -121,13 +121,27 @@ def main():
     REPORT['same_application_data_directory_preserved'] = True
     REPORT['sqlite_path_preserved'] = bool(REPORT['v0.0.9']['sqlite_files']) and REPORT['v0.0.9']['sqlite_files'] == REPORT['v0.0.10']['sqlite_files']
     save()
-    root = tree()
+    for _ in range(6):
+        root = tree()
+        if labeled_node(root, ('聊天', '手机聊天', '设置', 'DeepSeek娘')) is not None:
+            break
+        time.sleep(5)
     REPORT['native_accessibility_webview'] = root is not None and any(
         node.get('package') == APP and node.get('class') == 'android.webkit.WebView' for node in root.iter('node')
     )
-    if REPORT['native_accessibility_webview']:
-        REPORT['checked_native_pages'].append('chat')
+    if root is not None:
         (OUTPUT / 'android-accessibility.xml').write_text(ET.tostring(root, encoding='unicode'))
+    if labeled_node(root, ('聊天', '手机聊天', '设置', 'DeepSeek娘')) is not None:
+        REPORT['checked_native_pages'].append('chat')
+        snapshot('android-native-chat.png')
+    else:
+        snapshot('android-late-frame.png')
+    (OUTPUT / 'webview-provider.txt').write_text(adb('shell', 'dumpsys', 'webviewupdate'))
+    messages = adb('logcat', '-d', '-t', '4000')
+    related = [line for line in messages.splitlines() if any(key in line for key in (
+        'chromium', 'cr_', 'companion.test2', 'deepseekcompanion:', 'libcompanion_app', 'ndk_translation', 'WebViewFactory', 'tauri.localhost',
+    ))]
+    (OUTPUT / 'webview-runtime.log').write_text('\n'.join(related) + '\n')
     for key, labels, expected in [
         ('personas', ('手机人格', '人格'), ('人格管理', '新增人格')),
         ('settings', ('手机设置', '设置'), ('应用外观', '设置', '界面外观')),
@@ -139,6 +153,7 @@ def main():
                 REPORT['checked_native_pages'].append(key)
     assert foreground(), 'New Android version lost its foreground activity'
     REPORT['passed'] = True
+    REPORT['webview_content_verified'] = 'chat' in REPORT['checked_native_pages']
 
 
 try:
