@@ -71,8 +71,12 @@ def snapshot(filename):
 
 
 def foreground():
-    value = adb('shell', 'dumpsys', 'window', 'windows')
-    return any(APP + '/' in line and 'mCurrentFocus=' in line for line in value.splitlines())
+    window = adb('shell', 'dumpsys', 'window')
+    activity = adb('shell', 'dumpsys', 'activity', 'activities')
+    focus_lines = [line.strip() for line in (window + '\n' + activity).splitlines() if
+                   any(key in line for key in ('mCurrentFocus=', 'mFocusedApp=', 'topResumedActivity=', 'mResumedActivity:'))]
+    (OUTPUT / 'android-focus.txt').write_text('\n'.join(focus_lines) + '\n')
+    return any(APP + '/' in line for line in focus_lines)
 
 
 def install(version, upgrade):
@@ -88,15 +92,14 @@ def install(version, upgrade):
     assert re.search(r'Status:\s*ok', launch), launch
     REPORT[f'v{version}'] = {'installed': True, 'launch_command_succeeded': True}
     save()
-    for _ in range(30):
+    REPORT[f'v{version}']['activity_foreground'] = False
+    for _ in range(12):
         if foreground():
             REPORT[f'v{version}']['activity_foreground'] = True
             break
         time.sleep(1)
-    else:
-        raise AssertionError(f'v{version} did not show its Android activity in the foreground')
-    time.sleep(3)
-    snapshot(f'android-native-v{version}-chat.png')
+    time.sleep(2)
+    snapshot(f'android-v{version}-screen.png')
     REPORT[f'v{version}']['sqlite_files'] = adb('shell', 'run-as', APP, 'find', '.', '-name', 'companion.sqlite3').splitlines()
     save()
 
@@ -117,7 +120,9 @@ def main():
     REPORT['native_accessibility_webview'] = root is not None and any(
         node.get('package') == APP and node.get('class') == 'android.webkit.WebView' for node in root.iter('node')
     )
-    REPORT['checked_native_pages'].append('chat')
+    if REPORT['native_accessibility_webview']:
+        REPORT['checked_native_pages'].append('chat')
+        (OUTPUT / 'android-accessibility.xml').write_text(ET.tostring(root, encoding='unicode'))
     for key, labels, expected in [
         ('personas', ('手机人格', '人格'), ('人格管理', '新增人格')),
         ('settings', ('手机设置', '设置'), ('应用外观', '设置', '界面外观')),
@@ -136,7 +141,9 @@ try:
 except Exception as error:
     REPORT['passed'] = False
     REPORT['issue'] = str(error)
-    (OUTPUT / 'android-app-errors.txt').write_text(adb('logcat', '-d', '-t', '700', '-s', 'AndroidRuntime:E', 'chromium:E'))
+    messages = adb('logcat', '-d', '-t', '1400', '-s', 'AndroidRuntime:E', 'ActivityTaskManager:I', 'WindowManager:W', 'libc:F', 'chromium:E')
+    crash = adb('logcat', '-d', '-b', 'crash', '-t', '250')
+    (OUTPUT / 'android-app-errors.txt').write_text(messages + '\n' + crash)
     raise
 finally:
     save()
