@@ -9,6 +9,7 @@ from pathlib import Path
 
 
 APP = 'io.local.deepseekcompanion.test2'
+EMULATOR_LAUNCHER = 'com.google.android.apps.nexuslauncher'
 OUTPUT = Path(os.environ['COMPANION_NATIVE_EVIDENCE'])
 APKS = Path(os.environ['APK_DIRECTORY'])
 MARKER = 'deepseek-v010-emulator-upgrade-fixture'
@@ -76,7 +77,11 @@ def foreground():
     focus_lines = [line.strip() for line in (window + '\n' + activity).splitlines() if
                    any(key in line for key in ('mCurrentFocus=', 'mFocusedApp=', 'topResumedActivity=', 'mResumedActivity:'))]
     (OUTPUT / 'android-focus.txt').write_text('\n'.join(focus_lines) + '\n')
-    return any(APP + '/' in line for line in focus_lines)
+    if any(f'Application Not Responding: {EMULATOR_LAUNCHER}' in line for line in focus_lines):
+        adb('shell', 'am', 'force-stop', EMULATOR_LAUNCHER)
+        REPORT['emulator_launcher_dialog_dismissed'] = True
+        return False
+    return any(APP + '/' in line and 'mCurrentFocus=' in line for line in focus_lines)
 
 
 def install(version, upgrade):
@@ -93,7 +98,7 @@ def install(version, upgrade):
     REPORT[f'v{version}'] = {'installed': True, 'launch_command_succeeded': True}
     save()
     REPORT[f'v{version}']['activity_foreground'] = False
-    for _ in range(12):
+    for _ in range(20):
         if foreground():
             REPORT[f'v{version}']['activity_foreground'] = True
             break
