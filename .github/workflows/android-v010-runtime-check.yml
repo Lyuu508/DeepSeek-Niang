@@ -13,8 +13,6 @@ jobs:
     timeout-minutes: 20
     env:
       ANDROID_SERIAL: emulator-5554
-      COMPANION_NATIVE_EVIDENCE: ${{ runner.temp }}/android-v010-runtime
-      APK_DIRECTORY: ${{ runner.temp }}/deepseek-apks
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -28,6 +26,10 @@ jobs:
           cmdline-tools-version: '12266719'
           packages: platform-tools
           log-accepted-android-sdk-licenses: false
+      - name: Configure disposable evidence paths
+        run: |
+          printf 'COMPANION_NATIVE_EVIDENCE=%s/android-v010-runtime\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+          printf 'APK_DIRECTORY=%s/deepseek-apks\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - name: Verify and retain the published APKs for this run
         run: |
           mkdir -p "$APK_DIRECTORY" "$COMPANION_NATIVE_EVIDENCE"
