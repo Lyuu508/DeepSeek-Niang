@@ -1,54 +1,50 @@
-name: Build Windows test package
-
+name: Check published v0.0.9 Windows rendering
 on:
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
   windows:
     runs-on: windows-latest
-    timeout-minutes: 45
-    env:
-      CARGO_INCREMENTAL: "0"
-      CARGO_PROFILE_DEV_DEBUG: "0"
-      CARGO_PROFILE_TEST_DEBUG: "0"
-      CARGO_PROFILE_RELEASE_DEBUG: "0"
-    defaults:
-      run:
-        shell: pwsh
+    timeout-minutes: 7
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - name: Configure temporary build directory
-        run: |
-          ('CARGO_TARGET_DIR=' + (Join-Path $env:RUNNER_TEMP 'deepseek-windows-target')) | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
         with:
-          node-version: "24"
+          node-version: '24'
           package-manager-cache: false
-      - name: Validate packaging script
+      - name: Install the exact published executable and check the WebView
+        shell: pwsh
+        env:
+          V009_EXE_SHA: f9d66f8a68b1323048eda1ac205d94fc3bcc08be52a291e77650c5385f5367be
         run: |
-          $Tokens = $null; $ParseErrors = $null
-          [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PWD '.github/scripts/windows-package-smoke.ps1'), [ref]$Tokens, [ref]$ParseErrors) | Out-Null
-          if ($ParseErrors.Count) { throw ($ParseErrors | Out-String) }
-      - name: Select reviewed Rust toolchain
-        run: |
-          rustup toolchain install 1.99.1 --profile minimal
-          if ($LASTEXITCODE -ne 0) { throw 'Rust toolchain installation failed' }
-          rustup default 1.99.1
-          if ($LASTEXITCODE -ne 0) { throw 'Rust selection failed' }
-      - name: Build and test locked source
-        run: .\scripts\build-windows.ps1
-      - name: Collect package and test installation
-        run: .\.github\scripts\windows-package-smoke.ps1
+          $ErrorActionPreference = 'Stop'
+          $Output = Join-Path $env:RUNNER_TEMP 'v009-render-result'
+          New-Item -ItemType Directory -Force $Output | Out-Null
+          $Exe = Join-Path $env:RUNNER_TEMP 'companion-published-v009.exe'
+          $Install = Join-Path $env:RUNNER_TEMP 'companion-published-v009'
+          $Url = 'https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.9/DeepSeek-Niang_0.0.9_windows-x64-setup.exe'
+          Invoke-WebRequest -Uri ($Url + '?v009_render_run=' + $env:GITHUB_RUN_ID) -OutFile $Exe -TimeoutSec 80
+          if ((Get-FileHash $Exe -Algorithm SHA256).Hash.ToLowerInvariant() -ne $env:V009_EXE_SHA) { throw 'Published executable checksum mismatch' }
+          $Setup = Start-Process -FilePath $Exe -ArgumentList @('/S', "/D=$Install") -PassThru
+          if (-not $Setup.WaitForExit(120000)) { Stop-Process -Id $Setup.Id -Force; throw 'Install timed out' }
+          if ($Setup.ExitCode -notin @(0, 3010)) { throw 'Installation failed' }
+          $Apps = @(Get-ChildItem -LiteralPath $Install -Filter '*.exe' | Where-Object Name -NotMatch '(?i)uninstall')
+          if ($Apps.Count -ne 1) { throw 'Expected one installed app' }
+          $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--remote-debugging-port=9224 --remote-debugging-address=127.0.0.1'
+          $App = Start-Process -FilePath $Apps[0].FullName -PassThru
+          try {
+            node .github/scripts/verify-v009-windows-render.mjs $Output
+            if ($LASTEXITCODE -ne 0) { throw 'Installed window did not render the chat and its native persona' }
+          } finally {
+            if (-not $App.HasExited) { Stop-Process -Id $App.Id -Force }
+          }
       - if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          name: windows-test-package
-          path: ${{ runner.temp }}/deepseek-windows-artifacts/
-          if-no-files-found: error
-          retention-days: 7
-          compression-level: 0
+          name: v009-published-windows-webview
+          path: ${{ runner.temp }}/v009-render-result/
+          if-no-files-found: warn
+          retention-days: 14
