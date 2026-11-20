@@ -28,7 +28,7 @@ pub struct Store {
     pub(crate) authority_epoch: i64,
     _file_lock: Option<std::fs::File>,
 }
-pub const SCHEMA_VERSION: u32 = 8;
+pub const SCHEMA_VERSION: u32 = 9;
 #[derive(Debug, Serialize)]
 pub struct MemoryRecord {
     pub id: String,
@@ -108,6 +108,10 @@ impl Store {
                 8,
                 include_str!("../../../db/migrations/0008_life_tasks.sql"),
             ),
+            (
+                9,
+                include_str!("../../../db/migrations/0009_local_video.sql"),
+            ),
         ];
         for (number, sql) in migrations {
             let digest = sha256_hex(sql.as_bytes());
@@ -146,6 +150,11 @@ impl Store {
                     "companion_bond_events",
                     "companion_mood_events",
                     "companion_proactive",
+                    "video_sources",
+                    "video_tasks",
+                    "video_segments",
+                    "video_analysis_results",
+                    "video_memories",
                 ]
                 .iter()
                 .filter(|table| {

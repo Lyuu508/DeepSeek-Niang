@@ -1,10 +1,10 @@
 [workspace]
-members = ["crates/companion-core", "crates/companion-node", "crates/companion-chat", "crates/companion-secrets", "crates/companion-sync"]
+members = ["crates/companion-core", "crates/companion-node", "crates/companion-chat", "crates/companion-secrets", "crates/companion-sync", "crates/companion-video"]
 exclude = ["apps/companion/src-tauri", "plugins/companion-keystore"]
 resolver = "2"
 
 [workspace.package]
-version = "0.0.6"
+version = "0.0.7"
 edition = "2024"
 rust-version = "1.99"
 publish = false

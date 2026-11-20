@@ -17,8 +17,8 @@ import verify_android
 import version
 from test_release_identity import existing_bundle
 
-VERSION='0.0.6'
-PREVIOUS_VERSION='0.0.5'
+VERSION='0.0.7'
+PREVIOUS_VERSION='0.0.6'
 APP_ID='io.local.deepseekcompanion.test2'
 
 def run(args,env=None,**kwargs):
@@ -51,7 +51,7 @@ def base_report(source,platform):
     assert sha==os.environ['EXPECTED_SOURCE_SHA'] and re.fullmatch('[0-9a-f]{40}',sha)
     assert not run(['git','status','--porcelain'],cwd=ROOT).strip(),'Source must remain clean'
     spec=version.check()
-    assert spec=={'version':VERSION,'androidVersionCode':1006}
+    assert spec=={'version':VERSION,'androidVersionCode':1007}
     report=read(source/(platform+'-build.json'))
     assert report['source_commit']==sha and report['version']==VERSION and report['working_tree_clean']
     package=source/report['file']
@@ -68,6 +68,7 @@ def windows(source,output):
     assert report['hosted_runner_install_smoke']
     old=read(source/'BUILD-RESULTS-WINDOWS.json')
     assert old['build_commit']==sha and old['installed_process_started'] and old['installer_language_verified']
+    assert old['local_video_bundled']
     assert old['desktop_pet_bundled'] and old['application_identifier']=='io.local.deepseekcompanion'
     exe=output/f'DeepSeek-Niang_{VERSION}_windows-x64-setup.exe'
     shutil.copyfile(original,exe)
@@ -92,6 +93,7 @@ def windows(source,output):
     assert proof['build_commit']==sha and proof['installer_sha256']==digest(exe)
     assert proof['installed_on_windows_runner'] and proof['installed_process_started'] and proof['installer_language_verified']
     assert proof['window_title']=='DeepSeek娘'
+    assert proof['local_video_bundled']
     assert proof['desktop_pet_bundled'] and proof['application_identifier']=='io.local.deepseekcompanion'
     proof.update(authenticode_signed=True,authenticode_verified_on_disposable_runner=True,publicly_trusted_publisher=False,
         signer_certificate_sha256=public['windows_certificate_sha256'])
@@ -131,12 +133,12 @@ def android(source,output):
         reference_cert=re.findall(r'certificate SHA-256 digest: ([0-9a-f]+)',signature)
         assert reference_cert==[public['android_certificate_sha256']]
         badging=run(verify_android.sdk_command(tools,'aapt2','dump','badging',str(reference_apk))).decode()
-        assert f"package: name='{APP_ID}' versionCode='1005' versionName='{PREVIOUS_VERSION}'" in badging
+        assert f"package: name='{APP_ID}' versionCode='1006' versionName='{PREVIOUS_VERSION}'" in badging
         original=reference('v0.0.1','DeepSeek-Niang_0.0.1_android-arm64.apk',temp/'reference-production.apk')
         production=verify_android.verify_reference(original)
         assert production['signer_certificate_sha256']!=reference_cert[0]
         write(output/'ANDROID-SIGNING-REFERENCES.json',{'production':production,'previous_test2':{
-            'application_id':APP_ID,'version':PREVIOUS_VERSION,'version_code':1005,'sha256':digest(reference_apk),
+            'application_id':APP_ID,'version':PREVIOUS_VERSION,'version_code':1006,'sha256':digest(reference_apk),
             'signer_certificate_sha256':reference_cert[0],'apksigner_output':signature}})
         aligned=temp/'aligned.apk';signed=output/f'DeepSeek-Niang_{VERSION}_android-arm64-isolated-test.apk'
         run(verify_android.sdk_command(tools,'zipalign','-f','-P','16','4',str(apk),str(aligned)))
@@ -146,7 +148,7 @@ def android(source,output):
         assert result['source_commit']==sha and result['working_tree_clean'] and result['signer_certificate_sha256']==reference_cert[0]
         result.update(unsigned_build_sha256=raw['sha256'],test_signer_persistence_guaranteed=True,
             signature_source='existing GitHub encrypted TEST_RELEASE_SIGNING_B64',current_test2_update_identity_stable=True,
-            upgrade_compatible_with_test2_v0_0_5=True,physical_upgrade_tested=False,production_upgrade_compatible=False,
+            upgrade_compatible_with_test2_v0_0_6=True,physical_upgrade_tested=False,production_upgrade_compatible=False,
             certificate_matches_v0_0_1=False)
         write(output/'android-build.json',result);write(output/'android-reverified.json',result)
         (output/f'apksigner-{VERSION}.txt').write_bytes(run(verify_android.sdk_command(tools,'apksigner','verify','--verbose','--print-certs',str(signed))))

@@ -1,0 +1,17 @@
+[package]
+name = "companion-video"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+companion-core = { path = "../companion-core" }
+base64 = "=0.22.1"
+reqwest = { version = "=0.12.28", default-features = false, features = ["json", "stream"] }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tempfile = "=3.27.0"
+tokio = { version = "=1.54.1", features = ["rt", "macros", "time", "process", "io-util", "fs"] }
+tokio-util = { version = "=0.7.20", features = ["rt"] }

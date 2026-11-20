@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "desktop-local-video",
+  "description": "Native local-file analysis. Import paths only originate from a native picker.",
+  "windows": ["main"],
+  "platforms": ["windows"],
+  "permissions": ["allow-video-list", "allow-video-select-whisper", "allow-video-import", "allow-video-control"]
+}

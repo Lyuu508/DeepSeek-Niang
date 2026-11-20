@@ -231,6 +231,10 @@ impl Store {
             .map(|events| events.iter().take(3).cloned().collect::<Vec<_>>())
             .unwrap_or_default();
         prompt[0].content.push_str(&format!("\n应用生活状态（仅虚拟安排，不是实际浏览、播放或视频理解；过期时不可声称仍在执行）：{}",json!({"host_online":life["host_online"],"current":life["current"],"next_activity":life["next_activity"],"recent_recorded_events":recent})));
+        if let Some(video) = self.current_video_activity(&persona)? {
+            prompt[0].content.push_str(&format!("\n本机真实活动（无文件名或媒体内容）：{}，已记录采样分析覆盖 {}%。只说明该状态和覆盖，不说视频已播放或臆测内容。",
+                video.label, video.progress_milli as f64 / 10.0));
+        }
         if prefs.memory_context {
             let query = prompt
                 .iter()

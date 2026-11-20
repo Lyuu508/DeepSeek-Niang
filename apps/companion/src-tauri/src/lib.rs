@@ -2,6 +2,8 @@ mod companion;
 #[cfg(target_os = "windows")]
 mod desktop_pet;
 mod sync;
+#[cfg(target_os = "windows")]
+mod video;
 use companion_chat::{
     ChatFailure,
     deepseek::DeepSeekClient,
@@ -271,8 +273,14 @@ pub fn run() {
                 DeepSeekClient::official()?,
             ));
             let weak = Arc::downgrade(&service);
+            let boot = std::time::Instant::now();
+            #[cfg(target_os = "windows")]
+            app.manage(Arc::new(video::VideoHost::new(
+                service.store.clone(),
+                directory.join("video-work"),
+                boot,
+            )));
             std::thread::spawn(move || {
-                let boot = std::time::Instant::now();
                 loop {
                     let Some(service) = weak.upgrade() else { break };
                     let _ = tauri::async_runtime::block_on(service.life_tick(
@@ -311,6 +319,7 @@ pub fn run() {
                 && let tauri::WindowEvent::CloseRequested { api, .. } = event
             {
                 api.prevent_close();
+                window.state::<Arc<video::VideoHost>>().stop();
                 window.app_handle().exit(0);
             }
             #[cfg(not(target_os = "windows"))]
@@ -356,6 +365,14 @@ pub fn run() {
             desktop_pet::pet_send,
             #[cfg(target_os = "windows")]
             desktop_pet::pet_stop,
+            #[cfg(target_os = "windows")]
+            video::video_list,
+            #[cfg(target_os = "windows")]
+            video::video_select_whisper,
+            #[cfg(target_os = "windows")]
+            video::video_import,
+            #[cfg(target_os = "windows")]
+            video::video_control,
         ])
         .run(tauri::generate_context!())
         .expect("native application startup failed");

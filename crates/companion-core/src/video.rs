@@ -1,5 +1,7 @@
-//! Timeline planning and measured coverage, not a decoder or model implementation.
+//! Timeline planning, coverage calculation and authority-local video persistence.
+mod local;
 use crate::{Error, Result};
+pub use local::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

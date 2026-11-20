@@ -8,7 +8,7 @@ root = Path(__file__).resolve().parents[1]
 required = set("""local_profiles devices conversations messages character_profiles relationship_states
 relationship_events character_moods memories memory_relations character_interests daily_activities
 life_events life_plans proactive_messages proactive_settings video_tasks video_sources video_progress
-video_timeline_events video_analysis_results video_memories meme_knowledge media_interests
+video_timeline_events video_analysis_results video_memories video_local_media meme_knowledge media_interests
 external_accounts application_settings task_queue task_checkpoints activity_states sync_events
 sync_checkpoints data_tombstones api_usage_records""".split())
 db = sqlite3.connect(":memory:")

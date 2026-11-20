@@ -127,6 +127,14 @@ pub(crate) fn install_capture(db: &Connection) -> Result<()> {
             ("UPDATE", old.as_str(), new.as_str()),
             ("DELETE", old.as_str(), "NULL"),
         ] {
+            let prefix = if op == "DELETE" { "old" } else { "new" };
+            let task_guard = match *table {
+                "task_queue" => format!(" AND {prefix}.kind<>'local_video'"),
+                "task_checkpoints" => format!(
+                    " AND EXISTS(SELECT 1 FROM task_queue WHERE id={prefix}.task_id AND kind<>'local_video')"
+                ),
+                _ => String::new(),
+            };
             let guard = if op == "DELETE" {
                 if *table == "application_settings" {
                     " AND old.scope='profile' AND old.device_id='' AND old.key IN ('theme','language')"
@@ -136,7 +144,7 @@ pub(crate) fn install_capture(db: &Connection) -> Result<()> {
             } else {
                 ready
             };
-            db.execute_batch(&format!("CREATE TRIGGER IF NOT EXISTS lan_{table}_{op} AFTER {op} ON {table} WHEN (SELECT suppress=0 FROM lan_control WHERE id=1){guard} BEGIN INSERT INTO lan_outbox(table_name,before_json,after_json) VALUES('{table}',{before},{after}); END;"))?;
+            db.execute_batch(&format!("CREATE TRIGGER IF NOT EXISTS lan_{table}_{op} AFTER {op} ON {table} WHEN (SELECT suppress=0 FROM lan_control WHERE id=1){guard}{task_guard} BEGIN INSERT INTO lan_outbox(table_name,before_json,after_json) VALUES('{table}',{before},{after}); END;"))?;
         }
     }
     Ok(())
@@ -301,6 +309,10 @@ impl Store {
                     }
                     "chat_turn_choices" => {
                         " WHERE EXISTS(SELECT 1 FROM chat_generations WHERE id=t.selected_generation_id AND state NOT IN ('sending','generating'))"
+                    }
+                    "task_queue" => " WHERE t.kind<>'local_video'",
+                    "task_checkpoints" => {
+                        " WHERE EXISTS(SELECT 1 FROM task_queue WHERE id=t.task_id AND kind<>'local_video')"
                     }
                     _ => "",
                 };
@@ -835,18 +847,20 @@ fn validate_row(db: &Connection, e: &Change, local: &str) -> Result<()> {
         return Err(Error::Untrusted);
     }
     if e.table == "task_checkpoints" {
-        let authority: String = db.query_row(
-            "SELECT authority_device_id FROM task_queue WHERE id=?1",
+        let (authority, kind): (String, String) = db.query_row(
+            "SELECT authority_device_id,kind FROM task_queue WHERE id=?1",
             [e.row["task_id"]
                 .as_str()
                 .ok_or(Error::Invalid("task UUID"))?],
-            |r| r.get(0),
+            |r| Ok((r.get(0)?, r.get(1)?)),
         )?;
-        if authority != e.origin {
+        if authority != e.origin || kind == "local_video" {
             return Err(Error::Untrusted);
         }
     }
-    if e.table == "task_queue" && e.row["authority_device_id"] != e.origin {
+    if e.table == "task_queue"
+        && (e.row["authority_device_id"] != e.origin || e.row["kind"] == "local_video")
+    {
         return Err(Error::Untrusted);
     }
     if obj.values().any(|v| {

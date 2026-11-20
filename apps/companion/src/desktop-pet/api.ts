@@ -41,6 +41,7 @@ export interface PetSnapshot {
     progress_milli: number;
     updated_at_ms: number;
     stale: boolean;
+    is_virtual?: boolean;
   } | null;
   unread_share: boolean;
   settings: Pick<PetSettings, 'always_on_top' | 'scale_percent' | 'roam' | 'reduce_motion'>;

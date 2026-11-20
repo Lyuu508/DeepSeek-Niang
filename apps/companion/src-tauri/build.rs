@@ -33,6 +33,10 @@ fn main() {
         "pet_action",
         "pet_send",
         "pet_stop",
+        "video_list",
+        "video_select_whisper",
+        "video_import",
+        "video_control",
     ];
     let manifest = tauri_build::AppManifest::new().commands(commands);
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(manifest))

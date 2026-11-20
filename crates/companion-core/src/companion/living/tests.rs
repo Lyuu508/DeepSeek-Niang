@@ -557,7 +557,7 @@ fn schema7_upgrade_keeps_persona_activity_events_and_consistent_backup() {
         s.conn
             .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
             .unwrap(),
-        8
+        i64::from(crate::storage::SCHEMA_VERSION)
     );
     assert_eq!(
         s.conn
@@ -568,13 +568,12 @@ fn schema7_upgrade_keeps_persona_activity_events_and_consistent_backup() {
             .unwrap(),
         0
     );
-    assert!(
-        std::fs::read_dir(&dir).unwrap().any(|p| p
-            .unwrap()
+    assert!(std::fs::read_dir(&dir).unwrap().any(|p| {
+        p.unwrap()
             .path()
             .to_string_lossy()
-            .contains("pre-v8-"))
-    );
+            .contains(&format!("pre-v{}-", crate::storage::SCHEMA_VERSION))
+    }));
     drop(s);
     std::fs::remove_dir_all(dir).unwrap();
 }
@@ -613,13 +612,12 @@ fn failed_schema8_upgrade_rolls_back_all_rebuilds_and_retains_backup() {
         .unwrap();
     assert!(!ddl.contains("task_id"));
     drop(c);
-    assert!(
-        std::fs::read_dir(&dir).unwrap().any(|p| p
-            .unwrap()
+    assert!(std::fs::read_dir(&dir).unwrap().any(|p| {
+        p.unwrap()
             .path()
             .to_string_lossy()
-            .contains("pre-v8-"))
-    );
+            .contains(&format!("pre-v{}-", crate::storage::SCHEMA_VERSION))
+    }));
     std::fs::remove_dir_all(dir).unwrap();
 }
 

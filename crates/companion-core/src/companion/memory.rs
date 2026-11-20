@@ -202,7 +202,7 @@ pub(crate) fn extract(
     Ok(())
 }
 #[allow(clippy::too_many_arguments)]
-fn write(
+pub(crate) fn write(
     db: &rusqlite::Transaction<'_>,
     device: &str,
     owner: &str,

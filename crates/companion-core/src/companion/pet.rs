@@ -94,6 +94,7 @@ pub struct PetActivity {
     pub progress_milli: i64,
     pub updated_at_ms: i64,
     pub stale: bool,
+    pub is_virtual: bool,
 }
 
 #[derive(Debug, Serialize)]
@@ -164,7 +165,7 @@ impl Store {
             )
             .optional()?;
         let life_enabled = self.companion_preferences(&persona.id)?.life_enabled;
-        let activity = recent
+        let mut activity = recent
             .as_ref()
             .map(|(kind, state, progress, updated)| PetActivity {
                 label: format!("虚拟{}", life::activity_label(kind)),
@@ -176,7 +177,18 @@ impl Store {
                 progress_milli: (*progress).clamp(0, 1000),
                 updated_at_ms: *updated,
                 stale: !fresh,
+                is_virtual: true,
             });
+        if let Some(video) = self.current_video_activity(&persona.id)? {
+            activity = Some(PetActivity {
+                label: video.label.into(),
+                state: "running".into(),
+                progress_milli: video.progress_milli,
+                updated_at_ms: video.updated_at_ms,
+                stale: false,
+                is_virtual: false,
+            });
+        }
         let mood: Option<(String, i64, i64, bool)> = self
             .conn
             .query_row(
@@ -221,7 +233,7 @@ impl Store {
         let kind = recent
             .as_ref()
             .map(|row| row.0.as_str())
-            .filter(|_| running);
+            .filter(|_| running && activity.as_ref().is_some_and(|a| a.is_virtual));
         let pose = match (chat, mood, kind) {
             (PetChatState::Thinking, _, _) => PetPose::Thinking,
             (PetChatState::Replying, _, _) => PetPose::Replying,

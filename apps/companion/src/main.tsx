@@ -1,4 +1,5 @@
 import {listen} from '@tauri-apps/api/event';
+import {VideoPanel} from './VideoPanel';
 import {PetSettingsCard} from './desktop-pet/PetSettingsCard';
 import {notifyShare} from './notifications';
 import {StrictMode,useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
@@ -69,7 +70,7 @@ function StoragePanel({personaId,onError,onRefresh}:{personaId:string;onError:(e
 function App(){
  const [boot,setBoot]=useState<Bootstrap|null>(null);
  const [companion,setCompanion]=useState<CompanionSnapshot|null>(null);
- const [page,setPage]=useState<'chat'|'settings'|'storage'|'personas'|'sync'|'companion'>('chat');
+ const [page,setPage]=useState<'chat'|'settings'|'storage'|'personas'|'sync'|'companion'|'video'>('chat');
  const readingShares=useRef(new Set<string>());
  const notifyingShares=useRef(new Set<string>());
  useEffect(()=>{
@@ -177,7 +178,7 @@ function App(){
  const lastUser=[...rows].reverse().find(m=>m.role==='user');const variants=rows.filter(m=>m.role==='assistant'&&!m.selected).length;
  const mobile=boot?.platform==='android'||(!boot&&/Android/i.test(navigator.userAgent))||(runtimeMode!=='native'&&matchMedia('(pointer:coarse)').matches);
  const connected=nativeAvailable&&!!boot;const canSend=connected&&!!conversation&&boot.key_status.configured&&!active&&!loading&&!switching;
- const title=page==='companion'?'关系与日常':page==='sync'?(mobile?'设备连接':'局域网同步'):page==='settings'?'设置':page==='storage'?'本地数据':page==='personas'?'人格管理':persona?.name??'DeepSeek娘';
+ const title=page==='video'?'视频中心':page==='companion'?'关系与日常':page==='sync'?(mobile?'设备连接':'局域网同步'):page==='settings'?'设置':page==='storage'?'本地数据':page==='personas'?'人格管理':persona?.name??'DeepSeek娘';
  const currentCompanion=companion?.persona_id===boot?.active_persona_id?companion:null;
  return <div className="app" data-theme={dark?'dark':'light'} data-platform={mobile?'android':'desktop'}>
   <header><button className="menu-toggle" aria-label="打开侧栏" onClick={()=>setDrawer(true)}><span className="desktop-menu-symbol">☰</span><span className="phone-menu-avatar"><Avatar persona={persona} small/></span></button>{page==='chat'&&<div className="mobile-persona-avatar"><Avatar persona={persona} small/></div>}<div className="header-title"><strong>{title}</strong><small>{mobile?(page==='chat'?'你的专属聊天空间':'DeepSeek娘'):page==='chat'?'一直延续的聊天时间线':'DeepSeek娘'}</small></div><div className="header-actions">{runtimeMode==='native'&&boot?.platform==='windows'&&<button className="desktop-pet-entry" onClick={()=>setPage('settings')}>桌宠</button>}<span className={`connection-badge ${boot?.key_status.configured?'ready':''}`}><i/>{boot?.key_status.configured?'密钥已配置':'待配置密钥'}</span><button className="icon-button" aria-label="切换深浅色" onClick={()=>setDark(!dark)}>{dark?'☀':'☾'}</button></div></header>
@@ -189,7 +190,7 @@ function App(){
    <div className="sidebar-label">切换人格 <span>{boot?.personas.length??'—'}</span></div>
    <nav className="persona-list" aria-label="人格切换">{boot?.personas.map(p=><button key={p.id} data-persona-id={p.id} aria-current={boot.active_persona_id===p.id?'true':undefined} disabled={switching} className={boot.active_persona_id===p.id?'selected':''} onClick={()=>void switchPersona(p.id)}><Avatar persona={p} small/><span>{p.name}</span>{active?.conversation===p.main_conversation_id&&<i className="working-dot"/>}</button>)}</nav>
    <button className="add-persona mobile-add-persona" disabled={!connected} onClick={()=>{setPage('personas');setDrawer(false);}}>＋ 新增人格</button>
-   <div className="sidebar-bottom"><button aria-label="关系与日常" className={`sidebar-companion-nav ${page==='companion'?'selected':''}`} onClick={()=>{setPage('companion');setDrawer(false);}}>♡ 关系与日常</button><button aria-label="人格管理" className={page==='personas'?'selected':''} onClick={()=>{setPage('personas');setDrawer(false);}}>♧ 人格管理</button><button aria-label="局域网同步" className={page==='sync'?'selected':''} onClick={()=>{setPage('sync');setDrawer(false);}}>⇄ 局域网同步</button><button aria-label="本地数据" className={page==='storage'?'selected':''} onClick={()=>{setPage('storage');setDrawer(false);}}>▤ 本地数据</button><button aria-label="设置" className={page==='settings'?'selected':''} onClick={()=>{setPage('settings');setDrawer(false);}}>⚙ 设置</button><div className="sidebar-profile"><span className="user-dot">你</span><div>本地个人空间<small>{boot?.version??'本地开发版'}</small></div><span className="private-dot" title="未启用云数据库"/></div></div>
+   <div className="sidebar-bottom"><button aria-label="关系与日常" className={`sidebar-companion-nav ${page==='companion'?'selected':''}`} onClick={()=>{setPage('companion');setDrawer(false);}}>♡ 关系与日常</button><button aria-label="人格管理" className={page==='personas'?'selected':''} onClick={()=>{setPage('personas');setDrawer(false);}}>♧ 人格管理</button><button aria-label="局域网同步" className={page==='sync'?'selected':''} onClick={()=>{setPage('sync');setDrawer(false);}}>⇄ 局域网同步</button>{runtimeMode==='native'&&boot?.platform==='windows'&&<button aria-label="视频中心" className={page==='video'?'selected':''} onClick={()=>{setPage('video');setDrawer(false);}}>▷ 视频中心</button>}<button aria-label="本地数据" className={page==='storage'?'selected':''} onClick={()=>{setPage('storage');setDrawer(false);}}>▤ 本地数据</button><button aria-label="设置" className={page==='settings'?'selected':''} onClick={()=>{setPage('settings');setDrawer(false);}}>⚙ 设置</button><div className="sidebar-profile"><span className="user-dot">你</span><div>本地个人空间<small>{boot?.version??'本地开发版'}</small></div><span className="private-dot" title="未启用云数据库"/></div></div>
   </aside>
   <main>
    {import.meta.env.VITE_COMPANION_TEST_PACKAGE==='1'&&<div className="test-build-banner notice" role="status">{mobile?'独立测试版 · 不覆盖正式版数据':'独立测试版 · 与正式版数据隔离，不用于覆盖正式版。请使用合成测试资料验收。'}</div>}
@@ -197,7 +198,7 @@ function App(){
    {runtimeMode==='preview'&&<div className="mode-banner" role="status">浏览器外观预览 · 原生功能未连接，请通过 Windows 或 Android 应用聊天</div>}
    {!brandingReady&&<div className="branding-pending">已指定海滩角色图；原始 PNG 文件待导入，暂不使用替代人物图标。</div>}
    {error&&<div className="error-banner" role="alert"><span>{error.message}<small>{error.code}</small></span><button aria-label="关闭错误提示" onClick={()=>setError(null)}>×</button></div>}
-   {page==='companion'?<div className="page-scroll"><CompanionPanel key={boot?.active_persona_id} data={currentCompanion} onRefresh={refresh} onError={setError} onMemories={()=>setPage('storage')}/></div>:page==='sync'?<div className="page-scroll"><SyncPanel mobile={mobile} onPaired={refresh}/></div>:page==='settings'?<div className="page-scroll"><SettingsPanel key={boot?.active_persona_id??'loading'} boot={boot} onRefresh={refresh} onError={setError}/></div>:page==='storage'?<div className="page-scroll"><StoragePanel key={boot?.active_persona_id??'loading'} personaId={boot?.active_persona_id??''} onError={setError} onRefresh={refresh}/></div>:page==='personas'?<div className="page-scroll"><PersonaManager boot={boot} onSwitch={switchPersona} onRefresh={refresh} onError={setError} onSettings={()=>setPage('settings')}/></div>:<div className="chat-layout"><section className="chat-main">
+   {page==='video'?<div className="page-scroll"><VideoPanel key={boot?.active_persona_id} personaId={boot?.active_persona_id??''} onMemories={()=>setPage('storage')}/></div>:page==='companion'?<div className="page-scroll"><CompanionPanel key={boot?.active_persona_id} data={currentCompanion} onRefresh={refresh} onError={setError} onMemories={()=>setPage('storage')}/></div>:page==='sync'?<div className="page-scroll"><SyncPanel mobile={mobile} onPaired={refresh}/></div>:page==='settings'?<div className="page-scroll"><SettingsPanel key={boot?.active_persona_id??'loading'} boot={boot} onRefresh={refresh} onError={setError}/></div>:page==='storage'?<div className="page-scroll"><StoragePanel key={boot?.active_persona_id??'loading'} personaId={boot?.active_persona_id??''} onError={setError} onRefresh={refresh}/></div>:page==='personas'?<div className="page-scroll"><PersonaManager boot={boot} onSwitch={switchPersona} onRefresh={refresh} onError={setError} onSettings={()=>setPage('settings')}/></div>:<div className="chat-layout"><section className="chat-main">
     <div className="message-scroll" ref={scroll} onScroll={()=>{const n=scroll.current;if(n)nearBottom.current=n.scrollHeight-n.scrollTop-n.clientHeight<100;}}>
      {!visible.length&&!loading&&<div className="welcome"><span className="welcome-label">ONE CHARACTER · ONE SHARED STORY</span><Avatar persona={persona}/><h1>和{persona?.name??'DeepSeek娘'}，接着聊</h1><p>每一次问候，都留在同一条时间线。<br/>下次回来，我们从这里继续。</p><div className="suggestions">{['聊聊今天的小事','一起想一个新点子','今天想学点什么？'].map(s=><button key={s} disabled={!connected} onClick={()=>{setDrafts(old=>({...old,[conversation]:s}));input.current?.focus();}}>{s}<span>↗</span></button>)}</div></div>}
      {loading&&<div className="loading-history" role="status">正在读取人格时间线…</div>}
@@ -210,7 +211,7 @@ function App(){
    </section>{!mobile&&<CompanionRail key={boot?.active_persona_id} boot={boot} data={currentCompanion} onRefresh={refresh} onError={setError} onMemories={()=>setPage('storage')} settingsContent={<SettingsPanel compact boot={boot} onRefresh={refresh} onError={setError}/>}/>}</div>}
   </main>
   </div>
-  <MobileNav page={page} onSelect={destination=>{setPage(destination);setDrawer(false);}}/>
+  <MobileNav page={page==='video'?'chat':page} onSelect={destination=>{setPage(destination);setDrawer(false);}}/>
  </div>;
 }
 createRoot(document.getElementById('root')!).render(<StrictMode><App/></StrictMode>);

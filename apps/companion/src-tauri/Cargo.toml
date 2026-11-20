@@ -1,6 +1,6 @@
 [package]
 name = "companion-app"
-version = "0.0.6"
+version = "0.0.7"
 edition = "2024"
 rust-version = "1.99"
 publish = false
@@ -32,4 +32,5 @@ tauri-plugin-notification = "=2.8.1"
 [target.'cfg(windows)'.dependencies]
 tauri = { version = "=2.12.5", features = ["tray-icon"] }
 winreg = "=0.56.0"
-windows-sys = { version = "=0.61.2", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_UI_WindowsAndMessaging"] }
+windows-sys = { version = "=0.61.2", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_UI_WindowsAndMessaging", "Win32_UI_Controls_Dialogs"] }
+companion-video = { path = "../../../crates/companion-video" }

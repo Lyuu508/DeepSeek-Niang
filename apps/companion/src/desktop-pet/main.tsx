@@ -238,7 +238,7 @@ function Pet() {
       {pane === 'activity' && <>
         <p>心情 {offline ? '暂不可用' : snapshot?.mood_label ?? '待机'}</p>
         {activity ? <>
-          <p>{activity.stale || offline ? '最后记录' : '虚拟活动记录'} · {activity.label}</p>
+          <p>{activity.stale || offline ? '最后记录' : activity.is_virtual === false ? '本机视频任务' : '虚拟活动记录'} · {activity.label}</p>
           <progress aria-label="已记录的活动进度" value={activity.progress_milli} max={1000} />
           <p className="pet-muted">{activity.stale || offline ? '状态已过期' : actionLabel[activity.state] ?? '已记录'} · {time(activity.updated_at_ms)}</p>
         </> : <p className="pet-muted">暂无活动记录</p>}

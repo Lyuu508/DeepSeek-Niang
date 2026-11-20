@@ -573,12 +573,13 @@ dependencies = [
 
 [[package]]
 name = "companion-app"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "companion-chat",
  "companion-core",
  "companion-secrets",
  "companion-sync",
+ "companion-video",
  "serde",
  "serde_json",
  "tauri",
@@ -592,7 +593,7 @@ dependencies = [
 
 [[package]]
 name = "companion-chat"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "companion-core",
  "companion-secrets",
@@ -607,7 +608,7 @@ dependencies = [
 
 [[package]]
 name = "companion-core"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "rusqlite",
  "serde",
@@ -620,7 +621,7 @@ dependencies = [
 
 [[package]]
 name = "companion-secrets"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "thiserror 2.0.21",
  "uuid",
@@ -630,7 +631,7 @@ dependencies = [
 
 [[package]]
 name = "companion-sync"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "companion-core",
  "companion-secrets",
@@ -648,6 +649,21 @@ dependencies = [
  "uuid",
  "x509-parser",
  "zeroize",
+]
+
+[[package]]
+name = "companion-video"
+version = "0.0.7"
+dependencies = [
+ "base64 0.22.1",
+ "companion-core",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "tempfile",
+ "tokio",
+ "tokio-util",
 ]
 
 [[package]]
@@ -4319,7 +4335,7 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-companion-keystore"
-version = "0.0.6"
+version = "0.0.7"
 dependencies = [
  "companion-secrets",
  "companion-sync",
@@ -4577,6 +4593,7 @@ dependencies = [
  "libc",
  "mio",
  "pin-project-lite",
+ "signal-hook-registry",
  "socket2",
  "tokio-macros",
  "windows-sys 0.61.2",
