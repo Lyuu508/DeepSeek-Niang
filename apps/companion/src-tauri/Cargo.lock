@@ -573,8 +573,9 @@ dependencies = [
 
 [[package]]
 name = "companion-app"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
+ "base64 0.22.1",
  "companion-chat",
  "companion-core",
  "companion-secrets",
@@ -585,15 +586,19 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tauri-plugin-companion-keystore",
+ "tauri-plugin-companion-voice",
  "tauri-plugin-notification",
+ "tempfile",
+ "tokio",
  "uuid",
+ "windows",
  "windows-sys 0.61.2",
  "winreg",
 ]
 
 [[package]]
 name = "companion-chat"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "companion-core",
  "companion-secrets",
@@ -608,7 +613,7 @@ dependencies = [
 
 [[package]]
 name = "companion-core"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "rusqlite",
  "serde",
@@ -621,7 +626,7 @@ dependencies = [
 
 [[package]]
 name = "companion-secrets"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "thiserror 2.0.21",
  "uuid",
@@ -631,7 +636,7 @@ dependencies = [
 
 [[package]]
 name = "companion-sync"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "companion-core",
  "companion-secrets",
@@ -653,7 +658,7 @@ dependencies = [
 
 [[package]]
 name = "companion-video"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "base64 0.22.1",
  "companion-core",
@@ -4335,12 +4340,20 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-companion-keystore"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "companion-secrets",
  "companion-sync",
  "serde",
  "serde_json",
+ "tauri",
+ "tauri-plugin",
+]
+
+[[package]]
+name = "tauri-plugin-companion-voice"
+version = "0.0.8"
+dependencies = [
  "tauri",
  "tauri-plugin",
 ]

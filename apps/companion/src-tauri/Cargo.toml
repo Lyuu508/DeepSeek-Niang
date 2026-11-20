@@ -1,6 +1,6 @@
 [package]
 name = "companion-app"
-version = "0.0.7"
+version = "0.0.8"
 edition = "2024"
 rust-version = "1.99"
 publish = false
@@ -28,9 +28,16 @@ serde = { version = "=1.0.229", features = ["derive"] }
 companion-sync = { path = "../../../crates/companion-sync" }
 
 tauri-plugin-notification = "=2.8.1"
+base64 = "=0.22.1"
+tokio = { version = "=1.54.1", features = ["time", "macros"] }
 
 [target.'cfg(windows)'.dependencies]
 tauri = { version = "=2.12.5", features = ["tray-icon"] }
 winreg = "=0.56.0"
 windows-sys = { version = "=0.61.2", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_UI_WindowsAndMessaging", "Win32_UI_Controls_Dialogs"] }
 companion-video = { path = "../../../crates/companion-video" }
+tempfile = "=3.27.0"
+windows = { version = "=0.62.2", features = ["Media_Core", "Media_SpeechSynthesis", "Storage_Streams", "Win32_System_WinRT"] }
+
+[target.'cfg(target_os = "android")'.dependencies]
+tauri-plugin-companion-voice = { path = "../../../plugins/companion-voice" }

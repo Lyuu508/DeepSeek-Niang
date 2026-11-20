@@ -17,6 +17,8 @@ import {CompanionPanel} from './CompanionPanel';
 import {CompanionRail} from './CompanionRail';
 import {MemoryPanel} from './MemoryPanel';
 import {brandingReady} from './branding';
+import {VoiceControls,VoiceSettings} from './voice/VoiceControls';
+import {useVoice,type VoiceController} from './voice/useVoice';
 
 const terminal=(m:ChatMessage)=>['complete','failed','interrupted'].includes(m.state);
 function merge(rows:ChatMessage[],incoming:ChatMessage):ChatMessage[]{
@@ -27,7 +29,7 @@ function merge(rows:ChatMessage[],incoming:ChatMessage):ChatMessage[]{
  return old?rows.map(m=>m.id===incoming.id?incoming:m):[...rows,incoming];
 }
 function time(value:number|null){return value===null?'早期记录':new Intl.DateTimeFormat(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}).format(value);}
-function SettingsPanel({boot,onRefresh,onError,compact=false}:{compact?:boolean;boot:Bootstrap|null;onRefresh:()=>Promise<void>;onError:(e:ChatFailure|null)=>void}){
+function SettingsPanel({boot,onRefresh,onError,voice,compact=false}:{compact?:boolean;boot:Bootstrap|null;voice:VoiceController;onRefresh:()=>Promise<void>;onError:(e:ChatFailure|null)=>void}){
  const [settings,setSettings]=useState<ChatSettings>({...boot?.settings??previewSettings});
  const [key,setKey]=useState('');const [busy,setBusy]=useState(false);const [notice,setNotice]=useState('');
  async function perform(work:()=>Promise<string>){setBusy(true);setNotice('');onError(null);try{setNotice(await work());await onRefresh();}catch(e){onError(failure(e));}finally{setBusy(false);setKey('');}}
@@ -35,6 +37,7 @@ function SettingsPanel({boot,onRefresh,onError,compact=false}:{compact?:boolean;
  return <div className={`settings-content ${compact?'rail-settings':''}`}>
   <div className="page-heading"><span className="eyebrow">MAKE IT YOURS</span><h1>让陪伴更合心意</h1><p>人设和聊天偏好保存在本机。API Key 使用独立的系统安全存储。</p></div>
   {runtimeMode==='native'&&boot?.platform==='windows'&&<PetSettingsCard/>}
+  {voice.enabled&&<VoiceSettings voice={voice} platform={boot?.platform??''}/>}
   {notice&&<div className="notice" role="status">{notice}</div>}
   <section className="settings-card"><div className="card-heading"><span className="card-icon">⌘</span><div><h2>DeepSeek API</h2><p>直接连接官方服务，无云端中转。</p></div><span className={`badge ${boot?.key_status.configured?'success':''}`}>{boot?.key_status.configured?'已配置密钥':'未配置密钥'}</span></div>
    <div className="storage-status"><span>本机存储</span><strong>{boot?.key_status.backend??'原生安全存储未连接'}</strong></div>
@@ -108,6 +111,12 @@ function App(){
  const settings=boot?.settings??previewSettings;
  const persona=boot?.personas.find(p=>p.id===boot.active_persona_id);
  const conversation=persona?.main_conversation_id??'';
+ const voice=useVoice(persona?.id??'',runtimeMode==='native' ? boot?.platform??'' : '',page,text=>{
+  setDrafts(old=>{
+   const existing=old[conversation]??'';
+   return {...old,[conversation]:(existing+(existing?'\n':'')+text).slice(0,8000)};
+  });
+ });
  const refresh=useCallback(async()=>{
   if(!nativeAvailable)return;const sequence=++refreshSequence.current;const data=await native.bootstrap();if(sequence!==refreshSequence.current)return;setBoot(data);
   const companionData=await native.companion(data.active_persona_id);if(sequence!==refreshSequence.current)return;setCompanion(companionData);
@@ -164,6 +173,7 @@ function App(){
  },[boot?.platform]);
  async function switchPersona(id:string){
   if(switchLock.current)return;switchLock.current=true;setSwitching(true);setError(null);
+  voice.stop();
   try{await native.selectPersona(id);await refresh();setPage('chat');setDrawer(false);}catch(e){setError(failure(e));}finally{switchLock.current=false;setSwitching(false);}
  }
  async function send(regenerateUserId?:string){
@@ -198,17 +208,17 @@ function App(){
    {runtimeMode==='preview'&&<div className="mode-banner" role="status">浏览器外观预览 · 原生功能未连接，请通过 Windows 或 Android 应用聊天</div>}
    {!brandingReady&&<div className="branding-pending">已指定海滩角色图；原始 PNG 文件待导入，暂不使用替代人物图标。</div>}
    {error&&<div className="error-banner" role="alert"><span>{error.message}<small>{error.code}</small></span><button aria-label="关闭错误提示" onClick={()=>setError(null)}>×</button></div>}
-   {page==='video'?<div className="page-scroll"><VideoPanel key={boot?.active_persona_id} personaId={boot?.active_persona_id??''} onMemories={()=>setPage('storage')}/></div>:page==='companion'?<div className="page-scroll"><CompanionPanel key={boot?.active_persona_id} data={currentCompanion} onRefresh={refresh} onError={setError} onMemories={()=>setPage('storage')}/></div>:page==='sync'?<div className="page-scroll"><SyncPanel mobile={mobile} onPaired={refresh}/></div>:page==='settings'?<div className="page-scroll"><SettingsPanel key={boot?.active_persona_id??'loading'} boot={boot} onRefresh={refresh} onError={setError}/></div>:page==='storage'?<div className="page-scroll"><StoragePanel key={boot?.active_persona_id??'loading'} personaId={boot?.active_persona_id??''} onError={setError} onRefresh={refresh}/></div>:page==='personas'?<div className="page-scroll"><PersonaManager boot={boot} onSwitch={switchPersona} onRefresh={refresh} onError={setError} onSettings={()=>setPage('settings')}/></div>:<div className="chat-layout"><section className="chat-main">
+   {page==='video'?<div className="page-scroll"><VideoPanel key={boot?.active_persona_id} personaId={boot?.active_persona_id??''} onMemories={()=>setPage('storage')}/></div>:page==='companion'?<div className="page-scroll"><CompanionPanel key={boot?.active_persona_id} data={currentCompanion} onRefresh={refresh} onError={setError} onMemories={()=>setPage('storage')}/></div>:page==='sync'?<div className="page-scroll"><SyncPanel mobile={mobile} onPaired={refresh}/></div>:page==='settings'?<div className="page-scroll"><SettingsPanel key={boot?.active_persona_id??'loading'} boot={boot} voice={voice} onRefresh={refresh} onError={setError}/></div>:page==='storage'?<div className="page-scroll"><StoragePanel key={boot?.active_persona_id??'loading'} personaId={boot?.active_persona_id??''} onError={setError} onRefresh={refresh}/></div>:page==='personas'?<div className="page-scroll"><PersonaManager boot={boot} onSwitch={switchPersona} onRefresh={refresh} onError={setError} onSettings={()=>setPage('settings')}/></div>:<div className="chat-layout"><section className="chat-main">
     <div className="message-scroll" ref={scroll} onScroll={()=>{const n=scroll.current;if(n)nearBottom.current=n.scrollHeight-n.scrollTop-n.clientHeight<100;}}>
      {!visible.length&&!loading&&<div className="welcome"><span className="welcome-label">ONE CHARACTER · ONE SHARED STORY</span><Avatar persona={persona}/><h1>和{persona?.name??'DeepSeek娘'}，接着聊</h1><p>每一次问候，都留在同一条时间线。<br/>下次回来，我们从这里继续。</p><div className="suggestions">{['聊聊今天的小事','一起想一个新点子','今天想学点什么？'].map(s=><button key={s} disabled={!connected} onClick={()=>{setDrafts(old=>({...old,[conversation]:s}));input.current?.focus();}}>{s}<span>↗</span></button>)}</div></div>}
      {loading&&<div className="loading-history" role="status">正在读取人格时间线…</div>}
      <div className="messages" aria-label="永久聊天时间线">{visible.map(m=><article className={`message ${m.role==='user'?'user':'assistant'} ${!m.selected?'old-variant':''}`} key={m.id} data-message-id={m.id} data-state={m.state}>
-      {m.role!=='user'&&<Avatar persona={persona} small/>}<div className="message-body"><div className="message-meta"><strong>{m.role==='user'?'你':persona?.name??settings.character_name}</strong><time>{time(m.created_at_ms)}</time>{!m.selected&&<span>历史回复</span>}</div><div className={`bubble ${m.state==='failed'?'failed':''}`}>{m.content||(['sending','generating'].includes(m.state)?<span className="typing" aria-label="正在等待回复"><i/><i/><i/></span>:m.state==='failed'?'本次未收到回复。':'生成已中断，尚未收到正文。')}{m.state==='generating'&&<span className="stream-caret"/>}</div><div className="message-foot">{m.state==='sending'?'发送中 · 等待模型':m.state==='generating'?'正在生成':m.state==='interrupted'?(m.error_code==='APP_RESTARTED'?'应用退出时中断':'已停止 / 中断'):m.state==='failed'?'生成失败':'已保存本地'}{m.finish_reason==='length'&&<span> · 达到输出 Token 上限</span>}{m.role==='assistant'&&m.selected&&m.user_message_id===lastUser?.id&&terminal(m)&&<button disabled={!!active||!boot?.key_status.configured} onClick={()=>void send(m.user_message_id!)}>↻ {m.state==='failed'?'重试':'重新生成'}</button>}</div></div>{m.role==='user'&&<span className="user-avatar">你</span>}
+      {m.role!=='user'&&<Avatar persona={persona} small/>}<div className="message-body"><div className="message-meta"><strong>{m.role==='user'?'你':persona?.name??settings.character_name}</strong><time>{time(m.created_at_ms)}</time>{!m.selected&&<span>历史回复</span>}</div><div className={`bubble ${m.state==='failed'?'failed':''}`}>{m.content||(['sending','generating'].includes(m.state)?<span className="typing" aria-label="正在等待回复"><i/><i/><i/></span>:m.state==='failed'?'本次未收到回复。':'生成已中断，尚未收到正文。')}{m.state==='generating'&&<span className="stream-caret"/>}</div><div className="message-foot">{m.state==='sending'?'发送中 · 等待模型':m.state==='generating'?'正在生成':m.state==='interrupted'?(m.error_code==='APP_RESTARTED'?'应用退出时中断':'已停止 / 中断'):m.state==='failed'?'生成失败':'已保存本地'}{m.finish_reason==='length'&&<span> · 达到输出 Token 上限</span>}{voice.enabled&&m.role==='assistant'&&terminal(m)&&!!m.content.trim()&&<button type="button" disabled={!voice.prefs||switching||['starting','recording','transcribing'].includes(voice.phase)} onClick={()=>void voice.play(m.content)}>朗读</button>}{m.role==='assistant'&&m.selected&&m.user_message_id===lastUser?.id&&terminal(m)&&<button disabled={!!active||!boot?.key_status.configured} onClick={()=>void send(m.user_message_id!)}>↻ {m.state==='failed'?'重试':'重新生成'}</button>}</div></div>{m.role==='user'&&<span className="user-avatar">你</span>}
      </article>)}</div>
      {variants>0&&<button className="variant-toggle" onClick={()=>setShowHistory(!showHistory)}>{showHistory?'收起历史回复':`查看历史回复（${variants}）`}</button>}<div ref={bottom}/>
     </div>
-    <div className="composer-area">{!boot?.key_status.configured&&<button className="setup-hint" onClick={()=>setPage('settings')}>配置本机 DeepSeek API Key，开始聊天 <span>前往设置 →</span></button>}<form className="composer" onSubmit={e=>{e.preventDefault();void send();}}><label className="sr-only" htmlFor="chat-input">发送给当前人格的消息</label><textarea id="chat-input" ref={input} value={drafts[conversation]??''} maxLength={8000} placeholder={connected?`和${persona?.name??'她'}说说吧…`:'原生应用连接后即可聊天'} disabled={!connected||!conversation||loading||switching} onChange={e=>setDrafts(old=>({...old,[conversation]:e.target.value}))} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!mobile&&!e.nativeEvent.isComposing&&e.keyCode!==229){e.preventDefault();void send();}}}/><div className="composer-toolbar"><span>{mobile?'点击发送 · 支持中文输入':'Enter 发送 · Shift + Enter 换行'}</span>{active?<button type="button" className="stop-button" disabled={!active.started} onClick={()=>void stopCurrent()}>■ 停止{active.conversation!==conversation?'其他人格的':''}生成</button>:<button className="send-button" aria-label="发送消息" disabled={!canSend||!(drafts[conversation]??'').trim()}>发送 ↑</button>}</div></form><p className="privacy-line">当前人格设定 + 本次输入{settings.include_history?` + 最近 ${settings.history_turns} 轮聊天`:''}将发送至 DeepSeek；其他人格和整个数据库不会发送。相关记忆引用可在陪伴设置中关闭。</p></div>
-   </section>{!mobile&&<CompanionRail key={boot?.active_persona_id} boot={boot} data={currentCompanion} onRefresh={refresh} onError={setError} onMemories={()=>setPage('storage')} settingsContent={<SettingsPanel compact boot={boot} onRefresh={refresh} onError={setError}/>}/>}</div>}
+    <div className="composer-area">{!boot?.key_status.configured&&<button className="setup-hint" onClick={()=>setPage('settings')}>配置本机 DeepSeek API Key，开始聊天 <span>前往设置 →</span></button>}<form className="composer" onSubmit={e=>{e.preventDefault();void send();}}><label className="sr-only" htmlFor="chat-input">发送给当前人格的消息</label><textarea id="chat-input" ref={input} value={drafts[conversation]??''} maxLength={8000} placeholder={connected?`和${persona?.name??'她'}说说吧…`:'原生应用连接后即可聊天'} disabled={!connected||!conversation||loading||switching} onChange={e=>setDrafts(old=>({...old,[conversation]:e.target.value}))} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey&&!mobile&&!e.nativeEvent.isComposing&&e.keyCode!==229){e.preventDefault();void send();}}}/><div className="composer-toolbar"><span>{mobile?'点击发送 · 支持中文输入':'Enter 发送 · Shift + Enter 换行'}</span>{active?<button type="button" className="stop-button" disabled={!active.started} onClick={()=>void stopCurrent()}>■ 停止{active.conversation!==conversation?'其他人格的':''}生成</button>:<button className="send-button" aria-label="发送消息" disabled={!canSend||!(drafts[conversation]??'').trim()}>发送 ↑</button>}</div><VoiceControls voice={voice} recording={!switching} openSettings={()=>setPage('settings')}/></form><p className="privacy-line">当前人格设定 + 本次输入{settings.include_history?` + 最近 ${settings.history_turns} 轮聊天`:''}将发送至 DeepSeek；其他人格和整个数据库不会发送。相关记忆引用可在陪伴设置中关闭。</p></div>
+   </section>{!mobile&&<CompanionRail key={boot?.active_persona_id} boot={boot} data={currentCompanion} onRefresh={refresh} onError={setError} onMemories={()=>setPage('storage')} settingsContent={<SettingsPanel compact boot={boot} voice={voice} onRefresh={refresh} onError={setError}/>}/>}</div>}
   </main>
   </div>
   <MobileNav page={page==='video'?'chat':page} onSelect={destination=>{setPage(destination);setDrawer(false);}}/>

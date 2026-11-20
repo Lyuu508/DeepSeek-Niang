@@ -66,6 +66,7 @@ $InstalledApps = @(Get-ChildItem -LiteralPath $InstallFolder -Filter '*.exe' | W
 if ($InstalledApps.Count -ne 1) { throw 'Installed application not found' }
 $DesktopPetBundled = $false
 $LocalVideoBundled = $false
+$VoiceBundled = $false
 if (Test-Path 'apps/companion/pet.html') {
     if ($Config.identifier -ne 'io.local.deepseekcompanion') { throw 'Expected the main Windows installation identity' }
     $InstalledPayload = [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($InstalledApps[0].FullName))
@@ -81,6 +82,27 @@ if (Test-Path 'apps/companion/pet.html') {
             if (-not $InstalledPayload.Contains($Command)) { throw "Missing local video command in the installed client: $Command" }
         }
         $LocalVideoBundled = $true
+    }
+    if (Test-Path 'apps/companion/src/voice/VoiceControls.tsx') {
+        foreach ($Command in @('voice_speak', 'voice_record', 'voice_guide', 'pet_speech_level')) {
+            if (-not $InstalledPayload.Contains($Command)) { throw "Missing voice command in the installed client: $Command" }
+        }
+        $VoiceBundled = $true
+    }
+}
+$VoiceResult = 'unavailable'
+if ($VoiceBundled) {
+    $Probe = Start-Process -FilePath $InstalledApps[0].FullName -ArgumentList '--self-test-voice' -PassThru
+    if ($Probe.WaitForExit(30000)) {
+        switch ($Probe.ExitCode) {
+            0 { $VoiceResult = 'system_voice_wav_generated' }
+            2 { $VoiceResult = 'runner_has_no_usable_system_voice' }
+            3 { $VoiceResult = 'runner_system_synthesis_failed' }
+            default { throw "Local voice self-test exited with $($Probe.ExitCode)" }
+        }
+    } else {
+        Stop-Process -Id $Probe.Id -Force
+        $VoiceResult = 'runner_system_synthesis_timed_out'
     }
 }
 $Process = $null
@@ -133,6 +155,8 @@ public static class CompanionWindowCapture {
         installed_process_started = $true
         desktop_pet_bundled = $DesktopPetBundled
         local_video_bundled = $LocalVideoBundled
+        voice_bundled = $VoiceBundled
+        native_voice_probe = $VoiceResult
         application_identifier = $Config.identifier
         window_title = $WindowTitle
         window_screenshot = $Screenshot

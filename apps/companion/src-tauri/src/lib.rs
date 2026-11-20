@@ -4,6 +4,7 @@ mod desktop_pet;
 mod sync;
 #[cfg(target_os = "windows")]
 mod video;
+mod voice;
 use companion_chat::{
     ChatFailure,
     deepseek::DeepSeekClient,
@@ -21,6 +22,12 @@ use tauri::{Manager, State, ipc::Channel};
 use uuid::Uuid;
 
 struct AppState(Arc<ChatService>);
+
+#[cfg(target_os = "windows")]
+#[doc(hidden)]
+pub fn voice_self_test() -> i32 {
+    voice::windows::probe()
+}
 #[derive(Serialize)]
 struct KeyStatus {
     configured: bool,
@@ -258,7 +265,10 @@ async fn delete_memory(
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    #[cfg(target_os = "android")]
+    let builder = builder.plugin(tauri_plugin_companion_voice::init());
+    builder
         .plugin(tauri_plugin_companion_keystore::init())
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {
@@ -280,6 +290,8 @@ pub fn run() {
                 directory.join("video-work"),
                 boot,
             )));
+            #[cfg(target_os = "windows")]
+            app.manage(voice::windows::VoiceHost::new(directory.join("voice-work")));
             std::thread::spawn(move || {
                 loop {
                     let Some(service) = weak.upgrade() else { break };
@@ -373,6 +385,16 @@ pub fn run() {
             video::video_import,
             #[cfg(target_os = "windows")]
             video::video_control,
+            voice::voice_preferences,
+            voice::voice_voices,
+            voice::voice_speak,
+            voice::voice_guide,
+            voice::voice_focus,
+            voice::voice_record,
+            #[cfg(target_os = "windows")]
+            voice::windows::voice_meter,
+            #[cfg(target_os = "windows")]
+            voice::windows::pet_speech_level,
         ])
         .run(tauri::generate_context!())
         .expect("native application startup failed");

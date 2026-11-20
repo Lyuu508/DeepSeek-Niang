@@ -35,6 +35,36 @@ impl From<CoreError> for Failure {
 }
 
 const MAX_WHISPER_BYTES: u64 = 2 * 1024 * 1024 * 1024;
+pub const MAX_RECORDING_BYTES: usize = 16_000 * 2 * 30;
+
+pub fn check_recording_model(model: &Path) -> Outcome<()> {
+    if !media::local_file(model)
+        || !std::fs::metadata(model).is_ok_and(|meta| (1..=MAX_WHISPER_BYTES).contains(&meta.len()))
+    {
+        return Err(Failure("VOICE_MODEL_REQUIRED"));
+    }
+    media::check_whisper().map_err(|_| Failure("VOICE_WHISPER_MISSING"))
+}
+
+/// Signed little-endian mono PCM at 16 kHz. The caller owns the scratch directory.
+pub async fn recognize_recording(pcm: &[u8], folder: &Path, model: &Path) -> Outcome<String> {
+    if !pcm.len().is_multiple_of(2) || !(16_000..=MAX_RECORDING_BYTES).contains(&pcm.len()) {
+        return Err(Failure("VOICE_RECORDING_LENGTH"));
+    }
+    check_recording_model(model)?;
+    let cues = media::recognize(pcm, folder, model, 0, pcm.len() as u64 / 32)
+        .await
+        .map_err(|_| Failure("VOICE_RECOGNITION_FAILED"))?;
+    let text = cues
+        .into_iter()
+        .map(|cue| cue.text)
+        .collect::<Vec<_>>()
+        .join(" ");
+    if text.trim().is_empty() {
+        return Err(Failure("VOICE_NO_SPEECH"));
+    }
+    Ok(excerpt(&text, 4000))
+}
 
 pub fn supported_model(model: &str) -> bool {
     matches!(model, "qwen3-vl:2b" | "qwen3-vl:4b" | "qwen3-vl:8b")

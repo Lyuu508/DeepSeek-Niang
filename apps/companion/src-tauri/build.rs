@@ -37,6 +37,14 @@ fn main() {
         "video_select_whisper",
         "video_import",
         "video_control",
+        "voice_preferences",
+        "voice_voices",
+        "voice_speak",
+        "voice_guide",
+        "voice_focus",
+        "voice_record",
+        "voice_meter",
+        "pet_speech_level",
     ];
     let manifest = tauri_build::AppManifest::new().commands(commands);
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(manifest))

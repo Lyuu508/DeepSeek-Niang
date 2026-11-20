@@ -378,24 +378,9 @@ impl Decoder {
             return Err(Failure("VIDEO_AUDIO_DECODE_FAILED"));
         }
         let processed_ms = (pcm.len() as u64 / 32).min(duration);
-        let wav = folder.join("speech.wav");
-        let result = folder.join("speech");
-        tokio::fs::write(&wav, wave(&pcm))
-            .await
-            .map_err(|_| Failure("VIDEO_SCRATCH"))?;
-        let mut whisper = command(&binary("whisper-cli")?);
-        whisper
-            .arg("-m")
-            .arg(model)
-            .arg("-f")
-            .arg(wav)
-            .args(["-t", "2", "-l", "auto", "-ng", "-np", "-oj", "-of"])
-            .arg(&result);
-        output(whisper, 16 * 1024, LONG, "VIDEO_TRANSCRIBE_FAILED").await?;
-        let body = read_limited(&result.with_extension("json"), 256 * 1024).await?;
         Ok(Audio {
             processed_ms,
-            speech: parse_speech(&body, span.start_ms, processed_ms)?,
+            speech: recognize(&pcm, folder, model, span.start_ms, processed_ms).await?,
         })
     }
 
@@ -434,6 +419,31 @@ impl Decoder {
 
 pub fn check_whisper() -> Outcome<()> {
     binary("whisper-cli").map(drop)
+}
+
+pub(crate) async fn recognize(
+    pcm: &[u8],
+    folder: &Path,
+    model: &Path,
+    start_ms: u64,
+    duration_ms: u64,
+) -> Outcome<Vec<SpeechCue>> {
+    let wav = folder.join("speech.wav");
+    let result = folder.join("speech");
+    tokio::fs::write(&wav, wave(pcm))
+        .await
+        .map_err(|_| Failure("VIDEO_SCRATCH"))?;
+    let mut whisper = command(&binary("whisper-cli")?);
+    whisper
+        .arg("-m")
+        .arg(model)
+        .arg("-f")
+        .arg(wav)
+        .args(["-t", "2", "-l", "auto", "-ng", "-np", "-oj", "-of"])
+        .arg(&result);
+    output(whisper, 16 * 1024, LONG, "VIDEO_TRANSCRIBE_FAILED").await?;
+    let body = read_limited(&result.with_extension("json"), 256 * 1024).await?;
+    parse_speech(&body, start_ms, duration_ms)
 }
 
 async fn read_limited(path: &Path, cap: usize) -> Outcome<Vec<u8>> {

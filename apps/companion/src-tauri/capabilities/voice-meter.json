@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "windows-voice-meter",
+  "description": "Measure local playback in the main window for the Windows desktop pet.",
+  "windows": ["main"],
+  "platforms": ["windows"],
+  "permissions": ["allow-voice-meter"]
+}

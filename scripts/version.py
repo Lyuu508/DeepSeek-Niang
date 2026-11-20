@@ -60,7 +60,7 @@ def check():
     assert lock['version'] == data['version']
     assert json.loads((ROOT / 'apps/companion/package.json').read_text())['dependencies']['@deepseek/contracts'] == data['version']
     assert lock['packages']['apps/companion']['dependencies']['@deepseek/contracts'] == data['version']
-    for relative in ['Cargo.toml', 'apps/companion/src-tauri/Cargo.toml', 'plugins/companion-keystore/Cargo.toml']:
+    for relative in ['Cargo.toml', 'apps/companion/src-tauri/Cargo.toml', 'plugins/companion-keystore/Cargo.toml', 'plugins/companion-voice/Cargo.toml']:
         assert re.search(r'^version = "' + re.escape(data['version']) + '"$', (ROOT / relative).read_text(), re.M), relative
     config = json.loads((ROOT / 'apps/companion/src-tauri/tauri.conf.json').read_text())
     assert config['identifier'] == 'io.local.deepseekcompanion'

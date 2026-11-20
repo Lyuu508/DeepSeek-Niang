@@ -21,3 +21,6 @@ sha2.workspace = true
 uuid.workspace = true
 thiserror.workspace = true
 serde_jcs = "=0.2.0"
+
+[dev-dependencies]
+tempfile = "=3.27.0"

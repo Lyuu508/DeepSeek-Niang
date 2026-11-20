@@ -58,6 +58,7 @@ export const desktopPet = {
   settings: () => invoke<PetSettings>('desktop_pet_settings'),
   configure: (setting: Setting) => invoke<PetSettings>('desktop_pet_configure', { setting }),
   snapshot: () => invoke<PetSnapshot>('pet_snapshot'),
+  speechLevel: (personaId: string) => invoke<number>('pet_speech_level', { personaId }),
   watchMotion: (receive: (motion: PetMotion) => void) => {
     const channel = new Channel<PetMotion>();
     channel.onmessage = receive;

@@ -1,0 +1,15 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "local-voice",
+  "description": "On-device speech, settings and audio sessions in the main client.",
+  "windows": ["main"],
+  "platforms": ["windows", "android"],
+  "permissions": [
+    "allow-voice-preferences",
+    "allow-voice-voices",
+    "allow-voice-speak",
+    "allow-voice-guide",
+    "allow-voice-focus",
+    "allow-voice-record"
+  ]
+}

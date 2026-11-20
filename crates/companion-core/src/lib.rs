@@ -10,6 +10,7 @@ pub mod replication;
 pub mod storage;
 pub mod task;
 pub mod video;
+pub mod voice;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {

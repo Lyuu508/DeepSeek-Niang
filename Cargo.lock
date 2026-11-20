@@ -136,7 +136,7 @@ dependencies = [
 
 [[package]]
 name = "companion-chat"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "companion-core",
  "companion-secrets",
@@ -152,20 +152,21 @@ dependencies = [
 
 [[package]]
 name = "companion-core"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "rusqlite",
  "serde",
  "serde_jcs",
  "serde_json",
  "sha2",
+ "tempfile",
  "thiserror",
  "uuid",
 ]
 
 [[package]]
 name = "companion-node"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "companion-core",
  "serde_json",
@@ -174,7 +175,7 @@ dependencies = [
 
 [[package]]
 name = "companion-secrets"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "thiserror",
  "uuid",
@@ -184,7 +185,7 @@ dependencies = [
 
 [[package]]
 name = "companion-sync"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "companion-core",
  "companion-secrets",
@@ -206,7 +207,7 @@ dependencies = [
 
 [[package]]
 name = "companion-video"
-version = "0.0.7"
+version = "0.0.8"
 dependencies = [
  "base64 0.22.1",
  "companion-core",

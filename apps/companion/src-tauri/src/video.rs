@@ -59,6 +59,10 @@ impl VideoHost {
             job.cancel.cancel();
         }
     }
+
+    pub(crate) fn selected_speech_model(&self) -> Option<PathBuf> {
+        self.speech_model.lock().ok()?.clone()
+    }
 }
 
 fn require_main(window: &WebviewWindow) -> Reply<()> {

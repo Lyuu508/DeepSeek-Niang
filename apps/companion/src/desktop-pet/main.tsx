@@ -44,6 +44,7 @@ function Pet() {
   const [waving, setWaving] = useState(false);
   const [systemReduced, setSystemReduced] = useState(reducedMotion.matches);
   const [motion, setMotion] = useState<PetMotion>({ walking: false, facing_left: true });
+  const [speechLevel, setSpeechLevel] = useState(0);
   const requestRunning = useRef(false);
   const tap = useRef<number | undefined>(undefined);
   const waveTimer = useRef<number | undefined>(undefined);
@@ -132,6 +133,20 @@ function Pet() {
   }
 
   const persona = snapshot?.persona_id ?? '';
+  useEffect(() => {
+    setSpeechLevel(0);
+    if (!persona || offline || !visible) return;
+    let alive = true;
+    let timer: number | undefined;
+    async function update() {
+      const level = await desktopPet.speechLevel(persona).catch(() => 0);
+      if (!alive) return;
+      setSpeechLevel(level);
+      timer = window.setTimeout(update, level > 0 ? 105 : 300);
+    }
+    void update();
+    return () => { alive = false; window.clearTimeout(timer); };
+  }, [persona, visible, offline]);
   const draft = drafts[persona] ?? '';
   const reply = snapshot?.reply;
   const replyActive = reply?.phase === 'sending' || reply?.phase === 'streaming';
@@ -219,6 +234,9 @@ function Pet() {
           ? <img className="pet-sprite" src={sprites[animation]} alt="" draggable={false} />
           : <span className="pet-initial">{Array.from(name).slice(0, 2).join('')}</span>}
       </span>
+      {speechLevel > 0 && <span className="pet-voice" title="正在发声" aria-label="正在发声">
+        {[0.65, 1, 0.84].map((scale, index) => <i key={index} style={{height: `${3 + (systemReduced ? 5 : scale * speechLevel * 0.14)}px`}}/>)}
+      </span>}
       {(controls || pose === 'replying' || pose === 'thinking') && poseGlyph[pose]
         && <span className="pet-expression" aria-hidden="true">{poseGlyph[pose]}</span>}
       {!controls && snapshot?.unread_share && <span className="pet-share" title="有一条新分享" />}

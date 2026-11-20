@@ -1,0 +1,18 @@
+.voice-settings { min-width: 0; }
+.voice-settings form { display: grid; gap: 10px; margin-bottom: 12px; }
+.voice-settings select { width: 100%; min-width: 0; }
+.voice-settings form > button { justify-self: start; }
+.voice-settings .field-help { margin: 8px 0; }
+.voice-sliders { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 10px 18px; }
+.voice-sliders label { display: block; min-width: 0; }
+.voice-sliders input { width: 100%; padding: 0; accent-color: var(--accent, #246bd0); }
+.voice-sliders output { float: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.voice-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; }
+.voice-actions small { color: var(--muted); }
+.voice-actions button { border: 1px solid var(--line); border-radius: 9px; background: transparent; color: var(--text); padding: 6px 10px; min-height: 30px; }
+.voice-actions button:hover:not(:disabled), .voice-actions button.voice-active { color: var(--accent, #246bd0); border-color: var(--accent, #246bd0); }
+.voice-actions label { display: flex; gap: 4px; align-items: center; margin: 0; }
+.voice-controls .inline-error { margin: 6px 0 0; }
+.composer .voice-controls { padding: 0 12px 8px; }
+.composer .voice-controls:empty, .voice-settings .voice-controls:empty { display: none; }
+.app[data-platform=android] .voice-actions button { min-height: 36px; }
