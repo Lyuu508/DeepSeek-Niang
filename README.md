@@ -2,9 +2,9 @@
 
 一款面向 Windows 与 Android 的本地优先 AI 陪伴软件，让不同人格拥有各自延续的聊天、记忆与虚拟日常。
 
-**[下载 Windows 版](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.8/DeepSeek-Niang_0.0.8_windows-x64-setup.exe) · [下载 Android 版](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.8/DeepSeek-Niang_0.0.8_android-arm64-isolated-test.apk) · [首次使用](docs/USAGE.md)**
+**[下载 Windows 版](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.9/DeepSeek-Niang_0.0.9_windows-x64-setup.exe) · [下载 Android 版](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.9/DeepSeek-Niang_0.0.9_android-arm64-isolated-test.apk) · [首次使用](docs/USAGE.md)**
 
-当前版本为 **v0.0.8 测试版**。已有自动化测试和原生构建记录，真实设备、家庭网络及真实 API 体验待验收。
+当前版本为 **v0.0.9 测试版**。已有自动化测试和原生构建记录，真实设备、家庭网络及真实 API 体验待验收。
 
 v0.0.9 加入人格回收站、自定义对话风格、声明式插件和设备字号，优化 Windows 界面与 Android 竖屏聊天。两端同步需使用相同数据版本。[界面与图标](docs/V009_UI.md) · [回收站与迁移](docs/V009_RECYCLE_MIGRATION.md) · [插件开发](docs/PLUGIN_DEVELOPMENT.md)
 
@@ -27,16 +27,7 @@ Windows 侧栏「视频中心」支持用户授权的本地视频分析，需要
 
 ## 界面预览
 
-以下是 v0.0.5 的浏览器 UI 测试截图，仅展示界面布局。其中的关系数值和状态是测试数据，不代表真实对话、手机运行或用户实机验收。
-
-![电脑端界面预览：人格列表、永久聊天与右侧状态栏](docs/images/v0.0.5-desktop-ui.png)
-
-<details>
-<summary>查看手机布局预览</summary>
-
-<img src="docs/images/v0.0.5-mobile-ui.png" alt="手机端关系与日常页面的 UI 测试截图" width="300">
-
-</details>
+双端界面与聊天区测量来自使用合成数据的浏览器夹具。Windows 另有公开签名安装包的原生启动截图。[双端界面截图](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.9/UI-EVIDENCE.zip) · [Windows 原生截图](docs/validation-v009/windows-published-native.png) · [图标遮罩预览](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.9/ANDROID-ICON-MASKS.png)
 
 ## 主要功能
 
@@ -53,18 +44,18 @@ Windows 侧栏「视频中心」支持用户授权的本地视频分析，需要
 
 自动记忆和旧聊检索采用本地规则，可能遗漏或未命中。重要信息建议手动核对、保存，不承诺无限记忆。
 
-## 下载 v0.0.8 测试版
+## 下载 v0.0.9 测试版
 
 | 平台 | 安装包 | 系统要求 |
 | --- | --- | --- |
-| Windows | [下载中文主客户端 EXE（内含桌宠）](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.8/DeepSeek-Niang_0.0.8_windows-x64-setup.exe) | Windows 10/11，x64 |
-| Android | [下载 ARM64 APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.8/DeepSeek-Niang_0.0.8_android-arm64-isolated-test.apk) | Android 10 及以上，ARM64 |
+| Windows | [下载中文主客户端 EXE（内含桌宠）](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.9/DeepSeek-Niang_0.0.9_windows-x64-setup.exe) | Windows 10/11，x64 |
+| Android | [下载 ARM64 APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.9/DeepSeek-Niang_0.0.9_android-arm64-isolated-test.apk) | Android 10 及以上，ARM64 |
 
-[版本说明](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.0.8) · [SHA-256 校验清单](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.8/SHA256SUMS.txt) · [签名信息](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.8/SIGNING-IDENTITIES.json)
+[版本说明](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.0.9) · [SHA-256 校验清单](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.9/SHA256SUMS.txt) · [签名信息](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.9/SIGNING-IDENTITIES.json)
 
 普通用户选择 EXE 或 APK 即可，无需下载源码归档、构建日志或开发工具。
 
-**升级前先保全数据，不要先卸载、清除应用数据或删除数据库。** Android 当前安装身份为 `io.local.deepseekcompanion.test2`，应用名称为“DeepSeek娘 扫码测试版”。本版满足从 v0.0.6 test2 更新的签名与版本条件，实际手机覆盖升级仍待验收；不能覆盖 v0.0.1 原身份或早期 `.test` 应用，也不能自动读取它们的私有数据。
+**升级前先保全数据，不要先卸载、清除应用数据或删除数据库。** Android 当前安装身份为 `io.local.deepseekcompanion.test2`，应用名称为“DeepSeek娘 扫码测试版”。本版满足从 v0.0.8 test2 更新的签名与版本条件，实际手机覆盖升级仍待验收；不能覆盖 v0.0.1 原身份或早期 `.test` 应用，也不能自动读取它们的私有数据。
 
 ## 安装与首次使用
 
@@ -73,18 +64,19 @@ Windows 侧栏「视频中心」支持用户授权的本地视频分析，需要
 3. **安装 Android 版。** 按系统提示为所用浏览器或文件管理器临时允许安装 APK。若提示签名冲突，停止并保留旧应用及数据，不要通过卸载来强行安装。
 4. **配置聊天。** 打开“设置”，先验证安全存储，再保存自己的 DeepSeek API Key。密钥由本机系统安全存储保管，不要贴到 Issue、聊天记录或公开截图中。
 5. **开始使用。** 进入默认人格聊天，或通过“人格管理”创建自己的角色；在“本地数据”中核对和管理长期记忆。
-6. **连接另一台设备。** 两端都更新到 v0.0.8，接入可互访的同一局域网。电脑打开“局域网同步”并点击“连接手机”，手机进入连接页点击“扫一扫”。有线电脑和同一路由器下的 Wi-Fi 手机也可配对。访客网络或设备隔离可能阻断连接。
+6. **连接另一台设备。** 两端都更新到 v0.0.9，接入可互访的同一局域网。电脑打开“局域网同步”并点击“连接手机”，手机进入连接页点击“扫一扫”。有线电脑和同一路由器下的 Wi-Fi 手机也可配对。访客网络或设备隔离可能阻断连接。
 7. **按需开启日常与分享。** 在陪伴设置中调整虚拟日常、主动交流、安静时段和通知。新建配置的主动消息与模型生成默认关闭；升级保留原设置。模型生成需要另外开启并设置预算。
 
 **扫码与 API Key：** 电脑生成连接二维码时，会授权将已配置的 Key 一次配置到本次认证的手机；重新扫码可能更新手机已有 Key。二维码本身不包含 Key，请仅向自己的可信手机展示。解除配对不会使已复制的 Key 在 DeepSeek 失效，如需撤销使用权，还需删除或轮换 Key。
 
 更多步骤见[使用说明](docs/USAGE.md)与[常见问题](docs/FAQ.md)。
 
-## v0.0.8 更新重点
+## v0.0.9 更新重点
 
-- 两端主客户端加入离线朗读和语音输入。转写先进入聊天输入框，确认后可以发送。
-- 音色、语速、音量和静音偏好按本机人格保存。试听无需配置 DeepSeek API Key。
-- 原创七音符唱段可试听。Windows 桌宠按实际播放的音量显示发声指示。
+- Android 压缩顶栏、输入区和底部导航，原始海滩图铺满 Launcher 可见区域。
+- Windows 常规按钮增加指针起始的渐变。两端可实时调整字号，各自保留偏好。
+- 人格移入回收站后可恢复聊天、记忆和关系。永久删除与清空各有确认，状态会同步到已配对设备。
+- 每个人格可选标准、自由或自定义对话。插件管理提供本机声明式风格和时间提醒。
 
 [查看完整更新日志](CHANGELOG.md)
 

@@ -1,5 +1,15 @@
 # 验证范围与待核实问题
 
+## v0.0.9 发布证据
+
+两端使用提交 `7728043708e0d35267e348be533064abe3718faa`。Windows EXE 已在 GitHub Windows runner 安装并启动，安装器、应用图标与原签名通过检查。Android ARM64 APK 验证了遮罩资源、包名、1009 版本号与 v0.0.8 test2 证书。公开下载已核对 25 项附件的 SHA-256。[构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.9/BUILD-RESULTS.json) · [同源 CI](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44716167090) · [签名发布](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44718040176)
+
+Linux 162 项、Windows 163 项 Rust 测试通过。另有 25 项 Python 检查、5 项同步模型测试和 81 项界面夹具检查。SQLite 升级、故障回滚和双副本回环 mTLS 测试通过，覆盖离线修改、恢复和永久删除。[自动化日志](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.9/AUTOMATED-TEST-RESULTS.txt) · [迁移说明](V009_RECYCLE_MIGRATION.md)
+
+375×812 浏览器中可见聊天区从 447px 增至 650px。截图中的 Android 输入法通过视口和原生事件模拟。Android 真机安装、家庭网络及真实 DeepSeek 流式对话待验收。[截图与测量](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.9/UI-EVIDENCE.zip) · [实机验收清单](V009_UI.md#实机验收)
+
+首次签后截图在应用窗口开启后采集，聊天区仍为空白。另在 Windows runner 下载并安装具有相同 SHA-256 的公开 EXE，等待后取得包含默认人格、欢迎页、输入区和插件入口的原生截图。复测的调试接口未暴露 WebView，截图证据以实际桌面采集为准。[Windows 原生截图](validation-v009/windows-published-native.png) · [复测步骤](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44719233553)
+
 ## v0.0.8 发布证据
 
 双端安装包从 `6caba0d1259db64b9c3e77e713c5279293b5a0bb` 构建。Windows EXE 在 Windows runner 安装并启动。Android ARM64 APK 核对了语音桥接、麦克风权限、包 ID 与 v0.0.7 test2 签名。两包已从公开下载地址回下载并验证 SHA-256。安装后的 Windows 程序通过 WinRT 系统语音生成了 WAV。 [构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.8/BUILD-RESULTS.json) · [同源 CI](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44695203939) · [签名发布](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44696382185)

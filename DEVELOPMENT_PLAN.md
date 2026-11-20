@@ -20,7 +20,7 @@ Windows 客户端支持用户授权的本地视频。分段采样和语音转写
 
 ## 当前版本与完成状态
 
-当前公开测试版为 [v0.0.8](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.0.8)，发布源码为 `6caba0d1259db64b9c3e77e713c5279293b5a0bb`。双端新增本机语音能力，签名和下载已核验。
+当前公开测试版为 [v0.0.9](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.0.9)，发布源码为 `7728043708e0d35267e348be533064abe3718faa`。双端签名和公开下载已核验。
 
 | 方向 | 已实现、可测试 | 仍需验收或完善 |
 | --- | --- | --- |

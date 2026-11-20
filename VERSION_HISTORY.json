@@ -125,6 +125,22 @@
       "windowsVoiceBundled": true,
       "androidVoiceBundled": true,
       "physicalWindowsAndroidTested": false
+    },
+    {
+      "version": "0.0.9",
+      "androidVersionCode": 1009,
+      "tag": "v0.0.9",
+      "commit": "7728043708e0d35267e348be533064abe3718faa",
+      "releaseId": 452543322,
+      "ciRun": 44716167090,
+      "publishRun": 44718040176,
+      "distribution": "persisted-test2-update",
+      "androidApplicationId": "io.local.deepseekcompanion.test2",
+      "androidCertificateSha256": "fefb57342751c7bd5ef8271e4a8b09f8702c0285e0120e8407b557d20dbbf153",
+      "windowsCertificateSha256": "069f0150a9698a8178bdaf7dfea13f5509185aa69b9ba940f5473edbafa8af62",
+      "windowsInstallerIconsVerified": true,
+      "androidLauncherResourcesVerified": true,
+      "physicalWindowsAndroidTested": false
     }
   ]
 }
