@@ -48,7 +48,8 @@ def labeled_node(root, labels):
         if node.get('package') != APP:
             continue
         strings = {node.get('text', '').strip(), node.get('content-desc', '').strip()}
-        if strings.intersection(labels):
+        bounds = re.findall(r'\d+', node.get('bounds', ''))
+        if len(bounds) == 4 and int(bounds[2]) > int(bounds[0]) and int(bounds[3]) > int(bounds[1]) and strings.intersection(labels):
             return node
     return None
 
@@ -133,6 +134,19 @@ def main():
         (OUTPUT / 'android-accessibility.xml').write_text(ET.tostring(root, encoding='unicode'))
     if labeled_node(root, ('聊天', '手机聊天', '设置', 'DeepSeek娘')) is not None:
         REPORT['checked_native_pages'].append('chat')
+        REPORT['startup_operation_failed_banner'] = labeled_node(root, ('OPERATION_FAILED',)) is not None
+        if REPORT['startup_operation_failed_banner']:
+            snapshot('android-native-chat-startup.png')
+        for _ in range(10):
+            root = tree()
+            composer = [] if root is None else [n for n in root.iter('node') if n.get('package') == APP and n.get('class') == 'android.widget.EditText' and n.get('enabled') == 'true']
+            if composer:
+                REPORT['chat_input_connected_to_native_state'] = True
+                break
+            time.sleep(3)
+        if labeled_node(root, ('关闭错误提示',)) is not None:
+            REPORT['startup_banner_dismissed_using_ui'] = tap(root, '关闭错误提示')
+            root = tree()
         snapshot('android-native-chat.png')
     else:
         snapshot('android-late-frame.png')
@@ -143,14 +157,22 @@ def main():
     ))]
     (OUTPUT / 'webview-runtime.log').write_text('\n'.join(related) + '\n')
     for key, labels, expected in [
-        ('personas', ('手机人格', '人格'), ('人格管理', '新增人格')),
-        ('settings', ('手机设置', '设置'), ('应用外观', '设置', '界面外观')),
+        ('personas', ('手机人格',), ('管理每个人格的设定与聊天空间。', '新建人格')),
+        ('settings', ('手机设置',), ('管理本机外观、聊天与设备偏好。', '应用外观')),
     ]:
         if tap(root, *labels):
             root = tree()
             if labeled_node(root, expected) is not None:
                 snapshot(f'android-native-{key}.png')
                 REPORT['checked_native_pages'].append(key)
+    if 'settings' in REPORT['checked_native_pages'] and tap(root, 'API 配置'):
+        root = tree()
+        if tap(root, '验证安全存储'):
+            root = tree()
+            REPORT['native_vault_self_test_passed'] = root is not None and any(
+                '写入、读取、删除自测通过。' in n.get('text', '') for n in root.iter('node')
+            )
+            snapshot('android-native-api-settings.png')
     assert foreground(), 'New Android version lost its foreground activity'
     REPORT['passed'] = True
     REPORT['webview_content_verified'] = 'chat' in REPORT['checked_native_pages']
