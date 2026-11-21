@@ -325,5 +325,13 @@ async function exercisePhone() {
   }
   fs.writeFileSync(path.join(output, baseline ? 'before.json' : 'layout-results.json'), JSON.stringify(report, null, 2) + '\n');
   console.log(JSON.stringify(report));
-})().catch(error => { console.error(error); process.exitCode = 1; })
+})().catch(error => {
+  console.error(error);
+  const location = error?.stack?.match(/\b(v009|ocean-evidence|rework-evidence)\.cjs:(\d+):\d+/);
+  if (process.env.GITHUB_ACTIONS === 'true' && location) {
+    const [, file, line] = location;
+    console.error(`::error file=tests/browser/${file}.cjs,line=${line},title=Browser fixture failed::Review the fixture assertion or browser action on this line.`);
+  }
+  process.exitCode = 1;
+})
   .finally(async () => { await browser?.close(); server.kill(); });
