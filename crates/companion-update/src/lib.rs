@@ -173,12 +173,25 @@ impl Updater {
         if response.status() == 404 {
             return Ok(None);
         }
-        let release = serde_json::from_slice(&bytes(response, 256 * 1024).await?)
+        let release: Release = serde_json::from_slice(&bytes(response, 256 * 1024).await?)
             .map_err(|_| "UPDATE_METADATA_INVALID")?;
+        let is_acceptance_tag = release
+            .tag_name
+            .strip_prefix('v')
+            .and_then(|tag| Version::parse(tag).ok())
+            .is_some_and(|version| !version.pre.is_empty());
+        if release.prerelease || release.draft || is_acceptance_tag {
+            return Ok(None);
+        }
         Ok(Some(parsed_release(release, current, platform)?))
     }
 
-    pub async fn download(&self, latest: &Latest, directory: &Path) -> Result<Download> {
+    pub async fn download(
+        &self,
+        latest: &Latest,
+        directory: &Path,
+        mut progress: impl FnMut(u8),
+    ) -> Result<Download> {
         if !latest.view.can_download {
             return Err("UPDATE_ASSET_MISSING");
         }
@@ -218,6 +231,8 @@ impl Updater {
         let mut response = status(response)?;
         let mut digest = Sha256::new();
         let mut count = 0_u64;
+        let mut percent = 0_u8;
+        progress(percent);
         while let Some(chunk) = response.chunk().await.map_err(network)? {
             count += chunk.len() as u64;
             if count > package.size {
@@ -225,6 +240,11 @@ impl Updater {
             }
             digest.update(&chunk);
             file.write_all(&chunk).await.map_err(storage)?;
+            let received = (count.saturating_mul(100) / package.size) as u8;
+            if received > percent {
+                percent = received;
+                progress(percent);
+            }
         }
         file.sync_all().await.map_err(storage)?;
         drop(file);

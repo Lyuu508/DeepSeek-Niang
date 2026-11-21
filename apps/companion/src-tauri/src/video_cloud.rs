@@ -296,6 +296,62 @@ pub async fn cloud_video_answer(
 }
 
 #[tauri::command]
+pub async fn cloud_video_save_chat(
+    window: WebviewWindow,
+    state: State<'_, AppState>,
+    host: State<'_, CloudVideoHost>,
+    persona: String,
+    id: String,
+) -> Reply<()> {
+    main_window(&window)?;
+    let _guard = host.request.try_lock().map_err(|_| "VIDEO_BUSY")?;
+    let mut database = store(&state)?;
+    active(&database, &persona)?;
+    let saved = record(&database, &persona)?
+        .filter(|record| record.id == id)
+        .ok_or("VIDEO_RECORD_MISSING")?;
+    let answer = saved.answer.as_deref().ok_or("VIDEO_ANSWER_REQUIRED")?;
+    let conversation = database
+        .personas()
+        .map_err(storage_error)?
+        .into_iter()
+        .find(|item| item.id == persona)
+        .ok_or("VIDEO_PERSONA_CHANGED")?
+        .main_conversation_id;
+    let settings = database.persona_settings(&persona).map_err(storage_error)?;
+    let prepared = database
+        .begin_chat(
+            &companion_core::chat::StartChat {
+                request_id: id,
+                conversation_id: conversation,
+                text: Some(format!("【视频提问】\n{}", saved.question)),
+                regenerate_user_id: None,
+            },
+            &settings,
+        )
+        .map_err(storage_error)?;
+    if let Err(error) = database.finish_chat(
+        &prepared.request_id,
+        answer,
+        "complete",
+        None,
+        Some("video"),
+        None,
+    ) {
+        let _ = database.finish_chat(
+            &prepared.request_id,
+            "",
+            "failed",
+            Some("VIDEO_SAVE_FAILED"),
+            None,
+            None,
+        );
+        return Err(storage_error(error));
+    }
+    Ok(())
+}
+
+#[tauri::command]
 pub async fn cloud_video_clear(
     window: WebviewWindow,
     state: State<'_, AppState>,

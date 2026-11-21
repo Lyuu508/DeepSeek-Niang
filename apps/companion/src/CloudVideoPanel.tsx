@@ -1,3 +1,4 @@
+import { FileDrop } from './FileDrop';
 import { invoke } from '@tauri-apps/api/core';
 import { useEffect, useState } from 'react';
 import type { ManagedMemory } from '@deepseek/contracts';
@@ -53,8 +54,8 @@ function timestamp(milliseconds: number) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}.${Math.floor(milliseconds % 1000 / 100)}`;
 }
 
-export function CloudVideoPanel({ personaId, deepseekConfigured, memories, previousWindows, onMemories }: {
-  personaId: string; deepseekConfigured: boolean; memories: ManagedMemory[]; previousWindows: boolean; onMemories: () => void;
+export function CloudVideoPanel({ personaId, deepseekConfigured, memories, previousWindows, initialVideo, onSaved, onMemories }: {
+  personaId: string; deepseekConfigured: boolean; memories: ManagedMemory[]; previousWindows: boolean; initialVideo?: { file: File; question: string }; onSaved: () => void; onMemories: () => void;
 }) {
   const native = runtimeMode === 'native';
   const [provider, setProvider] = useState<Provider>({ settings: defaults, configured: false, connection: 'unconfigured' });
@@ -63,7 +64,7 @@ export function CloudVideoPanel({ personaId, deepseekConfigured, memories, previ
   const [file, setFile] = useState<File>();
   const [duration, setDuration] = useState(0);
   const [mode, setMode] = useState<'clip' | 'frames'>('frames');
-  const [question, setQuestion] = useState('');
+  const [question, setQuestion] = useState(initialVideo?.question ?? '');
   const [consent, setConsent] = useState(false);
   const [record, setRecord] = useState<Record | null>(null);
   const [matchingPlan, setMatchingPlan] = useState('');
@@ -101,6 +102,21 @@ export function CloudVideoPanel({ personaId, deepseekConfigured, memories, previ
     setConsent(false);
   }
 
+  useEffect(() => {
+    if (!initialVideo) return;
+    let cancelled = false;
+    setBusy('读取聊天视频');
+    void videoDuration(initialVideo.file).then(duration => {
+      if (cancelled) return;
+      setDuration(duration);
+      setFile(initialVideo.file);
+      setMode(canSendClip(initialVideo.file) ? 'clip' : 'frames');
+    }).catch(error => {
+      if (!cancelled) setProblem(errorText(error));
+    }).finally(() => { if (!cancelled) setBusy(''); });
+    return () => { cancelled = true; };
+  }, [initialVideo]);
+
   async function analyze() {
     if (!file || !consent) return;
     let current = record;
@@ -129,12 +145,10 @@ export function CloudVideoPanel({ personaId, deepseekConfigured, memories, previ
     <PageHeader title="视频中心" icon="video" scene="scene-video" art="thinking" description="千问提取画面证据，DeepSeek结合你的问题给出回答。" />
     <section className="settings-card">
       <div className="card-heading"><span className="card-icon"><Icon name="video"/></span><div><h2>视频提问</h2><p>选择有权分析的本地视频。</p></div></div>
-      <label>视频文件<input type="file" accept="video/*,.mp4,.mov,.webm" disabled={!native || !!busy} onChange={event => {
-        const next = event.currentTarget.files?.[0];
-        event.currentTarget.value = '';
-        if (next) void act('读取视频', () => select(next));
-      }}/></label>
-      {file && <p className="field-help">{file.name} · {timestamp(duration)} · {(file.size / 1048576).toFixed(1)} MiB</p>}
+      <FileDrop label="选择或拖入视频" accept="video/*,.mp4,.mov,.webm" icon="video" file={file}
+        disabled={!native} busy={busy} onFile={next => void act('读取视频', () => select(next))}
+        onClear={() => { setFile(undefined); setDuration(0); setMatchingPlan(''); setConsent(false); }}/>
+      {file && <p className="field-help">视频时长 · {timestamp(duration)}</p>}
       <label>你想了解什么？<textarea rows={3} maxLength={1000} value={question} disabled={!!busy} onChange={event => { setQuestion(event.target.value); setConsent(false); }} placeholder="这个视频里的人做了什么？"/></label>
       {file && <div className="segment-control" role="group" aria-label="发送素材">
         <button type="button" disabled={!!busy || !canSendClip(file)} aria-pressed={mode === 'clip'} onClick={() => {setMode('clip');setConsent(false);}}>MP4 原片</button>
@@ -162,6 +176,10 @@ export function CloudVideoPanel({ personaId, deepseekConfigured, memories, previ
         {record.evidence.limitations && <p className="field-help">识别限制 · {record.evidence.limitations}</p>}
       </details>}
       <div className="button-row">
+        {record.answer && <button type="button" disabled={!!busy || !native} onClick={() => void act('保存问答', async () => {
+          await invoke('cloud_video_save_chat', { persona: personaId, id: record.id });
+          onSaved();
+        })}><Icon name="chat"/>保存问答到聊天</button>}
         {record.evidence && <button type="button" disabled={!!busy || !deepseekConfigured} onClick={() => setConfirm('answer')}><Icon name="sync"/>{record.answer ? '重新组织回答' : '重试 DeepSeek 回答'}</button>}
         <button type="button" disabled={!!busy} onClick={() => setConfirm('clear')}>清除本机结果</button>
       </div>

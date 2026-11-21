@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { useState } from 'react';
 import { Icon } from './OceanDesign';
 
+export const MAX_CHAT_IMAGES = 4;
 export type ChatImage = { name: string; jpeg: string };
 export const attachmentSource = (image: ChatImage) => `data:image/jpeg;base64,${image.jpeg}`;
 
@@ -33,16 +34,19 @@ export async function readTextAttachment(file: File) {
 }
 
 export function ChatImagePreview({ conversation, id }: { conversation: string; id: string }) {
-  const [preview, setPreview] = useState<ChatImage | null>(null);
+  const [preview, setPreview] = useState<ChatImage[]>([]);
   const [error, setError] = useState(false);
   const [busy, setBusy] = useState(false);
-  return <div className="message-attachment">{preview
-    ? <button type="button" className="image-close" aria-label="收起图片" onClick={() => setPreview(null)}><img alt={preview.name} src={attachmentSource(preview)}/></button>
+  return <div className="message-attachment">{preview.length
+    ? <div className="message-gallery">
+      {preview.map((image, index) => <img key={index} alt={image.name} src={attachmentSource(image)}/>)}
+      <button type="button" className="image-close" onClick={() => setPreview([])}>收起图片</button>
+    </div>
     : <button type="button" disabled={busy} onClick={() => {
       setBusy(true);
       setError(false);
-      void invoke<ChatImage | null>('chat_image', { conversationId: conversation, id }).then(value => {
-        setPreview(value);setError(value === null);
+      void invoke<ChatImage[]>('chat_gallery', { conversationId: conversation, id }).then(value => {
+        setPreview(value);setError(value.length === 0);
       }).catch(() => setError(true)).finally(() => setBusy(false));
     }}><Icon name="picture"/>查看本机图片</button>}
     {error && <small role="alert">图片无法读取。</small>}

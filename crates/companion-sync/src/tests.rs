@@ -1452,12 +1452,12 @@ fn explicit_scan_copies_api_only_over_mutual_tls_and_never_into_qr_or_sqlite() {
         .make_invite(vec![format!("127.0.0.1:{}", pc.port)], true)
         .unwrap();
     phone.pair_scanned(&next.text).unwrap();
-    assert!(target.get().unwrap().expose() == replacement.expose());
+    assert!(target.get().unwrap().expose() == key.expose());
     assert_eq!(
         phone.status().unwrap().peers[0]
             .api_configuration
             .as_deref(),
-        Some("updated")
+        Some("configuration_conflict")
     );
     assert_eq!(phone.store.lock().unwrap().personas().unwrap().len(), 1);
     pc.stop();
@@ -1776,6 +1776,67 @@ fn stage4_real_tls_plan_outcomes_and_share_receipts_dedupe_on_both_devices() {
         );
         assert_eq!(s.managed_memories(&p).unwrap().len(), 1);
     }
+    pc.stop();
+    phone.stop();
+}
+
+#[test]
+fn paired_provider_configs_pass_only_inside_mutual_tls() {
+    struct ProviderFixture {
+        source: bool,
+        received: Mutex<Vec<PairProvider>>,
+    }
+    impl ProviderHandoff for ProviderFixture {
+        fn snapshot(&self) -> Result<Vec<PairProvider>> {
+            if !self.source {
+                return Ok(Vec::new());
+            }
+            Ok(vec![
+                PairProvider::new(
+                    PairProviderKind::QwenVision,
+                    serde_json::json!({"model":"qwen-fixture"}),
+                    Secret::new("fixture-qwen-key-not-secret".into()).unwrap(),
+                ),
+                PairProvider::new(
+                    PairProviderKind::Speech,
+                    serde_json::json!({"voice_id":"fixture-speech"}),
+                    Secret::new("fixture-speech-key-not-secret".into()).unwrap(),
+                ),
+            ])
+        }
+        fn receive(&self, record: PairProvider) -> Result<bool> {
+            self.received.lock().unwrap().push(record);
+            Ok(false)
+        }
+    }
+    let pc = service_named("电脑");
+    let phone = service_named("手机");
+    pc.configure_platform(true, false);
+    phone.configure_platform(false, true);
+    pc.configure_provider_handoff(Arc::new(ProviderFixture {
+        source: true,
+        received: Mutex::new(vec![]),
+    }))
+    .unwrap();
+    let target = Arc::new(ProviderFixture {
+        source: false,
+        received: Mutex::new(vec![]),
+    });
+    phone.configure_provider_handoff(target.clone()).unwrap();
+    let qr = pc
+        .make_invite(vec![format!("127.0.0.1:{}", pc.port)], true)
+        .unwrap();
+    assert!(!qr.text.contains("fixture-qwen-key") && !qr.svg.contains("fixture-speech-key"));
+    phone.pair_scanned(&qr.text).unwrap();
+    let received = target.received.lock().unwrap();
+    assert_eq!(received.len(), 2);
+    assert!(received[0].kind == PairProviderKind::QwenVision);
+    assert_eq!(received[0].settings["model"], "qwen-fixture");
+    assert!(received[1].kind == PairProviderKind::Speech);
+    assert!(received[1].secret().expose() == "fixture-speech-key-not-secret");
+    let status = serde_json::to_string(&phone.status().unwrap()).unwrap();
+    assert!(!status.contains("fixture-qwen-key") && !status.contains("fixture-speech-key"));
+    assert!(status.contains("providers_received"));
     pc.stop();
     phone.stop();
 }

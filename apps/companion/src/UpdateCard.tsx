@@ -1,4 +1,5 @@
-import { invoke } from '@tauri-apps/api/core';
+import { Channel, invoke } from '@tauri-apps/api/core';
+import packageInfo from '../package.json';
 import { useState } from 'react';
 import { Confirmation } from './Confirmation';
 import { Icon } from './OceanDesign';
@@ -22,6 +23,7 @@ const problems: { [key: string]: string } = {
   UPDATE_ANDROID_IDENTITY: 'APK 证书、安装身份或版本与当前应用不兼容，请保留现有安装和数据。',
   UPDATE_INSTALLER_FAILED: '未能启动系统安装程序。',
   UPDATE_STORAGE_FAILED: '无法写入本机下载目录，请检查空间和权限。',
+  UPDATE_BACKUP_FAILED: '更新前的本地备份失败，请检查数据目录和可用磁盘空间后重试。',
   UPDATE_CHAT_BUSY: '请等待当前回复完成或先停止生成。',
   UPDATE_BUSY: '更新任务正在执行。',
 };
@@ -31,6 +33,7 @@ export function UpdateCard({ version }: { version?: string }) {
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [hint, setHint] = useState('');
+  const [progress, setProgress] = useState<number>();
   const [confirm, setConfirm] = useState<'download' | 'install' | null>(null);
   const latest = check?.latest;
   async function perform(label: string, work: () => Promise<void>) {
@@ -39,13 +42,13 @@ export function UpdateCard({ version }: { version?: string }) {
     setHint('');
     try { await work(); }
     catch (problem) { setError(problems[String(problem)] ?? '更新操作未完成。'); }
-    finally { setBusy(''); }
+    finally { setBusy(''); setProgress(undefined); }
   }
 
   return <section className="settings-card update-card" aria-labelledby="update-title">
     <div className="card-heading"><span className="card-icon"><Icon name="download"/></span><div><h2 id="update-title">应用更新</h2><p>从项目 GitHub 正式发布检查更新。</p></div></div>
     <dl className="update-versions">
-      <div><dt>当前版本</dt><dd>{check?.current_version ?? version ?? '0.1.0'}</dd></div>
+      <div><dt>当前版本</dt><dd>{check?.current_version ?? version ?? packageInfo.version}</dd></div>
       <div><dt>最新正式版</dt><dd>{latest?.version ?? (check ? '暂无正式发布' : '尚未检查')}</dd></div>
       {latest && <div><dt>发布日期</dt><dd>{new Date(latest.published_at).toLocaleDateString('zh-CN')}</dd></div>}
     </dl>
@@ -63,6 +66,7 @@ export function UpdateCard({ version }: { version?: string }) {
         : <button className="primary" type="button" disabled={!!busy} onClick={() => setConfirm('download')}>下载更新</button>)}
     </div>
     {busy && <p role="status">{busy}…</p>}
+    {progress !== undefined && <div className="update-progress"><progress aria-label="下载安装包进度" value={progress} max={100}/> {progress}%</div>}
     {hint && <p role="status">{hint}</p>}
     {error && <p className="inline-error" role="alert">{error}</p>}
     {runtimeMode !== 'native' && <p className="field-help">请在原生应用检查更新。</p>}
@@ -73,7 +77,9 @@ export function UpdateCard({ version }: { version?: string }) {
         setConfirm(null);
         void perform(action === 'download' ? '正在下载和校验' : '正在交给系统安装', async () => {
           if (action === 'download') {
-            await invoke('update_download', { version: latest.version, confirmed: true });
+            const channel = new Channel<number>();
+            channel.onmessage = percent => setProgress(percent);
+            await invoke('update_download', { version: latest.version, confirmed: true, onProgress: channel });
             setCheck(current => current && { ...current, ready: true });
           } else {
             const status = await invoke<string>('update_install', { version: latest.version, confirmed: true });

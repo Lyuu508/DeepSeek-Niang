@@ -1,3 +1,4 @@
+pub mod cloud;
 use crate::AppState;
 use base64::{Engine, engine::general_purpose::STANDARD};
 use companion_core::{
@@ -109,6 +110,7 @@ pub async fn voice_voices(window: WebviewWindow) -> Reply<Vec<Voice>> {
 pub async fn voice_speak(
     window: WebviewWindow,
     state: State<'_, AppState>,
+    remote: State<'_, cloud::CloudVoiceHost>,
     persona_id: String,
     session: String,
     text: String,
@@ -129,6 +131,12 @@ pub async fn voice_speak(
         let (speed, pitch) = prefs.expression(&mood.kind, mood.intensity_milli);
         (prefs, speed, pitch)
     };
+    if let Some(take) = remote
+        .synthesize(&state, &window, &persona_id, text, speed)
+        .await?
+    {
+        return Ok(take);
+    }
     #[cfg(target_os = "windows")]
     return windows::speak(&window, prefs.voice_id, speed, pitch, text.into()).await;
     #[cfg(target_os = "android")]

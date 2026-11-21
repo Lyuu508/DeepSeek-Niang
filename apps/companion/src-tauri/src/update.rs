@@ -88,6 +88,7 @@ pub async fn update_download(
     host: State<'_, UpdateHost>,
     version: String,
     confirmed: bool,
+    on_progress: tauri::ipc::Channel<u8>,
 ) -> Reply<()> {
     require_main(&window)?;
     if !confirmed {
@@ -105,7 +106,11 @@ pub async fn update_download(
         .app_cache_dir()
         .map_err(|_| "UPDATE_STORAGE_FAILED")?
         .join("companion-updates");
-    let download = Updater::new()?.download(latest, &folder).await?;
+    let download = Updater::new()?
+        .download(latest, &folder, |percent| {
+            let _ = on_progress.send(percent);
+        })
+        .await?;
     verify(window.app_handle(), &download).await?;
     session.ready = Some(download);
     Ok(())
@@ -171,7 +176,30 @@ pub async fn update_install(
         return Err("UPDATE_CHECK_REQUIRED");
     }
     let download = session.ready.take().ok_or("UPDATE_CHECK_REQUIRED")?;
-    let result = launch(window.app_handle(), &download).await;
+    let result = async {
+        verify(window.app_handle(), &download).await?;
+        let directory = window
+            .app_handle()
+            .path()
+            .app_data_dir()
+            .map_err(|_| "UPDATE_BACKUP_FAILED")?
+            .join("update-backups");
+        let store = app_state.0.store.clone();
+        tokio::task::spawn_blocking(move || {
+            store
+                .lock()
+                .map_err(|_| "UPDATE_BACKUP_FAILED")?
+                .backup_for_upgrade(&directory)
+                .map_err(|_| "UPDATE_BACKUP_FAILED")
+        })
+        .await
+        .map_err(|_| "UPDATE_BACKUP_FAILED")??;
+        if app_state.0.active_request().is_some() {
+            return Err("UPDATE_CHAT_BUSY");
+        }
+        launch(window.app_handle(), &download)
+    }
+    .await;
     match result {
         Ok("closing_for_install") => {
             download.retain();
@@ -182,8 +210,9 @@ pub async fn update_install(
     result
 }
 
-async fn launch(app: &AppHandle, download: &Download) -> Reply<&'static str> {
-    verify(app, download).await?;
+fn launch(app: &AppHandle, download: &Download) -> Reply<&'static str> {
+    #[cfg(not(target_os = "android"))]
+    let _ = app;
     #[cfg(target_os = "android")]
     {
         android_action(app, download, "installUpdate")

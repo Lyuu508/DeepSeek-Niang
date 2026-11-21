@@ -4,6 +4,7 @@ pub mod sse;
 #[cfg(test)]
 mod tests;
 pub mod video_cloud;
+pub mod voice_cloud;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

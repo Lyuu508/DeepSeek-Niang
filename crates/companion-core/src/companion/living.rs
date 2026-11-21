@@ -282,6 +282,15 @@ impl Store {
         now: i64,
         tick: i64,
     ) -> Result<Option<PreparedShare>> {
+        self.prepare_proactive_candidate(now, tick, None)
+    }
+
+    pub fn prepare_proactive_candidate(
+        &mut self,
+        now: i64,
+        tick: i64,
+        selection: Option<&str>,
+    ) -> Result<Option<PreparedShare>> {
         for persona in self.personas()? {
             let p = &persona.id;
             let prefs = self.companion_preferences(p)?;
@@ -291,7 +300,7 @@ impl Store {
             {
                 continue;
             }
-            let item:Option<(String,String)>=self.conn.query_row("SELECT p.id,e.description FROM companion_proactive p JOIN companion_life_events e ON e.id=p.source_life_event_id JOIN companion_activities a ON a.id=e.activity_id WHERE p.persona_id=?1 AND p.host_device_id=?2 AND p.state='candidate' AND e.kind='completed' AND a.state='completed' ORDER BY p.created_at_ms,p.id LIMIT 1",params![p,self.device_id],|r|Ok((r.get(0)?,r.get(1)?))).optional()?;
+            let item:Option<(String,String)>=self.conn.query_row("SELECT p.id,e.description FROM companion_proactive p JOIN companion_life_events e ON e.id=p.source_life_event_id JOIN companion_activities a ON a.id=e.activity_id WHERE p.persona_id=?1 AND p.host_device_id=?2 AND p.state='candidate' AND e.kind='completed' AND a.state='completed' AND (?3 IS NULL OR p.id=?3) ORDER BY p.created_at_ms,p.id LIMIT 1",params![p,self.device_id,selection],|r|Ok((r.get(0)?,r.get(1)?))).optional()?;
             let Some((id, description)) = item else {
                 continue;
             };

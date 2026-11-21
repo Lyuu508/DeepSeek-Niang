@@ -12,6 +12,7 @@ pub mod ports;
 pub mod recycle;
 pub mod relationship;
 pub mod replication;
+pub mod stickers;
 pub mod storage;
 pub mod task;
 pub mod video;

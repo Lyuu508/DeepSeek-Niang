@@ -1,6 +1,8 @@
-use companion_core::storage::Store;
-use companion_secrets::SecretStore;
-use companion_sync::{SyncService, discovery::Discovery};
+use companion_core::{storage::Store, video_device::VideoDeviceSlot};
+use companion_secrets::{SecretStore, VaultError};
+use companion_sync::{
+    Error, PairProvider, PairProviderKind, ProviderHandoff, SyncService, discovery::Discovery,
+};
 use std::sync::{
     Arc, Mutex,
     atomic::{AtomicBool, Ordering},
@@ -13,11 +15,111 @@ fn sync_error(error: impl Into<companion_sync::Error>) -> String {
     error.into().code().to_owned()
 }
 
+pub struct PairedProviders {
+    pub store: Arc<Mutex<Store>>,
+    pub qwen: Arc<dyn SecretStore>,
+    pub speech: Arc<dyn SecretStore>,
+}
+
+impl PairedProviders {
+    fn vault(&self, kind: PairProviderKind) -> &dyn SecretStore {
+        match kind {
+            PairProviderKind::QwenVision => self.qwen.as_ref(),
+            PairProviderKind::Speech => self.speech.as_ref(),
+        }
+    }
+
+    fn read(
+        store: &Store,
+        kind: PairProviderKind,
+    ) -> companion_sync::Result<Option<serde_json::Value>> {
+        match kind {
+            PairProviderKind::QwenVision => store.read_video_device(VideoDeviceSlot::Provider),
+            PairProviderKind::Speech => store.read_cloud_voice(None),
+        }
+        .map_err(Error::from)
+    }
+
+    fn validate(kind: PairProviderKind, value: &serde_json::Value) -> companion_sync::Result<()> {
+        match kind {
+            PairProviderKind::QwenVision => {
+                serde_json::from_value::<companion_chat::video_cloud::QwenSettings>(value.clone())
+                    .map_err(|_| Error::Invalid)?
+                    .validate()
+                    .map_err(|_| Error::Invalid)
+            }
+            PairProviderKind::Speech => {
+                serde_json::from_value::<companion_chat::voice_cloud::SpeechSettings>(value.clone())
+                    .map_err(|_| Error::Invalid)?
+                    .validate()
+                    .map_err(|_| Error::Invalid)
+            }
+        }
+    }
+}
+
+impl ProviderHandoff for PairedProviders {
+    fn snapshot(&self) -> companion_sync::Result<Vec<PairProvider>> {
+        let store = self.store.lock().map_err(|_| Error::Storage)?;
+        let mut providers = Vec::new();
+        for kind in [PairProviderKind::QwenVision, PairProviderKind::Speech] {
+            let Some(settings) = Self::read(&store, kind)? else {
+                continue;
+            };
+            Self::validate(kind, &settings)?;
+            match self.vault(kind).get() {
+                Ok(key) => providers.push(PairProvider::new(kind, settings, key)),
+                Err(VaultError::Missing) => {}
+                Err(_) => return Err(Error::Vault),
+            }
+        }
+        Ok(providers)
+    }
+
+    fn receive(&self, provider: PairProvider) -> companion_sync::Result<bool> {
+        Self::validate(provider.kind, &provider.settings)?;
+        let store = self.store.lock().map_err(|_| Error::Storage)?;
+        let local = Self::read(&store, provider.kind)?;
+        let vault = self.vault(provider.kind);
+        match vault.get() {
+            Ok(key) => {
+                return Ok(local.as_ref() != Some(&provider.settings)
+                    || key.expose() != provider.secret().expose());
+            }
+            Err(VaultError::Missing) => {}
+            Err(_) => return Err(Error::Vault),
+        }
+        if local.is_some_and(|value| value != provider.settings) {
+            return Ok(true);
+        }
+        vault.set(provider.secret()).map_err(|_| Error::Vault)?;
+        let verified = vault
+            .get()
+            .is_ok_and(|value| value.expose() == provider.secret().expose());
+        if !verified {
+            let _ = vault.delete();
+            return Err(Error::Vault);
+        }
+        let stored = match provider.kind {
+            PairProviderKind::QwenVision => {
+                store.write_video_device(VideoDeviceSlot::Provider, Some(provider.settings))
+            }
+            PairProviderKind::Speech => store.write_cloud_voice_provider(provider.settings),
+        };
+        if let Err(error) = stored {
+            let _ = vault.delete();
+            return Err(error.into());
+        }
+        Ok(false)
+    }
+}
+
 pub struct SyncHost {
     pub suspended: AtomicBool,
     pub store: Arc<Mutex<Store>>,
     pub credentials: Arc<dyn SecretStore>,
     pub api_credentials: Arc<dyn SecretStore>,
+    pub providers: Arc<PairedProviders>,
     pub discovery: Arc<dyn Discovery>,
     pub service: Mutex<Option<Arc<SyncService>>>,
 }
@@ -42,6 +144,9 @@ impl SyncHost {
         started.configure_platform(cfg!(target_os = "windows"), cfg!(target_os = "android"));
         started
             .configure_api_vault(self.api_credentials.clone())
+            .map_err(sync_error)?;
+        started
+            .configure_provider_handoff(self.providers.clone())
             .map_err(sync_error)?;
         *service = Some(started.clone());
         Ok(started)

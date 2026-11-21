@@ -1,3 +1,4 @@
+import { FileDrop } from '../FileDrop';
 import { Art, PageHeader } from '../OceanDesign';
 import { useEffect, useId, useRef, useState } from 'react';
 import { Confirmation } from '../Confirmation';
@@ -172,12 +173,8 @@ export function PluginManager({ persona, name }: { persona: string; name: string
     <PageHeader title="插件管理" description={name ? `当前人格 · ${name}` : undefined} icon="plugin" art="thinking" scene="scene-plugins"/>
     <section className="settings-card">
       <h2>导入本地插件</h2>
-      <label htmlFor={fileId}>选择 JSON 清单</label>
-      <input id={fileId} type="file" accept=".json,application/json" disabled={!enabled || busy}
-        onChange={e => {
-          const file = e.target.files?.[0];
-          e.target.value = '';
-          if (!file) return;
+      <FileDrop id={fileId} label="选择或拖入插件清单" accept=".json,application/json" icon="plugin"
+        disabled={!enabled || busy} onFile={file => {
           if (!file.name.toLowerCase().endsWith('.json') || file.size > 16_384) {
             setProblem('请选择不超过 16 KB 的 JSON 清单。');
             return;

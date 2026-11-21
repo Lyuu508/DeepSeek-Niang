@@ -16,7 +16,7 @@ class Versioning(unittest.TestCase):
                 version.next_version(value)
 
     def test_platform_versions_and_identity_match_the_single_source(self):
-        self.assertEqual(module('version').check(), {'version':'0.1.0','androidVersionCode':1011})
+        self.assertEqual(module('version').check(), {'version':'0.1.1','androidVersionCode':1012})
 
 
 class AndroidVersionSequence(unittest.TestCase):

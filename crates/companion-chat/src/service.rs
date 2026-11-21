@@ -53,6 +53,7 @@ struct Active {
     runs: BTreeMap<String, Run>,
     changing_key: bool,
     background: Option<Run>,
+    pending_share: Option<CancellationToken>,
 }
 pub struct ChatService {
     pub store: Arc<Mutex<Store>>,
@@ -78,7 +79,7 @@ impl ChatService {
         input: StartChat,
         observer: Observer,
     ) -> Result<PreparedChat, ChatFailure> {
-        self.start_checked(input, None, observer, None)
+        self.start_checked(input, None, observer, &[])
     }
 
     pub fn start_with_image(
@@ -87,7 +88,16 @@ impl ChatService {
         observer: Observer,
         image: companion_core::chat_images::ChatImage,
     ) -> Result<PreparedChat, ChatFailure> {
-        self.start_checked(input, None, observer, Some(&image))
+        self.start_with_images(input, observer, std::slice::from_ref(&image))
+    }
+
+    pub fn start_with_images(
+        self: &Arc<Self>,
+        input: StartChat,
+        observer: Observer,
+        images: &[companion_core::chat_images::ChatImage],
+    ) -> Result<PreparedChat, ChatFailure> {
+        self.start_checked(input, None, observer, images)
     }
 
     /// The desktop pet submits exactly to the persona shown beside its composer.
@@ -97,7 +107,7 @@ impl ChatService {
         persona_id: &str,
         observer: Observer,
     ) -> Result<PreparedChat, ChatFailure> {
-        self.start_checked(input, Some(persona_id), observer, None)
+        self.start_checked(input, Some(persona_id), observer, &[])
     }
 
     fn start_checked(
@@ -105,11 +115,14 @@ impl ChatService {
         input: StartChat,
         required_persona: Option<&str>,
         observer: Observer,
-        image: Option<&companion_core::chat_images::ChatImage>,
+        images: &[companion_core::chat_images::ChatImage],
     ) -> Result<PreparedChat, ChatFailure> {
         let mut active = self.active.lock().map_err(|_| ChatFailure::new("BUSY"))?;
         if active.changing_key || !active.runs.is_empty() {
             return Err(ChatFailure::new("BUSY"));
+        }
+        if let Some(pending) = &active.pending_share {
+            pending.cancel();
         }
         if let Some(background) = &active.background {
             background.cancel.cancel();
@@ -126,7 +139,7 @@ impl ChatService {
                 return Err(ChatFailure::new("PET_PERSONA_CHANGED"));
             }
             let settings = store.settings_for_conversation(&input.conversation_id)?;
-            let prepared = store.begin_chat_with_image(&input, &settings, image)?;
+            let prepared = store.begin_chat_with_images(&input, &settings, images)?;
             let prompt = match store.companion_context(&prepared.conversation_id, &settings) {
                 Ok(prompt) => prompt,
                 Err(error) => {
@@ -258,6 +271,9 @@ impl ChatService {
                 result.finish_reason.as_deref(),
                 result.usage.as_ref(),
             )?;
+            if state == "complete" {
+                let _ = store.maybe_attach_sticker(&task.conversation_id, &task.assistant_id);
+            }
             Ok(store.generation(&task.assistant_id)?)
         })();
         match final_message {
@@ -279,11 +295,21 @@ impl ChatService {
             }
         }
     }
+    #[cfg(test)]
+    pub(crate) fn share_is_pending(&self) -> bool {
+        self.active
+            .lock()
+            .is_ok_and(|active| active.pending_share.is_some())
+    }
+
     pub fn cancel_life_generation(&self) {
-        if let Ok(active) = self.active.lock()
-            && let Some(run) = &active.background
-        {
-            run.cancel.cancel();
+        if let Ok(active) = self.active.lock() {
+            if let Some(pending) = &active.pending_share {
+                pending.cancel();
+            }
+            if let Some(run) = &active.background {
+                run.cancel.cancel();
+            }
         }
     }
     /// Stop provider work after a local or synchronized lifecycle transition.
@@ -291,6 +317,9 @@ impl ChatService {
         let Ok(active) = self.active.lock() else {
             return;
         };
+        if let Some(pending) = &active.pending_share {
+            pending.cancel();
+        }
         if active.runs.is_empty() && active.background.is_none() {
             return;
         }
@@ -354,6 +383,9 @@ impl ChatService {
                 return Err(ChatFailure::new("BUSY"));
             }
             state.changing_key = true;
+            if let Some(pending) = &state.pending_share {
+                pending.cancel();
+            }
             state
                 .runs
                 .values()

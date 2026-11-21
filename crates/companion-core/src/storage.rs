@@ -63,6 +63,40 @@ impl Store {
             identity.unwrap_or_else(|| (Uuid::new_v4().to_string(), Uuid::new_v4().to_string()));
         Self::initialize(conn, &device, &profile, guard)
     }
+    /// Make and verify a consistent copy of the committed database before an installer runs.
+    pub fn backup_for_upgrade(&self, directory: &Path) -> Result<std::path::PathBuf> {
+        let io_error = |_| Error::Invalid("upgrade backup storage");
+        std::fs::create_dir_all(directory).map_err(io_error)?;
+        let backup = directory.join(format!("companion-{}.sqlite3", Uuid::new_v4()));
+        let pending = backup.with_extension("partial");
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        drop(options.open(&pending).map_err(io_error)?);
+        let result = (|| {
+            self.conn
+                .backup("main", &pending, rusqlite::backup::NO_PROGRESS)?;
+            let snapshot =
+                Connection::open_with_flags(&pending, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+            let outcome: String =
+                snapshot.pragma_query_value(None, "quick_check", |row| row.get(0))?;
+            if outcome != "ok" {
+                return Err(Error::Invalid("upgrade backup integrity"));
+            }
+            drop(snapshot);
+            std::fs::rename(&pending, &backup).map_err(io_error)?;
+            Ok(backup)
+        })();
+        if result.is_err() {
+            let _ = std::fs::remove_file(&pending);
+        }
+        result
+    }
+
     /// Explicit identities for the isolated two-replica protocol laboratory.
     #[cfg(feature = "lab")]
     pub fn open_lab(path: impl AsRef<Path>, device: &str, profile: &str) -> Result<Self> {

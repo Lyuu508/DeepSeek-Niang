@@ -869,3 +869,24 @@ async fn pet_chat_rejects_a_stale_persona_and_writes_to_the_shared_permanent_thr
             .any(|m| m.id == finished.id && m.state == "complete")
     );
 }
+
+#[tokio::test]
+async fn cancelling_the_pending_share_does_not_make_a_provider_request() {
+    let (endpoint, requests, task) = server(vec![success("不能在取消后发送")]).await;
+    let (service, _) = service(endpoint);
+    seed_life(&service);
+    let worker = service.clone();
+    let delayed =
+        tokio::spawn(async move { worker.life_tick_delayed(1090000, 1090000, true).await });
+    tokio::time::timeout(std::time::Duration::from_secs(2), async {
+        while !service.share_is_pending() {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
+    service.cancel_life_generation();
+    assert_eq!(delayed.await.unwrap().unwrap(), 0);
+    assert!(requests.lock().unwrap().is_empty());
+    task.abort();
+}

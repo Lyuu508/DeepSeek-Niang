@@ -1,4 +1,8 @@
-# v0.1.0 验收版
+# v0.1.1 当前进度
+
+本轮沿用 GitHub main 的 v0.1.0 代码和 schema 10，推进双端交互、视频问答、表情、云语音、配对配置和安全更新。验收版 Android 安装身份与正式原签名身份的区别需要在升级发布前核对。完整长视频、B站官方账号接口、虚拟媒体生成与端到端实机验收尚待完成。[v0.1.1 进度与限制](docs/V011_DEVELOPMENT.md)
+
+## v0.1.0 验收版
 
 本版更新双端海洋界面，加入授权视频识别与 DeepSeek 视频问答，以及「关于」中的更新检查。Windows EXE 和 Android 验收 APK 使用同一源码提交，已从 GitHub 回下载并确认摘要。实机安装、家庭网络、真实 API 和正式 Android 升级仍待验收。[验收下载](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.0-acceptance.1) · [验收清单](docs/V010_ACCEPTANCE.md)
 

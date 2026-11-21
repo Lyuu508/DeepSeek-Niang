@@ -1,3 +1,7 @@
+# v0.1.1 开发与发布
+
+用户授权提交、推送、构建与正式发布 v0.1.1，版本整数为 Android 1012。基线为 GitHub main `71bf470cd2cc53f0240150d98b434d2e621a84f4`。正式发布依赖真实构建与数据兼容验收，保留签名和应用身份。通过 GitHub 公布的 v0.1.0 APK 使用独立验收标识 `io.local.deepseekcompanion.acceptance`，正式原身份为 `io.local.deepseekcompanion`。本轮建置保留正式 ID，需要对应的原证书签名与安装验证。[验证范围](docs/V011_DEVELOPMENT.md)
+
 # 当前开发 · v0.1.0 验收候选
 
 v0.1.0 验收包由 `12c84651e6185ba90ef55c3b3cc3877952a8a1df` 构建，已通过 GitHub 的 `v0.1.0-acceptance.1` 交付。用户已授权将验收源码与文档同步到 main。创建正式 v0.1.0 Tag、正式 Release 和发布正式升级安装包仍以实机验收及用户明确表示“测试通过，同意发布正式版。”为准。

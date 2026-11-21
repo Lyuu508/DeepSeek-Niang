@@ -303,6 +303,7 @@ async fn start_chat(
     on_event: Channel<ChatEvent>,
     state: State<'_, AppState>,
     image: Option<companion_core::chat_images::ChatImage>,
+    images: Option<Vec<companion_core::chat_images::ChatImage>>,
 ) -> Result<PreparedChat, ChatFailure> {
     {
         let store = state
@@ -313,9 +314,11 @@ async fn start_chat(
         store.permanent_persona(&input.conversation_id)?;
     }
     let observer = Arc::new(move |event| on_event.send(event).is_ok());
-    match image {
-        Some(image) => state.0.start_with_image(input, observer, image),
-        None => state.0.start(input, observer),
+    match (image, images) {
+        (None, Some(images)) => state.0.start_with_images(input, observer, &images),
+        (Some(image), None) => state.0.start_with_image(input, observer, image),
+        (None, None) => state.0.start(input, observer),
+        _ => Err(ChatFailure::new("CHAT_IMAGE_INVALID")),
     }
 }
 #[tauri::command]
@@ -343,6 +346,67 @@ async fn chat_image(
         .map_err(|_| ChatFailure::new("STORAGE_ERROR"))?
         .local_chat_image(&conversation_id, &id)?)
 }
+#[tauri::command]
+async fn chat_gallery(
+    window: tauri::WebviewWindow,
+    conversation_id: String,
+    id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<companion_core::chat_images::ChatImage>, ChatFailure> {
+    if window.label() != "main" {
+        return Err(ChatFailure::new("CHAT_IMAGE_INVALID"));
+    }
+    Ok(state
+        .0
+        .store
+        .lock()
+        .map_err(|_| ChatFailure::new("STORAGE_ERROR"))?
+        .local_chat_gallery(&conversation_id, &id)?)
+}
+
+#[derive(serde::Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+enum StickerAction {
+    List,
+    Add {
+        tag: String,
+        image: companion_core::chat_images::ChatImage,
+    },
+    Remove {
+        id: String,
+    },
+    Automatic {
+        enabled: bool,
+    },
+}
+
+#[tauri::command]
+async fn sticker_catalog(
+    window: tauri::WebviewWindow,
+    state: State<'_, AppState>,
+    persona: String,
+    action: StickerAction,
+) -> Result<companion_core::stickers::StickerCatalog, ChatFailure> {
+    if window.label() != "main" {
+        return Err(ChatFailure::new("INVALID_INPUT"));
+    }
+    let store = state
+        .0
+        .store
+        .lock()
+        .map_err(|_| ChatFailure::new("STORAGE_ERROR"))?;
+    if store.active_persona_id()? != persona {
+        return Err(ChatFailure::new("INVALID_INPUT"));
+    }
+    match action {
+        StickerAction::List => {}
+        StickerAction::Add { tag, image } => store.add_sticker(&persona, tag, image)?,
+        StickerAction::Remove { id } => store.remove_sticker(&persona, &id)?,
+        StickerAction::Automatic { enabled } => store.set_automatic_stickers(&persona, enabled)?,
+    }
+    Ok(store.stickers(&persona)?)
+}
+
 #[tauri::command]
 async fn stop_generation(
     request_id: String,
@@ -415,14 +479,17 @@ pub fn run() {
             let mut store = Store::open(directory.join("companion.sqlite3"))?;
             store.set_device_platform(std::env::consts::OS)?;
             let credentials = vault(app.handle(), &store.profile_id)?;
-            // Derive a separate stable UUID for the Qwen credential. It is not a LAN handoff slot.
+            // Derive separate slots for video and cloud speech credentials.
             let mut qwen_slot = *Uuid::parse_str(&store.profile_id)?.as_bytes();
             qwen_slot[0] ^= 0x52;
             qwen_slot[15] ^= 0x81;
-            app.manage(video_cloud::CloudVideoHost::new(vault(
-                app.handle(),
-                &Uuid::from_bytes(qwen_slot).to_string(),
-            )?));
+            let qwen_vault = vault(app.handle(), &Uuid::from_bytes(qwen_slot).to_string())?;
+            app.manage(video_cloud::CloudVideoHost::new(qwen_vault.clone()));
+            let mut voice_slot = *Uuid::parse_str(&store.profile_id)?.as_bytes();
+            voice_slot[0] ^= 0x7A;
+            voice_slot[15] ^= 0x32;
+            let voice_vault = vault(app.handle(), &Uuid::from_bytes(voice_slot).to_string())?;
+            app.manage(voice::cloud::CloudVoiceHost::new(voice_vault.clone()));
             let service = Arc::new(ChatService::new(
                 Arc::new(Mutex::new(store)),
                 credentials,
@@ -441,13 +508,16 @@ pub fn run() {
             std::thread::spawn(move || {
                 loop {
                     let Some(service) = weak.upgrade() else { break };
-                    let _ = tauri::async_runtime::block_on(service.life_tick(
+                    let cycle = std::time::Instant::now();
+                    let _ = tauri::async_runtime::block_on(service.life_tick_delayed(
                         companion_core::chat::now_ms(),
                         boot.elapsed().as_millis().min(i64::MAX as u128) as i64,
                         cfg!(target_os = "windows"),
                     ));
                     drop(service);
-                    std::thread::sleep(std::time::Duration::from_secs(30));
+                    std::thread::sleep(
+                        std::time::Duration::from_secs(30).saturating_sub(cycle.elapsed()),
+                    );
                 }
             });
             // Separate secure-storage slot from the local DeepSeek API key.
@@ -462,6 +532,11 @@ pub fn run() {
                 store: service.store.clone(),
                 credentials: sync_vault,
                 api_credentials: service.vault.clone(),
+                providers: Arc::new(sync::PairedProviders {
+                    store: service.store.clone(),
+                    qwen: qwen_vault,
+                    speech: voice_vault,
+                }),
                 discovery: sync::discovery(app.handle()),
                 service: Mutex::new(None),
             });
@@ -492,6 +567,8 @@ pub fn run() {
             change_plugin,
             chat_image_ids,
             chat_image,
+            chat_gallery,
+            sticker_catalog,
             update::update_check,
             update::update_download,
             update::update_install,
@@ -503,6 +580,7 @@ pub fn run() {
             video_cloud::cloud_video_recognize,
             video_cloud::cloud_video_answer,
             video_cloud::cloud_video_clear,
+            video_cloud::cloud_video_save_chat,
             due_plugin_reminders,
             sync::sync_status,
             sync::sync_command,
@@ -552,6 +630,9 @@ pub fn run() {
             #[cfg(target_os = "windows")]
             video::video_control,
             voice::voice_preferences,
+            voice::cloud::cloud_voice_status,
+            voice::cloud::cloud_voice_save,
+            voice::cloud::cloud_voice_auto,
             voice::voice_voices,
             voice::voice_speak,
             voice::voice_guide,

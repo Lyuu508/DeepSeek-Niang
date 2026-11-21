@@ -34,6 +34,13 @@ export const voiceAPI = {
 };
 
 const errors: Record<string, string> = {
+  VOICE_CLOUD_SETTINGS: '请检查 HTTPS 语音接口、模型和音色标识。',
+  VOICE_CLOUD_KEY_REQUIRED: '请先保存语音服务的 API Key。',
+  VOICE_CLOUD_KEY_FORMAT: '语音密钥格式无效。',
+  VOICE_CLOUD_REENTER_KEY: '更换服务地址需要重新输入对应服务的密钥。',
+  VOICE_CLOUD_AUTH: '语音服务拒绝了凭据，请检查权限和模型。',
+  VOICE_CLOUD_BUSY: '语音服务请求频繁或额度不足，请稍后再试。',
+  VOICE_CLOUD_NETWORK: '暂时无法连接语音服务，可以继续文字聊天。',
   VOICE_BUSY: '本机语音正在处理上一项请求，请稍后重试。',
   VOICE_CANCELLED: '语音操作已停止。',
   VOICE_FOCUS_LOST: '声音播放已停止，其他应用正在使用音频。',

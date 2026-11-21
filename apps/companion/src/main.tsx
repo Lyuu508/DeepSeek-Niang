@@ -33,6 +33,7 @@ import {CompanionRail} from './CompanionRail';
 import {MemoryPanel} from './MemoryPanel';
 import {brandingReady} from './branding';
 import {VoiceSettings} from './voice/VoiceControls';
+import {CloudVoiceSettings} from './voice/CloudVoiceSettings';
 import {useVoice,type VoiceController} from './voice/useVoice';
 
 const terminal=(m:ChatMessage)=>['complete','failed','interrupted'].includes(m.state);
@@ -76,14 +77,15 @@ function SettingsPanel({boot,onRefresh,onError,voice,font,appearance,onNavigate,
   </nav>}
   <div data-setting="appearance"><AppearanceSettings control={appearance}/><FontSettings font={font}/></div>
   {runtimeMode==='native'&&boot?.platform==='windows'&&<div data-setting="pet"><PetSettingsCard/></div>}
-  {voice.enabled&&<div data-setting="voice"><VoiceSettings voice={voice} platform={boot?.platform??''}/></div>}
+  {voice.enabled&&<div data-setting="voice"><VoiceSettings voice={voice} platform={boot?.platform??''}/>{runtimeMode==='native'&&boot?.active_persona_id&&
+    <CloudVoiceSettings persona={boot.active_persona_id} voice={voice}/>}</div>}
   {notice&&<div className="notice" role="status">{notice}</div>}
   <section className="settings-card" data-setting="api"><div className="card-heading"><span className="card-icon"><Icon name="key"/></span><div><h2>DeepSeek API</h2><p>直接连接官方服务，无云端中转。</p></div><span className={`badge ${boot?.key_status.configured?'success':''}`}>{boot?.key_status.configured?'已配置密钥':'未配置密钥'}</span></div>
    <div className="storage-status"><span>本机存储</span><strong>{boot?.key_status.backend??'原生安全存储未连接'}</strong></div>
    {boot?.key_status.error&&<p className="inline-error">{boot.key_status.error.message}</p>}
    <form onSubmit={e=>{e.preventDefault();void perform(async()=>{await native.setKey(key.trim());return runtimeMode==='mock'?'模拟测试：已更新配置标记，未保存真实凭据。':'密钥已保存并通过系统存储读取核对。';});}}>
     <label htmlFor="api-key">API Key</label><div className="key-row"><input id="api-key" type="password" value={key} onChange={e=>setKey(e.target.value)} disabled={!nativeAvailable||busy} autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder={runtimeMode==='mock'?'只输入 fixture- 开头的测试文本，勿填真实密钥':'输入或替换本机 DeepSeek API Key'}/><button className="primary" disabled={!nativeAvailable||busy||!key.trim()}>保存密钥</button></div>
-    <p className="field-help">本设备的所有人格共用这份密钥；不会写入聊天数据库或普通同步日志。电脑出码、手机主动扫码时，可通过加密连接配置手机。保存后输入框会清空。</p>
+    <p className="field-help">本设备的所有人格共用这份密钥；不会写入聊天数据库或普通同步日志。电脑出码、手机主动扫码时，可通过加密连接交接 DeepSeek、千问和语音设置。已有冲突配置由本机保留。保存后输入框会清空。</p>
    </form>
    <div className="button-row"><button disabled={!nativeAvailable||busy||!boot?.key_status.configured} onClick={()=>void perform(async()=>{await native.deleteKey();return '本机密钥已删除。';})}>删除密钥</button><button disabled={!nativeAvailable||busy} onClick={()=>void perform(async()=>{const backend=await native.selfTestVault();return runtimeMode==='mock'?'模拟测试完成；未验证 Windows 或 Android 安全存储。':`${backend} 写入、读取、删除自测通过。`;})}>验证安全存储</button><small>替换或删除密钥会先停止正在生成的回复。</small></div>
   </section>
@@ -142,7 +144,8 @@ function App(){
 
  const [allMessages,setAllMessages]=useState<Record<string,ChatMessage[]>>({});
  const [drafts,setDrafts]=useState<Record<string,string>>({});
- const [images,setImages]=useState<Record<string,ChatImage|null>>({});
+ const [images,setImages]=useState<Record<string,ChatImage[]>>({});
+ const [videoDraft,setVideoDraft]=useState<{persona:string;file:File;question:string}|undefined>();
  const [localImages,setLocalImages]=useState<Record<string,string[]>>({});
  const [copied,setCopied]=useState('');
  const [error,setError]=useState<ChatFailure|null>(null);const [loading,setLoading]=useState(false);
@@ -218,6 +221,8 @@ function App(){
   };
   void poll();const timer=setInterval(()=>void poll(),1000);return()=>{stale=true;clearInterval(timer);};
  },[active?.request,active?.detached,refresh]);
+ const voiceContext={voice,persona:boot?.active_persona_id,conversation,page};
+ const latestVoice=useRef(voiceContext);latestVoice.current=voiceContext;
  const requestIsActive=(id:string)=>activeRef.current?.request===id;
  const updateActive=(value:typeof active)=>{activeRef.current=value;setActive(value);};
  const onEvent=(event:ChatEvent,fromPet=false)=>{
@@ -230,7 +235,25 @@ function App(){
   }else if(event.type==='delta'){
    setAllMessages(old=>({...old,[event.conversation_id]:(old[event.conversation_id]??[]).map(m=>m.id===event.message_id&&m.revision<=event.revision&&!terminal(m)?{...m,content:event.content,revision:event.revision,state:'generating'}:m)}));
   }else{
-   if(event.type==='finished')setAllMessages(old=>({...old,[event.conversation_id]:merge(old[event.conversation_id]??[],event.message)}));
+   if(event.type==='finished'){
+    setAllMessages(old=>({...old,[event.conversation_id]:merge(old[event.conversation_id]??[],event.message)}));
+    if (runtimeMode==='native') {
+     void invoke<string[]>('chat_image_ids',{conversationId:event.conversation_id}).then(ids=>{
+      setLocalImages(old=>({...old,[event.conversation_id]:ids}));
+     }).catch(()=>{});
+    }
+    const context=latestVoice.current;
+    if(!fromPet&&runtimeMode==='native'&&requestIsActive(event.request_id)&&event.message.state==='complete'
+      &&context.persona&&context.page==='chat'&&context.conversation===event.conversation_id){
+     void invoke<boolean>('cloud_voice_auto',{persona:context.persona}).then(enabled=>{
+      const current=latestVoice.current;
+      if(enabled&&current.persona===context.persona&&current.conversation===context.conversation
+        &&current.page==='chat'&&current.voice.phase==='idle'&&!activeRef.current){
+        void current.voice.play(event.message.content);
+      }
+     }).catch(()=>{});
+    }
+   }
    if(event.type==='failed')setError(event.error);else if(event.error&&event.error.code!=='CANCELLED')setError(event.error);
    if(activeRef.current?.request===event.request_id)updateActive(null);void refresh().catch(e=>setError(failure(e)));
   }
@@ -251,18 +274,20 @@ function App(){
  }
  async function send(regenerateUserId?:string){
   if(!conversation||activeRef.current||!boot?.key_status.configured||switching)return;
-  const text=drafts[conversation]??'';if(!regenerateUserId&&!text.trim())return;
+  const pictures=regenerateUserId?undefined:images[conversation];
+  const draft=drafts[conversation]??'';
+  const text=draft.trim()?draft:pictures?.length?'［发送了本机图片附件，请等我描述画面。］':'';
+  if(!regenerateUserId&&!text.trim())return;
   const request=crypto.randomUUID();const selected=conversation;setError(null);nearBottom.current=true;updateActive({request,conversation:selected,started:false});
   if(!regenerateUserId)setDrafts(old=>({...old,[selected]:''}));
-  const picture=regenerateUserId?undefined:images[selected]??undefined;
   try{
-   const result=await native.startChat({request_id:request,conversation_id:selected,text:regenerateUserId?null:text,regenerate_user_id:regenerateUserId??null},onEvent,picture);
-   if(picture){
-    setImages(old=>({...old,[selected]:old[selected]===picture?null:old[selected]}));
+   const result=await native.startChat({request_id:request,conversation_id:selected,text:regenerateUserId?null:text,regenerate_user_id:regenerateUserId??null},onEvent,pictures);
+   if(pictures?.length){
+    setImages(old=>({...old,[selected]:old[selected]===pictures?[]:old[selected]}));
     setLocalImages(old=>({...old,[selected]:[...new Set([...(old[selected]??[]),result.user_message_id])]}));
    }
   }
-  catch(e){setError(failure(e));if(requestIsActive(request)){updateActive(null);if(!regenerateUserId)setDrafts(old=>({...old,[selected]:old[selected]||text}));}}
+  catch(e){setError(failure(e));if(requestIsActive(request)){updateActive(null);if(!regenerateUserId)setDrafts(old=>({...old,[selected]:old[selected]||draft}));}}
  }
  async function stopCurrent(){const job=activeRef.current;if(!job)return;try{await native.stop(job.request);const list=await native.messages(job.conversation);setAllMessages(old=>({...old,[job.conversation]:list}));if(activeRef.current?.request===job.request)updateActive(null);await refresh();}catch(e){setError(failure(e));}}
  const lastUser=[...rows].reverse().find(m=>m.role==='user');const variants=rows.filter(m=>m.role==='assistant'&&!m.selected).length;
@@ -316,7 +341,10 @@ function App(){
    {!brandingReady&&<div className="branding-pending">已指定海滩角色图；原始 PNG 文件待导入，暂不使用替代人物图标。</div>}
    {error&&<div className="error-banner" role="alert"><span>{error.message}<small>{error.code}</small></span><button aria-label="关闭错误提示" onClick={()=>setError(null)}>×</button></div>}
    {reminders.reminder&&<div className="notice plugin-reminder" role="status"><span>提醒 · {reminders.reminder.label}</span><button onClick={()=>void reminders.dismiss(reminders.reminder!.id).catch(e=>setError(failure(e)))}>知道了</button></div>}
-   {page==='about'?<div className="page-scroll"><AboutPage version={boot?.version}/></div>:page==='plugins'?<div className="page-scroll"><PluginManager key={persona?.id} persona={persona?.id??''} name={persona?.name??''}/></div>:page==='video'?<div className="page-scroll"><CloudVideoPanel key={boot?.active_persona_id} personaId={boot?.active_persona_id??''} deepseekConfigured={!!boot?.key_status.configured} memories={currentCompanion?.memories??[]} previousWindows={boot?.platform==='windows'} onMemories={()=>navigate('storage')}/></div>:page==='companion'?<div className="page-scroll"><CompanionPanel key={boot?.active_persona_id} data={currentCompanion} persona={persona} onRefresh={refresh} onError={setError} onMemories={()=>setPage('storage')}/></div>:page==='sync'?<div className="page-scroll"><SyncPanel mobile={mobile} onPaired={refresh}/></div>:page==='settings'?<div className="page-scroll"><SettingsPanel key={boot?.active_persona_id??'loading'} boot={boot} voice={voice} font={font} appearance={appearance} onNavigate={navigate} onRefresh={refresh} onError={setError}/></div>:page==='storage'?<div className="page-scroll"><StoragePanel key={boot?.active_persona_id??'loading'} personaId={boot?.active_persona_id??''} onError={setError} onRefresh={refresh}/></div>:page==='personas'?<div className="page-scroll"><PersonaManager boot={boot} onSwitch={switchPersona} onRefresh={refresh} onError={setError} onSettings={()=>setPage('settings')} onErased={threads=>{
+   {page==='about'?<div className="page-scroll"><AboutPage version={boot?.version}/></div>:page==='plugins'?<div className="page-scroll"><PluginManager key={persona?.id} persona={persona?.id??''} name={persona?.name??''}/></div>:page==='video'?<div className="page-scroll"><CloudVideoPanel key={boot?.active_persona_id} personaId={boot?.active_persona_id??''} deepseekConfigured={!!boot?.key_status.configured} memories={currentCompanion?.memories??[]} previousWindows={boot?.platform==='windows'}
+        initialVideo={videoDraft?.persona===boot?.active_persona_id?videoDraft:undefined}
+        onSaved={()=>{setVideoDraft(undefined);navigate('chat');void refresh();}}
+        onMemories={()=>navigate('storage')}/></div>:page==='companion'?<div className="page-scroll"><CompanionPanel key={boot?.active_persona_id} data={currentCompanion} persona={persona} onRefresh={refresh} onError={setError} onMemories={()=>setPage('storage')}/></div>:page==='sync'?<div className="page-scroll"><SyncPanel mobile={mobile} onPaired={refresh}/></div>:page==='settings'?<div className="page-scroll"><SettingsPanel key={boot?.active_persona_id??'loading'} boot={boot} voice={voice} font={font} appearance={appearance} onNavigate={navigate} onRefresh={refresh} onError={setError}/></div>:page==='storage'?<div className="page-scroll"><StoragePanel key={boot?.active_persona_id??'loading'} personaId={boot?.active_persona_id??''} onError={setError} onRefresh={refresh}/></div>:page==='personas'?<div className="page-scroll"><PersonaManager boot={boot} onSwitch={switchPersona} onRefresh={refresh} onError={setError} onSettings={()=>setPage('settings')} onErased={threads=>{
       setAllMessages(old=>Object.fromEntries(Object.entries(old).filter(([id])=>!threads.includes(id))));
       setDrafts(old=>Object.fromEntries(Object.entries(old).filter(([id])=>!threads.includes(id))));
       setImages(old=>Object.fromEntries(Object.entries(old).filter(([id])=>!threads.includes(id))));
@@ -331,11 +359,11 @@ function App(){
      </article>)}</div>
      {variants>0&&<button className="variant-toggle" onClick={()=>setShowHistory(!showHistory)}>{showHistory?'收起历史回复':`查看历史回复（${variants}）`}</button>}<div ref={bottom}/>
     </div>
-    <ChatComposer field={input} draft={drafts[conversation]??''} name={persona?.name} image={images[conversation]}
-     onImage={image=>setImages(old=>({...old,[conversation]:image}))}
+    <ChatComposer key={conversation} field={input} draft={drafts[conversation]??''} name={persona?.name} personaId={persona?.id} images={images[conversation]??[]}
+     onImages={images=>setImages(old=>({...old,[conversation]:images}))}
+     onVideo={file=>{if(boot?.active_persona_id){setVideoDraft({persona:boot.active_persona_id,file,question:(drafts[conversation]??'').slice(0,1000)});navigate('video');}}}
      connected={connected} disabled={!connected||!conversation||loading||switching} configured={!!boot?.key_status.configured}
      canSend={canSend} mobile={mobile} voice={voice} recording={!switching}
-     historyTurns={settings.include_history?settings.history_turns:0}
      generation={active?{started:active.started,elsewhere:active.conversation!==conversation}:undefined}
      onEdit={text=>setDrafts(old=>({...old,[conversation]:text}))} onSend={()=>void send()}
      onStop={()=>void stopCurrent()} onSettings={()=>setPage('settings')}/>

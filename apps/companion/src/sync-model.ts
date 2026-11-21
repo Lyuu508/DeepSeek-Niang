@@ -28,4 +28,4 @@ Object.assign(syncErrors,{
  PAIR_KEY_TRANSFER_FAILED:'设备配对和人格同步已保留，但手机 API 配置尚未安全写入。请重新扫码或在手机设置中检查安全存储。',
  SYNC_FRAME_LIMIT:'本批数据超过传输上限，已保留本机记录。请保留错误代码供排查。'
 });
-export const apiConfigurationLabels:Record<string,string>={received:'已安全接收电脑 API 配置',updated:'已安全更新为电脑 API 配置',source_not_configured:'电脑未配置 API，手机已有配置保持',peer_update_required:'更新电脑端后可扫码配置 API',secure_storage_error:'手机安全存储未能完成 API 配置',transfer_failed:'API 配置传递未完成，请重新扫码'};
+export const apiConfigurationLabels:Record<string,string>={received:'已安全接收电脑 API 配置',updated:'已安全更新为电脑 API 配置',unchanged:'本机的 DeepSeek 密钥和电脑一致',configuration_conflict:'发现配置冲突，已保留手机当前设置',providers_received:'已通过加密配对接收电脑可用的模型配置',source_not_configured:'电脑未配置 API，手机已有配置保持',peer_update_required:'更新电脑端后可扫码配置 API',secure_storage_error:'手机安全存储未能完成 API 配置',transfer_failed:'API 配置传递未完成，请重新扫码'};

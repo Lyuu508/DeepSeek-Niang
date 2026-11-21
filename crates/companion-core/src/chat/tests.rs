@@ -476,3 +476,67 @@ fn v1_migration_preserves_raw_events_sequence_and_creates_consistent_backup() {
         1
     );
 }
+
+#[test]
+fn gallery_and_upgrade_backup_keep_the_original_message_and_images() {
+    use crate::chat_images::ChatImage;
+    let fixture = Fixture::new();
+    let mut store = Store::open(fixture.db()).unwrap();
+    let persona = store.active_persona_id().unwrap();
+    let thread = store.persona(&persona).unwrap().main_conversation_id;
+    let input = send(&thread, "升级前保留的聊天");
+    let settings = store.chat_settings().unwrap();
+    let images = ["第一张.jpg", "第二张.jpg"].map(|name| ChatImage {
+        name: name.into(),
+        jpeg: "/9j/Af/Z".into(),
+    });
+    let request = store
+        .begin_chat_with_images(&input, &settings, &images)
+        .unwrap();
+    assert!(
+        !store
+            .begin_chat_with_images(&input, &settings, &images)
+            .unwrap()
+            .is_new
+    );
+    store
+        .finish_chat(
+            &request.request_id,
+            "已收到本机附件。",
+            "complete",
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+    assert_eq!(
+        store
+            .local_chat_image(&thread, &request.user_message_id)
+            .unwrap()
+            .unwrap()
+            .name,
+        images[0].name
+    );
+    let path = store
+        .backup_for_upgrade(&fixture.0.join("before-update"))
+        .unwrap();
+    let restored = Store::open(path).unwrap();
+    assert_eq!(restored.active_persona_id().unwrap(), persona);
+    assert!(
+        restored
+            .chat_messages(&thread)
+            .unwrap()
+            .iter()
+            .any(|message| message.id == request.user_message_id)
+    );
+    let gallery = restored
+        .local_chat_gallery(&thread, &request.user_message_id)
+        .unwrap();
+    assert_eq!(
+        gallery
+            .iter()
+            .map(|image| image.name.as_str())
+            .collect::<Vec<_>>(),
+        ["第一张.jpg", "第二张.jpg"]
+    );
+}

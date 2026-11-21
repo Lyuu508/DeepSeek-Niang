@@ -211,6 +211,21 @@ impl Store {
         self.advance_life_at(now, now, windows_host)
     }
     pub fn advance_life_at(&mut self, now: i64, tick: i64, windows_host: bool) -> Result<usize> {
+        self.advance_life_clock(now, tick, windows_host, true)
+    }
+
+    pub fn advance_life_deferred(&mut self, now: i64, tick: i64) -> Result<()> {
+        self.advance_life_clock(now, tick, true, false)?;
+        Ok(())
+    }
+
+    fn advance_life_clock(
+        &mut self,
+        now: i64,
+        tick: i64,
+        windows_host: bool,
+        deliver: bool,
+    ) -> Result<usize> {
         if !windows_host {
             return Ok(0);
         }
@@ -419,7 +434,10 @@ impl Store {
             if !prefs.proactive_enabled || prefs.proactive_mode == "off" {
                 self.conn.execute("UPDATE companion_proactive SET state='dismissed' WHERE persona_id=?1 AND state='candidate'",[p])?;
             }
-            if !prefs.proactive_model_enabled && policy(&self.conn, p, &prefs, now, &stage)? {
+            if deliver
+                && !prefs.proactive_model_enabled
+                && policy(&self.conn, p, &prefs, now, &stage)?
+            {
                 let item:Option<(String,String)>=self.conn.query_row("SELECT id,content FROM companion_proactive WHERE persona_id=?1 AND host_device_id=?2 AND state='candidate' ORDER BY created_at_ms,id LIMIT 1",params![p,self.device_id],|r|Ok((r.get(0)?,r.get(1)?))).optional()?;
                 if let Some((id, content)) = item {
                     let name = self.persona_settings(p)?.user_title;
@@ -433,6 +451,57 @@ impl Store {
         }
         Ok(delivered)
     }
+    /// Select an eligible local candidate without publishing it or charging a provider request.
+    pub fn next_proactive_target(
+        &self,
+        now: i64,
+        model_available: bool,
+    ) -> Result<Option<(String, String, bool)>> {
+        for persona in self.personas()? {
+            let id = &persona.id;
+            let prefs = self.companion_preferences(id)?;
+            if (!model_available && prefs.proactive_model_enabled)
+                || !self.owns_life(id)?
+                || !policy(&self.conn, id, &prefs, now, &self.bond_snapshot(id)?.stage)?
+            {
+                continue;
+            }
+            let selected: Option<String> = self.conn.query_row(
+                "SELECT id FROM companion_proactive WHERE persona_id=?1 AND host_device_id=?2 AND state='candidate' ORDER BY created_at_ms,id LIMIT 1",
+                params![id, self.device_id], |row| row.get(0),
+            ).optional()?;
+            if let Some(candidate) = selected {
+                return Ok(Some((persona.id, candidate, prefs.proactive_model_enabled)));
+            }
+        }
+        Ok(None)
+    }
+
+    pub fn deliver_local_proactive(&mut self, persona: &str, id: &str, now: i64) -> Result<bool> {
+        let prefs = self.companion_preferences(persona)?;
+        let stage = self.bond_snapshot(persona)?.stage;
+        if prefs.proactive_model_enabled
+            || !self.owns_life(persona)?
+            || !policy(&self.conn, persona, &prefs, now, &stage)?
+        {
+            return Ok(false);
+        }
+        let item: Option<String> = self.conn.query_row(
+            "SELECT content FROM companion_proactive WHERE id=?1 AND persona_id=?2 AND host_device_id=?3 AND state='candidate'",
+            params![id, persona, self.device_id], |row| row.get(0),
+        ).optional()?;
+        let Some(content) = item else {
+            return Ok(false);
+        };
+        let name = self.persona_settings(persona)?.user_title;
+        let style = super::bond::style(&stage);
+        let message = format!("{name}，{content}（{}）", super::excerpt(style, 35));
+        let tx = self.conn.transaction()?;
+        let sent = publish(&tx, persona, &self.device_id, id, &message, now)?;
+        tx.commit()?;
+        Ok(sent)
+    }
+
     fn start_life_activity(
         &mut self,
         p: &str,

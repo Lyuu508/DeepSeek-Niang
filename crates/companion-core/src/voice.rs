@@ -85,6 +85,65 @@ impl Store {
         )?;
         Ok(())
     }
+
+    pub fn read_cloud_voice(&self, persona: Option<&str>) -> Result<Option<serde_json::Value>> {
+        let key = self.cloud_voice_key(persona)?;
+        let row: Option<String> = self
+            .conn
+            .query_row(
+                "SELECT value_json FROM application_settings
+             WHERE profile_id=?1 AND device_id=?2 AND key=?3 AND scope='device'",
+                params![self.profile_id, self.device_id, key],
+                |row| row.get(0),
+            )
+            .optional()?;
+        row.map(|json| serde_json::from_str(&json).map_err(Error::from))
+            .transpose()
+    }
+
+    pub fn write_cloud_voice_configuration(
+        &self,
+        persona: &str,
+        provider: serde_json::Value,
+        binding: serde_json::Value,
+    ) -> Result<()> {
+        let tx = self.conn.unchecked_transaction()?;
+        self.write_cloud_voice(None, provider)?;
+        self.write_cloud_voice(Some(persona), binding)?;
+        tx.commit()?;
+        Ok(())
+    }
+
+    pub fn write_cloud_voice_provider(&self, settings: serde_json::Value) -> Result<()> {
+        self.write_cloud_voice(None, settings)
+    }
+
+    fn write_cloud_voice(&self, persona: Option<&str>, settings: serde_json::Value) -> Result<()> {
+        let key = self.cloud_voice_key(persona)?;
+        let json = serde_json::to_string(&settings)?;
+        if json.len() > 4096 {
+            return Err(Error::Invalid("cloud speech settings length"));
+        }
+        self.conn.execute(
+            "INSERT INTO application_settings(profile_id,key,value_json,scope,device_id)
+             VALUES (?1,?2,?3,'device',?4)
+             ON CONFLICT(profile_id,key,device_id) DO UPDATE SET
+             value_json=excluded.value_json, revision=application_settings.revision+1
+             WHERE application_settings.scope='device' AND application_settings.value_json<>excluded.value_json",
+            params![self.profile_id, key, json, self.device_id],
+        )?;
+        Ok(())
+    }
+
+    fn cloud_voice_key(&self, persona: Option<&str>) -> Result<String> {
+        match persona {
+            Some(persona) => {
+                crate::persona::owner_exists(&self.conn, persona, &self.profile_id)?;
+                Ok(format!("voice_cloud:{persona}"))
+            }
+            None => Ok("voice_cloud_provider".into()),
+        }
+    }
 }
 
 #[derive(Clone, Copy, Serialize)]

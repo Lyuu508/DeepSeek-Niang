@@ -10,6 +10,7 @@ use companion_core::{
 };
 use companion_secrets::{Secret, SecretStore};
 use credentials::CredentialPacket;
+pub use credentials::{PairProvider, PairProviderKind, ProviderHandoff};
 use discovery::{Candidate, Discovery};
 use identity::{Identity, PublicIdentity, fingerprint, hex, random, unhex, verify};
 use serde::{Deserialize, Serialize};
@@ -84,6 +85,7 @@ pub struct PairCode {
 struct PairWindow {
     api_key: Option<Secret>,
     api_key_unavailable: bool,
+    providers: Option<Vec<PairProvider>>,
     authority: Option<HostAuthority>,
     session: String,
     token_hash: Vec<u8>,
@@ -145,6 +147,11 @@ pub struct Status {
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "kind", deny_unknown_fields)]
 enum Request {
+    ProvidersHandoff {
+        session: String,
+        token: String,
+        id: String,
+    },
     CredentialHandoff {
         session: String,
         token: String,
@@ -169,6 +176,9 @@ enum Request {
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "kind", deny_unknown_fields)]
 enum Reply {
+    Providers {
+        providers: Vec<PairProvider>,
+    },
     Credentials {
         key: Option<CredentialPacket>,
     },
@@ -236,6 +246,7 @@ fn local_endpoints(port: u16) -> Vec<String> {
 }
 pub struct SyncService {
     api_vault: Mutex<Option<Arc<dyn SecretStore>>>,
+    provider_handoff: Mutex<Option<Arc<dyn ProviderHandoff>>>,
     api_configuration: Mutex<BTreeMap<String, String>>,
     round: Mutex<()>,
     windows_host: AtomicBool,
@@ -278,6 +289,7 @@ impl SyncService {
         let port = listener.local_addr().map_err(|_| Error::Offline)?.port();
         let service = Arc::new(Self {
             api_vault: Mutex::new(None),
+            provider_handoff: Mutex::new(None),
             api_configuration: Mutex::new(BTreeMap::new()),
             round: Mutex::new(()),
             windows_host: AtomicBool::new(false),
@@ -492,9 +504,15 @@ impl SyncService {
             Ok(None)
         };
         let api_key_unavailable = snapshot.is_err();
+        let providers = if quick {
+            self.provider_snapshot().ok()
+        } else {
+            None
+        };
         *self.window.lock().map_err(|_| Error::Storage)? = Some(PairWindow {
             api_key: snapshot.unwrap_or(None),
             api_key_unavailable,
+            providers,
             authority: if quick {
                 Some(
                     self.store
@@ -676,6 +694,7 @@ impl SyncService {
                     // Copy only during this explicit scan, over a second mTLS
                     // connection. Do not wait for a potentially long backfill.
                     let credential_result = self.receive_api_configuration(&invite, endpoint);
+                    self.receive_pair_providers(&invite, endpoint);
                     let paired = peer(&identity, Some(endpoint.clone()));
                     if let Err(error) = self.exchange(&paired, endpoint) {
                         self.set_progress(
@@ -836,7 +855,10 @@ impl SyncService {
         }
         match request {
             Request::CredentialHandoff { session, token, id } => {
-                self.credential_handoff(&session, &token, &id, client.as_deref())
+                self.credential_handoff(&session, &token, &id, client.as_deref(), false)
+            }
+            Request::ProvidersHandoff { session, token, id } => {
+                self.credential_handoff(&session, &token, &id, client.as_deref(), true)
             }
             Request::Pair {
                 session,

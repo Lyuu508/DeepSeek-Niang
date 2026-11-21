@@ -219,13 +219,22 @@ impl Store {
         input: &StartChat,
         settings: &ChatSettings,
     ) -> Result<PreparedChat> {
-        self.begin_chat_with_image(input, settings, None)
+        self.begin_chat_with_images(input, settings, &[])
     }
     pub fn begin_chat_with_image(
         &mut self,
         input: &StartChat,
         settings: &ChatSettings,
         image: Option<&crate::chat_images::ChatImage>,
+    ) -> Result<PreparedChat> {
+        self.begin_chat_with_images(input, settings, image.map_or(&[], std::slice::from_ref))
+    }
+
+    pub fn begin_chat_with_images(
+        &mut self,
+        input: &StartChat,
+        settings: &ChatSettings,
+        images: &[crate::chat_images::ChatImage],
     ) -> Result<PreparedChat> {
         uuid(&input.request_id)?;
         uuid(&input.conversation_id)?;
@@ -241,18 +250,21 @@ impl Store {
         if let Some(id) = &input.regenerate_user_id {
             uuid(id)?;
         }
-        if let Some(image) = image {
-            if input.regenerate_user_id.is_some() {
-                return Err(Error::Invalid("CHAT_IMAGE_INVALID"));
-            }
+        if images.len() > crate::chat_images::MAX_IMAGES
+            || (!images.is_empty() && input.regenerate_user_id.is_some())
+        {
+            return Err(Error::Invalid("CHAT_IMAGE_INVALID"));
+        }
+        for image in images {
             image.validate()?;
         }
         let data_profile = self.conversation_profile(&input.conversation_id)?;
-        let input_hash = if let Some(image) = image {
-            sha256_hex(&serde_json::to_vec(&(input, image))?)
-        } else {
-            sha256_hex(&serde_json::to_vec(input)?)
+        let encoded = match images {
+            [] => serde_json::to_vec(input)?,
+            [image] => serde_json::to_vec(&(input, image))?,
+            _ => serde_json::to_vec(&(input, images))?,
         };
+        let input_hash = sha256_hex(&encoded);
         let latest_user = if input.regenerate_user_id.is_some() {
             self.chat_messages(&input.conversation_id)?
                 .into_iter()
@@ -314,13 +326,13 @@ impl Store {
                 Operation::Put,
                 json!({"role":"user","content":input.text.as_deref().unwrap_or(""),"conversation_id":input.conversation_id,"conversation_title":title,"created_at_ms":now,"request_id":input.request_id}),
             )?;
-            if let Some(image) = image {
+            if !images.is_empty() {
                 crate::chat_images::attach(
                     &tx,
                     &self.profile_id,
                     &self.device_id,
                     &user_id,
-                    image,
+                    images,
                 )?;
             }
             // First real message gives an untitled conversation a useful, bounded label.

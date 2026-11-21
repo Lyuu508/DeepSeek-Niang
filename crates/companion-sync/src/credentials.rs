@@ -20,6 +20,44 @@ impl<'de> Deserialize<'de> for CredentialPacket {
             .map_err(|_| serde::de::Error::custom("invalid credential format"))
     }
 }
+#[derive(Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum PairProviderKind {
+    QwenVision,
+    Speech,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct PairProvider {
+    pub kind: PairProviderKind,
+    pub settings: serde_json::Value,
+    key: CredentialPacket,
+}
+
+impl PairProvider {
+    pub fn new(kind: PairProviderKind, settings: serde_json::Value, key: Secret) -> Self {
+        Self {
+            kind,
+            settings,
+            key: CredentialPacket(key),
+        }
+    }
+    pub fn secret(&self) -> &Secret {
+        &self.key.0
+    }
+    fn copy(&self) -> Result<Self> {
+        let key = Secret::new(self.secret().expose().to_owned()).map_err(|_| Error::Vault)?;
+        Ok(Self::new(self.kind, self.settings.clone(), key))
+    }
+}
+
+pub trait ProviderHandoff: Send + Sync {
+    fn snapshot(&self) -> Result<Vec<PairProvider>>;
+    /// Return true for a local conflict, leaving existing settings and credentials untouched.
+    fn receive(&self, provider: PairProvider) -> Result<bool>;
+}
+
 impl Error {
     pub fn code(&self) -> &'static str {
         match self {
@@ -68,6 +106,82 @@ impl SyncService {
         *self.api_vault.lock().map_err(|_| Error::Storage)? = Some(vault);
         Ok(())
     }
+    pub fn configure_provider_handoff(&self, adapter: Arc<dyn ProviderHandoff>) -> Result<()> {
+        *self.provider_handoff.lock().map_err(|_| Error::Storage)? = Some(adapter);
+        Ok(())
+    }
+
+    pub(super) fn provider_snapshot(&self) -> Result<Vec<PairProvider>> {
+        let backend = self
+            .provider_handoff
+            .lock()
+            .map_err(|_| Error::Storage)?
+            .clone();
+        let items = backend
+            .map(|adapter| adapter.snapshot())
+            .transpose()?
+            .unwrap_or_default();
+        if items.len() > 2 {
+            return Err(Error::Limit);
+        }
+        Ok(items)
+    }
+
+    pub(super) fn receive_pair_providers(&self, invite: &Invitation, endpoint: &str) {
+        let Some(backend) = self
+            .provider_handoff
+            .lock()
+            .ok()
+            .and_then(|value| value.clone())
+        else {
+            return;
+        };
+        if invite.version < 3 {
+            return;
+        }
+        let Ok(Reply::Providers { providers }) = transport::request(
+            &self.identity,
+            endpoint,
+            &invite.identity.certificate,
+            true,
+            &Request::ProvidersHandoff {
+                session: invite.session.clone(),
+                token: invite.token.clone(),
+                id: self.identity.public.id.clone(),
+            },
+        ) else {
+            return;
+        }; // Earlier clients can still complete the legacy key handoff.
+        if providers.len() > 2 || (providers.len() == 2 && providers[0].kind == providers[1].kind) {
+            self.key_state(&invite.identity.id, "transfer_failed");
+            return;
+        }
+        let mut conflict = false;
+        let mut count = 0;
+        for provider in providers {
+            match backend.receive(provider) {
+                Ok(true) => conflict = true,
+                Ok(false) => count += 1,
+                Err(_) => {
+                    self.key_state(&invite.identity.id, "secure_storage_error");
+                    return;
+                }
+            }
+        }
+        if conflict {
+            self.key_state(&invite.identity.id, "configuration_conflict");
+        } else if count > 0 {
+            let already_conflict = self.api_configuration.lock().ok().is_some_and(|items| {
+                items
+                    .get(&invite.identity.id)
+                    .is_some_and(|state| state == "configuration_conflict")
+            });
+            if !already_conflict {
+                self.key_state(&invite.identity.id, "providers_received");
+            }
+        }
+    }
+
     pub(super) fn api_key_snapshot(&self) -> Result<Option<Secret>> {
         let vault = self.api_vault.lock().map_err(|_| Error::Storage)?.clone();
         match vault.map(|v| v.get()) {
@@ -82,6 +196,7 @@ impl SyncService {
         token: &str,
         id: &str,
         client: Option<&str>,
+        providers_only: bool,
     ) -> Result<Reply> {
         // A bootstrap Pair reply never carries a secret. The second connection
         // must present the trusted phone's TLS certificate, plus its own QR nonce.
@@ -108,6 +223,16 @@ impl SyncService {
             || !bool::from(token.as_slice().ct_eq(&w.token_hash))
         {
             return Err(Error::Pair);
+        }
+        if providers_only {
+            let providers = w
+                .providers
+                .as_ref()
+                .ok_or(Error::Vault)?
+                .iter()
+                .map(PairProvider::copy)
+                .collect::<Result<Vec<_>>>()?;
+            return Ok(Reply::Providers { providers });
         }
         if w.api_key_unavailable {
             return Err(Error::Vault);
@@ -154,6 +279,23 @@ impl SyncService {
                 );
                 match result {
                     Ok(Reply::Credentials { key: Some(packet) }) => {
+                        if let Some(local) = &previous {
+                            let same = bool::from(
+                                local
+                                    .expose()
+                                    .as_bytes()
+                                    .ct_eq(packet.0.expose().as_bytes()),
+                            );
+                            self.key_state(
+                                &invite.identity.id,
+                                if same {
+                                    "unchanged"
+                                } else {
+                                    "configuration_conflict"
+                                },
+                            );
+                            return Ok(());
+                        }
                         if vault.set(&packet.0).is_err()
                             || !vault.get().ok().is_some_and(|stored| {
                                 bool::from(
@@ -164,17 +306,11 @@ impl SyncService {
                                 )
                             })
                         {
-                            if let Some(previous) = previous {
-                                let _ = vault.set(&previous);
-                            }
+                            let _ = vault.delete();
                             self.key_state(&invite.identity.id, "secure_storage_error");
                             return Err(Error::KeyTransfer);
                         }
-                        if previous.is_some() {
-                            "updated"
-                        } else {
-                            "received"
-                        }
+                        "received"
                     }
                     Ok(Reply::Credentials { key: None }) => "source_not_configured",
                     _ => {
