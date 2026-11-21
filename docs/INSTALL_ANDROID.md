@@ -1,29 +1,25 @@
 # Android 安装说明
 
-**v0.0.10 测试版**适用于运行 Android 10 或更新版本的 ARM64 手机，下载后可直接使用系统安装器。[下载 APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.10/DeepSeek-Niang_0.0.10_android-arm64-isolated-test.apk)
+**v0.1.1 验收版**适用于运行 Android 10 或更新版本的 ARM64 手机，下载后可直接使用系统安装器。[下载 APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/DeepSeek-Niang_0.1.1_android-arm64-acceptance.apk)
 
 从「设置 → 语音与麦克风」试听朗读和原创唱段。Android 朗读使用系统离线音色。语音输入需要 Android 12 或更新版本和离线普通话识别。[语音使用与验收](phases/07-voice-singing.md)
 
 ## 先确认安装身份
 
-本版应用名为“DeepSeek娘 扫码测试版”，安装身份 `io.local.deepseekcompanion.test2`，versionCode 为 1010。已用官方工具核对与 v0.0.9 test2 同证书，满足该测试身份更新条件；真实手机覆盖升级仍待验收。
+本版使用 `io.local.deepseekcompanion.acceptance`，版本代码为 1012。官方工具已核对与 v0.1.0 验收 APK（1011）的包名和证书一致。真机覆盖升级仍待验收。[APK 验签记录](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/ANDROID-ACCEPTANCE-VERIFICATION.json)
 
-Android 35 模拟器已执行覆盖安装，确认应用数据目录与 SQLite 路径保留。模拟器界面问题与真机验收范围见验证记录。[验证记录](VALIDATION.md#v0010-发布证据)
-
-**不能覆盖 v0.0.1 原身份或早期 `.test`，也不能自动读取其私有数据。** 更早的 test2 仍需按实际升级跨度验证。保留旧应用及数据；提示签名冲突时停止，不通过卸载或清数据强行安装。详见[升级与数据保护](USAGE.md#升级与数据保护)。
+原正式版和早期 `.test`、`.test2` 测试版使用各自的应用身份和数据空间。请保留旧应用及数据。提示安装冲突时先停止安装。[升级与数据保护](USAGE.md#升级与数据保护)
 
 ## 安装步骤
 
-1. 下载 APK，对照同版 [SHA256SUMS.txt](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.10/SHA256SUMS.txt) 校验文件。也可先在电脑计算 SHA-256，再传到手机。
+1. 下载 APK 后核对同版 SHA-256。也可先在电脑校验，再传到手机。[SHA256SUMS.txt](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/SHA256SUMS.txt)
 2. 按 Android 提示，仅为所用文件管理器或浏览器临时允许安装来源；安装完成后可撤销权限，不关闭系统防护。
-3. 打开正确的“扫码测试版”。在设置中验证安全存储，再在手机本地配置自己的 DeepSeek API Key，或按下文通过可信电脑授权配置。
+3. 打开刚安装的验收版。在设置中验证安全存储，再在本机配置自己的 DeepSeek API Key，或按下文通过可信电脑授权配置。
 4. 检查旧人格、聊天和记忆是否保留；有异常先保留现状并反馈，不重复卸载、降级或重建数据。
-
-在桌面查看新安装图标。圆形、圆角方形遮罩的预览由 APK 使用的图层生成。[图标遮罩预览](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.10/ANDROID-ICON-MASKS.png)
 
 ## 连接电脑与独立使用
 
-电脑与手机都更新到 v0.0.10，连接可互访局域网。电脑点击“连接手机”，手机进入连接页点击“扫一扫”。二维码在手机本机识别，需要相机权限。成功配对后，电脑可通过这次授权的加密连接为手机配置已有的 DeepSeek Key。[连接说明](USAGE.md#连接电脑与手机)
+电脑与手机都使用 v0.1.1，并连接可互访的局域网。电脑点击“连接手机”，手机进入连接页点击“扫一扫”。手机使用相机在本机识别二维码。成功配对后，电脑可通过本次授权的加密连接交接已配置的 DeepSeek、千问视频和云语音配置。手机配置有冲突时保留本机值。[连接说明](USAGE.md#连接电脑与手机)
 
 手机 Key 配置成功后可以独立联网聊天，不要求电脑开机。手机查看已同步生活记录，但不独立执行 Windows 生活任务。应用被停止或系统限制时，不保证实时同步或系统通知，没有云推送。
 

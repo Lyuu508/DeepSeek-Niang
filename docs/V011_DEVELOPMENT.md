@@ -2,6 +2,8 @@
 
 Windows 与 Android 的版本均为 0.1.1。Android versionCode 为 1012。基于 GitHub 的 v0.1.0 代码 `71bf470` 和已验证的历史发布记录继续开发。
 
+验收预发布的两个安装包均由 `06aecb35506ac96225d0637484f131754444cc29` 构建。公开下载的八个附件均通过 SHA-256 核验。[验收发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.1-acceptance.1) · [构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/BUILD-RESULTS.json) · [测试报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/TEST-REPORT.md)
+
 ## 已实现的变更
 
 - 双端共用已有正式角色资源和海洋主题。桌面加强透明按钮、悬停和焦点反馈。手机优化设置分类排列和聊天工具触控。统一视频和插件的整块文件选择卡片。
@@ -21,7 +23,7 @@ Windows 与 Android 的版本均为 0.1.1。Android versionCode 为 1012。基�
 
 ## 安装身份与正式发布
 
-- GitHub 最新公开的 v0.1.0 APK 使用 `io.local.deepseekcompanion.acceptance` 与证书 `5d92ada7e0187559964c075fb7b285697f6b4357fcea877b5def20b7a15b6c12`。
+- GitHub 发布的 v0.1.0 验收 APK 使用 `io.local.deepseekcompanion.acceptance` 与证书 `5d92ada7e0187559964c075fb7b285697f6b4357fcea877b5def20b7a15b6c12`。
 - 正式应用使用 `io.local.deepseekcompanion`。v0.0.1 APK 的原证书为 `9de96ea5fb1d0b3f91ea73d9a16c030428453b15838927a85f86773eaef208a1`。这两个安装身份分别绑定各自的应用数据。
 - 独立交付的 v0.1.1 验收 APK 使用 GitHub v0.1.0 APK 的 `.acceptance` 安装身份和现有相同证书。使用 `apksigner` 验证两份 APK，并检查版本号从 1011 增至 1012。保留正式应用的包名配置，真机覆盖安装仍待验收。
 - 当前云环境缺少原证书对应的签名配置。在具备原签名、安装验收及必要功能验证后再创建正式 v0.1.1 Release。仓库 Actions Secrets 列表接口的 403 只反映调用权限。

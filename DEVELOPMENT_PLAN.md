@@ -1,6 +1,6 @@
-# v0.1.1 当前进度
+# v0.1.1 验收预发布
 
-本轮沿用 GitHub main 的 v0.1.0 代码和 schema 10，推进双端交互、视频问答、表情、云语音、配对配置和安全更新。验收版 Android 安装身份与正式原签名身份的区别需要在升级发布前核对。完整长视频、B站官方账号接口、虚拟媒体生成与端到端实机验收尚待完成。[v0.1.1 进度与限制](docs/V011_DEVELOPMENT.md)
+本轮沿用 schema 10，推进双端交互、视频问答、表情、云语音、配对配置和安全更新。Windows EXE、Android 验收 APK、校验清单和测试报告已公开。完整长视频、B站官方账号接口、虚拟媒体生成、正式 Android 升级与实机验收仍待完成。[验收发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.1-acceptance.1) · [v0.1.1 进度与限制](docs/V011_DEVELOPMENT.md)
 
 ## v0.1.0 验收版
 
@@ -32,7 +32,7 @@ Windows 客户端支持用户授权的本地视频。分段采样和语音转写
 
 ## 当前版本与完成状态
 
-当前可下载的版本为 v0.1.0 验收版，共同构建提交为 `12c84651e6185ba90ef55c3b3cc3877952a8a1df`。两端下载与 SHA-256 校验已核验，Android 验收 APK 已验签。[验收发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.0-acceptance.1) · [构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.0-acceptance.1/BUILD-RESULTS.json)
+当前验收版 v0.1.1 的共同构建提交为 `06aecb35506ac96225d0637484f131754444cc29`。两个安装包的公开下载与 SHA-256 已核验，Android 验收 APK 已验签。[构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/BUILD-RESULTS.json)
 
 | 方向 | 已实现、可测试 | 仍需验收或完善 |
 | --- | --- | --- |

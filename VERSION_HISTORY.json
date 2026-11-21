@@ -172,6 +172,19 @@
       "androidApplicationId": "io.local.deepseekcompanion.acceptance",
       "androidCertificateSha256": "5d92ada7e0187559964c075fb7b285697f6b4357fcea877b5def20b7a15b6c12",
       "physicalWindowsAndroidTested": false
+    },
+    {
+      "version": "0.1.1",
+      "androidVersionCode": 1012,
+      "tag": "v0.1.1-acceptance.1",
+      "commit": "06aecb35506ac96225d0637484f131754444cc29",
+      "releaseId": 453591191,
+      "ciRun": 44889212148,
+      "publishRun": 44891681127,
+      "distribution": "independent-acceptance",
+      "androidApplicationId": "io.local.deepseekcompanion.acceptance",
+      "androidCertificateSha256": "5d92ada7e0187559964c075fb7b285697f6b4357fcea877b5def20b7a15b6c12",
+      "physicalWindowsAndroidTested": false
     }
   ]
 }

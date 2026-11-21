@@ -1,5 +1,13 @@
 # 验证范围与待核实问题
 
+## v0.1.1 验收预发布证据
+
+Windows EXE 和 Android ARM64 APK 均来自 `06aecb35506ac96225d0637484f131754444cc29`。从 GitHub 公开地址重新下载了八个附件，SHA-256 均与上传前一致。[发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.1-acceptance.1) · [构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/BUILD-RESULTS.json)
+
+Linux 测试、Windows 原生安装启动和 Android ARM64 编译均通过。同源 CI 验证了 Windows 原生构建。Release 的 Windows 附件为已通过包体校验的验收构建。用 v0.1.0 源码创建的样本数据库验证了 v0.1.1 可以读取旧数据，生成的 SQLite 快照也能由旧版打开。[同源 CI](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44889212148) · [测试报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/TEST-REPORT.md)
+
+官方工具已确认 Android 验收 APK 与 v0.1.0 验收 APK 包名和签名一致，版本代码从 1011 增至 1012。真机覆盖安装、家庭局域网和真实第三方服务仍待验收。[验签记录](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/ANDROID-ACCEPTANCE-VERIFICATION.json) · [实机验收范围](V011_DEVELOPMENT.md#仍需完成的能力和验收)
+
 ## v0.0.10 发布证据
 
 两端从 `b4f56f55b4cbf567c0b57194a0936cc7c8eeb664` 构建。同一 Windows 自签名测试证书及 Android test2 证书通过核对。公开下载已复验 27 个附件。Windows runner 安装并启动后取得应用窗口截图。Android ARM64 的包名、1010 版本代码、签名、原图标和新素材均通过核验。[构建结果](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.10/BUILD-RESULTS.json) · [原生 Windows 截图](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.10/windows-installed-window.png) · [CI](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44778883247)

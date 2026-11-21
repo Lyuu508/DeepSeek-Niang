@@ -2,17 +2,15 @@
 
 一款面向 Windows 与 Android 的本地优先 AI 陪伴软件，让不同人格拥有各自延续的聊天、记忆与虚拟日常。
 
-**[下载 v0.1.0 Windows EXE](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.0-acceptance.1/DeepSeek-Niang_0.1.0_windows-x64-setup.exe) · [下载 v0.1.0 Android APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.0-acceptance.1/DeepSeek-Niang_0.1.0_android-arm64-acceptance.apk) · [安装与首次使用](#安装与首次使用)**
+**[下载 v0.1.1 Windows EXE](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/DeepSeek-Niang_0.1.1_windows-x64-setup.exe) · [下载 v0.1.1 Android APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/DeepSeek-Niang_0.1.1_android-arm64-acceptance.apk) · [安装与首次使用](#安装与首次使用)**
 
-最新下载为 **v0.1.0 验收版**，包含双端界面调整、千问辅助视频问答，以及「关于」中的更新检查。真实设备安装、家庭网络及真实 API 体验待验收。[发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.0-acceptance.1)
-
-本分支正在开发 v0.1.1，Android versionCode 为 1012。上方下载仍对应当前已公开的 v0.1.0 安装包。下方的历史截图和使用文档对应其标注的版本。[v0.1.1 实现与发布条件](docs/V011_DEVELOPMENT.md) · [v0.1.0 验收说明](docs/V010_ACCEPTANCE.md)
+最新验收预发布为 **v0.1.1**，Android 版本代码为 1012。本版优化双端布局，加入多图附件、表情库和自定义音色。实机覆盖升级、家庭网络及真实 API 体验待验收。[发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.1-acceptance.1) · [更新日志](CHANGELOG.md)
 
 v0.0.10 为 Windows 和 Android 更新海洋主题，包含三视图生成的角色素材、主题配色、深海夜色和全套页面设计。[设计与验收](docs/V010_OCEAN_UI.md) · [素材清单](assets/branding/ocean-art.json)
 
 v0.0.6 的桌宠已整合到 Windows 主客户端。透明角色能在桌面上自动走动，也支持直接拖动、点击挥手和双击聊天。[使用与验收](docs/phases/05-desktop-pet.md) · [dsh-pet 动画署名](apps/companion/src/desktop-pet/media/NOTICE.md)
 
-v0.1.0 验收版的「视频中心」在用户授权后调用千问识别画面，由 DeepSeek 生成最终回答。v0.0.10 的本地分析流程可参阅旧版使用文档。[v0.0.10 视频中心使用说明](docs/phases/06-video-understanding.md)
+在聊天或「视频中心」发起视频问答。用户授权后，千问识别画面，DeepSeek 生成最终回答。可把完成的问答保存到当前人格。[视频支持范围](docs/V011_DEVELOPMENT.md)
 
 两端可从聊天中使用本机朗读和语音输入。在「设置 → 语音与麦克风」为当前人格选择音色，或试听原创元音唱段。[语音试用与设备要求](docs/phases/07-voice-singing.md)
 
@@ -48,16 +46,16 @@ v0.1.0 验收版的「视频中心」在用户授权后调用千问识别画面�
 
 ## 下载安装
 
-### v0.1.0 验收版
+### v0.1.1 验收预发布
 
 | 平台 | 安装包 | 系统要求 |
 | --- | --- | --- |
-| Windows | [下载中文安装程序 EXE](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.0-acceptance.1/DeepSeek-Niang_0.1.0_windows-x64-setup.exe) | Windows 10/11，x64 |
-| Android | [下载 ARM64 APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.0-acceptance.1/DeepSeek-Niang_0.1.0_android-arm64-acceptance.apk) | Android 10 及以上，ARM64 |
+| Windows | [下载安装程序 EXE](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/DeepSeek-Niang_0.1.1_windows-x64-setup.exe) | Windows 10/11，x64 |
+| Android | [下载 ARM64 APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/DeepSeek-Niang_0.1.1_android-arm64-acceptance.apk) | Android 10 及以上，ARM64 |
 
-两个安装文件都可直接下载，无需解压。它们由同一源码提交 `12c8465` 构建，已从 GitHub 回下载验证 SHA-256。[发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.0-acceptance.1) · [SHA-256 校验清单](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.0-acceptance.1/SHA256SUMS.txt) · [构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.0-acceptance.1/BUILD-RESULTS.json) · [APK 验签记录](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.0-acceptance.1/APKSIGNER.txt)
+两个安装文件均来自源码提交 `06aecb3`，已从 GitHub 重新下载并核对 SHA-256。[发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.1-acceptance.1) · [SHA-256 校验清单](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/SHA256SUMS.txt) · [构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/BUILD-RESULTS.json) · [测试报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/TEST-REPORT.md)
 
-Android 安装后显示为「DeepSeek娘 验收版」，使用独立包名 `io.local.deepseekcompanion.acceptance` 和验收签名，能与现有 Android 版本并存。首次启动使用独立数据空间，原有聊天和记忆仍保存在原应用里。
+Android 继续使用 v0.1.0 验收版的包名 `io.local.deepseekcompanion.acceptance` 和证书，版本代码从 1011 升至 1012。已核对同身份覆盖升级条件，真机覆盖安装仍待验收。原正式应用和早期测试应用各自拥有独立的数据空间。[APK 验签记录](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/ANDROID-ACCEPTANCE-VERIFICATION.json) · [v0.1.0 历史下载](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.0-acceptance.1)
 
 ### v0.0.10 测试版
 
@@ -75,22 +73,22 @@ Android 安装后显示为「DeepSeek娘 验收版」，使用独立包名 `io.l
 ## 安装与首次使用
 
 1. **下载并校验。** 从上面的官方 Release 下载对应安装包，对照 SHA-256 清单。已有用户先阅读[升级与数据保护说明](docs/USAGE.md#升级与数据保护)。
-2. **安装 Windows 版。** 完全退出旧程序后运行 EXE。启动后打开顶栏「桌宠」，勾选「显示桌宠」。缺少 WebView2 时，使用微软官方运行库。v0.1.0 验收 EXE 尚无 Authenticode 签名。v0.0.10 EXE 使用自签名测试证书。系统可能提示未知发布者，请保留系统防护。
+2. **安装 Windows 版。** 完全退出旧程序后运行 EXE。启动后打开顶栏「桌宠」，勾选「显示桌宠」。缺少 WebView2 时，使用微软官方运行库。v0.1.1 验收 EXE 未做 Authenticode 签名，系统可能提示未知发布者。请保留系统防护。
 3. **安装 Android 版。** 按系统提示为所用浏览器或文件管理器临时允许安装 APK。若提示签名冲突，停止并保留旧应用及数据，不要通过卸载来强行安装。
 4. **配置聊天。** 打开“设置”，先验证安全存储，再保存自己的 DeepSeek API Key。密钥由本机系统安全存储保管，不要贴到 Issue、聊天记录或公开截图中。
 5. **开始使用。** 进入默认人格聊天，或通过“人格管理”创建自己的角色；在“本地数据”中核对和管理长期记忆。
 6. **连接另一台设备。** 两端使用同一版本，接入可互访的同一局域网。电脑打开“局域网同步”并点击“连接手机”，手机进入连接页点击“扫一扫”。有线电脑和同一路由器下的 Wi-Fi 手机也可配对。访客网络或设备隔离可能阻断连接。
 7. **按需开启日常与分享。** 在陪伴设置中调整虚拟日常、主动交流、安静时段和通知。新建配置的主动消息与模型生成默认关闭；升级保留原设置。模型生成需要另外开启并设置预算。
 
-**扫码与 API Key：** 电脑生成连接二维码时，会授权将已配置的 Key 一次配置到本次认证的手机；v0.1.0 中重新扫码可能更新手机已有 Key。v0.1.1 将已配置的冲突值保留在本机。二维码本身不包含 Key，请仅向自己的可信手机展示。解除配对不会使已复制的 Key 在 DeepSeek 失效，如需撤销使用权，还需删除或轮换 Key。
+电脑生成连接二维码时，会授权把已配置的 DeepSeek、千问视频和云语音配置通过加密连接交接给本次认证的手机。手机遇到配置冲突时保留本机值。请只向自己的可信手机展示二维码。解除配对后，如需撤销已复制的密钥，请在手机删除密钥或到对应提供商轮换。
 
 更多步骤见[使用说明](docs/USAGE.md)与[常见问题](docs/FAQ.md)。
 
-## v0.0.10 更新重点
+## v0.1.1 更新重点
 
-- Windows 三栏展示角色立绘、情绪与关系。Android 使用紧凑聊天布局，两端共用头像、插画和圆角设计。
-- 设置可更换海洋蓝、贝壳紫和海沫青，浅色与深海夜色分别设计。字号仍可实时调整。
-- 人格管理、回收站、插件、视频、配对、本地数据和关于使用统一视觉组件。Android 视频页读取已保存并同步的摘要。
+- 桌面导航、聊天和关系面板反馈更清晰。手机设置适配窄屏，字号预设保持等宽。
+- 聊天支持最多四张本机图片，可导入文字附件、使用表情库，还可为不同人格配置云端语音音色。
+- 配对可从电脑安全交接三类 API 配置。应用更新显示下载进度，并在安装前保存 SQLite 快照。
 
 [查看完整更新日志](CHANGELOG.md)
 
