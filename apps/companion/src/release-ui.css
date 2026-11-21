@@ -242,11 +242,14 @@
   border-radius: var(--radius-card);
   background: linear-gradient(140deg, var(--surface), var(--surface-soft));
 }
-.app .composer-row, .app[data-platform=android] .composer-row { display: block; }
+.app .composer-row, .app[data-platform=android] .composer-row { display: block; grid-area: field; min-width: 0; }
 .app .composer textarea { padding: .55rem .4rem; min-height: 2.55rem; }
-.app .composer-controls { display: flex; align-items: flex-end; justify-content: space-between; gap: .45rem; }
-.app .composer-attachments { min-width: 0; flex-wrap: wrap; gap: .18rem; }
-.app .composer-toolbar { position: relative; width: auto; flex: none; display: grid; justify-items: end; gap: .22rem; }
+.app .composer-body {
+  display: grid; align-items: end; gap: 0 .45rem;
+  grid-template: "field field" auto "tools send" auto / minmax(0, 1fr) auto;
+}
+.app .composer-attachments { grid-area: tools; min-width: 0; flex-wrap: wrap; gap: .18rem; }
+.app .composer-toolbar { grid-area: send; width: auto; display: grid; justify-items: end; gap: .22rem; }
 .app .composer-toolbar .composer-shortcut { color: var(--muted); font-size: .66rem; white-space: nowrap; }
 .app .composer :is(.send-button,.stop-button,.composer-attachments button) {
   display: grid; place-items: center;
@@ -319,18 +322,11 @@
 .app[data-platform=android] .composer button.composer-access { min-height: 36px; }
 .app[data-platform=android] .composer textarea { min-height: 2rem; }
 .app[data-platform=android] .composer .composer-attachments:not(:focus-within) > button { background: transparent; }
-.app[data-platform=android] .composer[data-tools-expanded=false] {
-  display: grid; align-items: end; padding: .18rem .25rem;
-  grid-template-columns: 44px minmax(0,1fr) 44px;
-  grid-template-areas: "tools field send";
+.app[data-platform=android] .composer[data-tools-expanded=false] { padding: .18rem .25rem; }
+.app[data-platform=android] .composer[data-tools-expanded=false] .composer-body {
+  gap: 0 .24rem;
+  grid-template: "tools field send" auto / 44px minmax(0, 1fr) 44px;
 }
-.app[data-platform=android] .composer[data-tools-expanded=false] > :not(.composer-row,.composer-controls) { grid-column: 1 / -1; }
-.app[data-platform=android] .composer[data-tools-expanded=false] .composer-access { grid-row: 1; }
-.app[data-platform=android] .composer[data-tools-expanded=false]:has(.composer-access) { grid-template-areas: "hint hint hint" "tools field send"; }
-.app[data-platform=android] .composer[data-tools-expanded=false] .composer-controls { display: contents; }
-.app[data-platform=android] .composer[data-tools-expanded=false] .composer-row { grid-area: field; min-width: 0; }
-.app[data-platform=android] .composer[data-tools-expanded=false] .composer-attachments { grid-area: tools; }
-.app[data-platform=android] .composer[data-tools-expanded=false] .composer-toolbar { grid-area: send; }
 .app[data-platform=android] .composer[data-tools-expanded=false] .composer textarea { min-height: 44px; }
 .app[data-platform=android] .composer[data-tools-expanded=false] .composer textarea:placeholder-shown {
   field-sizing: fixed; height: 44px; overflow-y: hidden;

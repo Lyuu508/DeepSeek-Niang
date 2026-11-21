@@ -148,7 +148,8 @@ async function measurements(page) {
     const height = selector => document.querySelector(selector)?.getBoundingClientRect().height ?? 0;
     return {
       width: innerWidth, height: innerHeight, header: height('header'), nav: height('.mobile-nav'),
-      composer: height('.composer-area'), message_px: height('.message-scroll'), overflow: document.documentElement.scrollWidth > innerWidth,
+      composer: height('.composer-area'), field: height('#chat-input'), tools: height('.composer-attachments'),
+      send: height('.composer-toolbar'), message_px: height('.message-scroll'), overflow: document.documentElement.scrollWidth > innerWidth,
     };
   });
 }
@@ -294,7 +295,7 @@ async function exercisePhone() {
       assert.equal(measured.overflow,false);
       assert.equal(measured.nav,53);
       assert(measured.message_px >= size[1] - 165,
-        `Mobile viewport ${size[0]}x${size[1]} reserved ${Math.ceil(size[1] - measured.message_px)}px outside the messages. Composer height is ${Math.ceil(measured.composer)}px.`);
+        `Mobile viewport ${size[0]}x${size[1]} reserved ${Math.ceil(size[1] - measured.message_px)}px outside the messages. Composer height is ${Math.ceil(measured.composer)}px. Field, tools, send: ${[measured.field,measured.tools,measured.send].map(Math.ceil).join('/')}px.`);
     }
     if (size[0] === 375) await page.screenshot({ path: path.join(output, baseline ? 'android-before.png' : 'android-after.png'), animations: 'disabled' });
     assert.deepEqual(errors, []);
@@ -331,7 +332,7 @@ async function exercisePhone() {
   const location = error?.stack?.match(/\b(v009|ocean-evidence|rework-evidence)\.cjs:(\d+):\d+/);
   if (process.env.GITHUB_ACTIONS === 'true' && location) {
     const [, file, line] = location;
-    const geometry = error?.message?.match(/^Mobile viewport \d+x\d+ reserved \d+px outside the messages\. Composer height is \d+px\.$/);
+    const geometry = error?.message?.match(/^Mobile viewport \d+x\d+ reserved \d+px outside the messages\. Composer height is \d+px\. Field, tools, send: \d+\/\d+\/\d+px\.$/);
     const detail = geometry?.[0] ?? 'Review the fixture assertion or browser action on this line.';
     console.error(`::error file=tests/browser/${file}.cjs,line=${line},title=Browser fixture failed::${detail}`);
   }

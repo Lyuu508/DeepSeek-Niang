@@ -155,25 +155,25 @@ export function ChatComposer(props: Props) {
         event.currentTarget.value = '';
         if (file) props.onVideo(file);
       }}/>
-      <div className="composer-row">
-        <label className="sr-only" htmlFor="chat-input">发送给当前人格的消息</label>
-        <textarea id="chat-input" ref={props.field} rows={1} value={props.draft} maxLength={8000}
-          placeholder={props.connected ? `和${props.name ?? '她'}说说吧…` : '原生应用连接后即可聊天'}
-          disabled={props.disabled || reading} onChange={event => props.onEdit(event.target.value)}
-          onPaste={event => {
-            const files = Array.from(event.clipboardData.files).filter(file => file.type.startsWith('image/'));
-            if (!files.length) return;
-            event.preventDefault();
-            void attachImages(files);
-          }}
-          onKeyDown={event => {
-            if (event.key === 'Enter' && !event.shiftKey && !mobile && !event.nativeEvent.isComposing && event.keyCode !== 229) {
+      <div className="composer-body">
+        <div className="composer-row">
+          <label className="sr-only" htmlFor="chat-input">发送给当前人格的消息</label>
+          <textarea id="chat-input" ref={props.field} rows={1} value={props.draft} maxLength={8000}
+            placeholder={props.connected ? `和${props.name ?? '她'}说说吧…` : '原生应用连接后即可聊天'}
+            disabled={props.disabled || reading} onChange={event => props.onEdit(event.target.value)}
+            onPaste={event => {
+              const files = Array.from(event.clipboardData.files).filter(file => file.type.startsWith('image/'));
+              if (!files.length) return;
               event.preventDefault();
-              submit();
-            }
-          }}/>
-      </div>
-      <div className="composer-controls">
+              void attachImages(files);
+            }}
+            onKeyDown={event => {
+              if (event.key === 'Enter' && !event.shiftKey && !mobile && !event.nativeEvent.isComposing && event.keyCode !== 229) {
+                event.preventDefault();
+                submit();
+              }
+            }}/>
+        </div>
         <div className="composer-attachments">
           {mobile && <button type="button" className="composer-more" aria-label="输入工具" aria-expanded={open}
             onClick={() => setOpen(value => !value)}><Icon name={open?'close':'add'}/></button>}
