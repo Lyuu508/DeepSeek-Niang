@@ -49,7 +49,15 @@ export function ChatComposer(props: Props) {
   const video = useRef<HTMLInputElement>(null);
   useLayoutEffect(() => {
     const field = props.field.current;
-    if (!field || CSS.supports('field-sizing', 'content')) return;
+    if (!field) return;
+    if (mobile && !props.draft) {
+      field.style.setProperty('field-sizing', 'fixed');
+      field.style.height = '44px';
+      return;
+    }
+    field.style.removeProperty('field-sizing');
+    field.style.removeProperty('height');
+    if (CSS.supports('field-sizing', 'content')) return;
     field.style.height = 'auto';
     field.style.height = `${Math.min(field.scrollHeight, 128)}px`;
   }, [props.field, props.draft, mobile]);
