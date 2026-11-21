@@ -1,6 +1,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 fn main() {
     #[cfg(target_os = "windows")]
+    companion_app_lib::run_update_worker_if_requested();
+    #[cfg(target_os = "windows")]
     if std::env::args_os()
         .nth(1)
         .is_some_and(|arg| arg == "--self-test-voice")

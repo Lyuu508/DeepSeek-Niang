@@ -219,6 +219,14 @@ impl Store {
         input: &StartChat,
         settings: &ChatSettings,
     ) -> Result<PreparedChat> {
+        self.begin_chat_with_image(input, settings, None)
+    }
+    pub fn begin_chat_with_image(
+        &mut self,
+        input: &StartChat,
+        settings: &ChatSettings,
+        image: Option<&crate::chat_images::ChatImage>,
+    ) -> Result<PreparedChat> {
         uuid(&input.request_id)?;
         uuid(&input.conversation_id)?;
         settings.validate()?;
@@ -233,8 +241,18 @@ impl Store {
         if let Some(id) = &input.regenerate_user_id {
             uuid(id)?;
         }
+        if let Some(image) = image {
+            if input.regenerate_user_id.is_some() {
+                return Err(Error::Invalid("CHAT_IMAGE_INVALID"));
+            }
+            image.validate()?;
+        }
         let data_profile = self.conversation_profile(&input.conversation_id)?;
-        let input_hash = sha256_hex(&serde_json::to_vec(input)?);
+        let input_hash = if let Some(image) = image {
+            sha256_hex(&serde_json::to_vec(&(input, image))?)
+        } else {
+            sha256_hex(&serde_json::to_vec(input)?)
+        };
         let latest_user = if input.regenerate_user_id.is_some() {
             self.chat_messages(&input.conversation_id)?
                 .into_iter()
@@ -296,6 +314,15 @@ impl Store {
                 Operation::Put,
                 json!({"role":"user","content":input.text.as_deref().unwrap_or(""),"conversation_id":input.conversation_id,"conversation_title":title,"created_at_ms":now,"request_id":input.request_id}),
             )?;
+            if let Some(image) = image {
+                crate::chat_images::attach(
+                    &tx,
+                    &self.profile_id,
+                    &self.device_id,
+                    &user_id,
+                    image,
+                )?;
+            }
             // First real message gives an untitled conversation a useful, bounded label.
             if title == "新对话" || title == "默认对话" {
                 let short: String = input

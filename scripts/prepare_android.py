@@ -20,7 +20,7 @@ def prepare(project: Path, branding: Path | None = None, unsigned_test: bool = F
     tree = ET.parse(manifest)
     root = tree.getroot()
     name = f"{{{ANDROID}}}name"
-    for permission in ["android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE", "android.permission.ACCESS_LOCAL_NETWORK", "android.permission.CAMERA"]:
+    for permission in ["android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE", "android.permission.ACCESS_LOCAL_NETWORK", "android.permission.CAMERA", "android.permission.REQUEST_INSTALL_PACKAGES"]:
         if not any(p.get(name) == permission for p in root.findall("uses-permission")):
             ET.SubElement(root, "uses-permission", {name: permission})
     if not any(feature.get(name) == "android.hardware.camera.any" for feature in root.findall("uses-feature")):
@@ -37,6 +37,14 @@ def prepare(project: Path, branding: Path | None = None, unsigned_test: bool = F
     application.set(f"{{{ANDROID}}}label", "@string/app_name")
     application.set(f"{{{ANDROID}}}icon", "@mipmap/ic_launcher")
     application.set(f"{{{ANDROID}}}roundIcon", "@mipmap/ic_launcher_round")
+    provider_class = "io.local.deepseekcompanion.CompanionUpdateFileProvider"
+    if not any(provider.get(name) == provider_class for provider in application.findall("provider")):
+        provider = ET.SubElement(application, "provider", {
+            name: provider_class, f"{{{ANDROID}}}authorities": "${applicationId}.companion.update",
+            f"{{{ANDROID}}}exported": "false", f"{{{ANDROID}}}grantUriPermissions": "true",
+        })
+        ET.SubElement(provider, "meta-data", {name: "android.support.FILE_PROVIDER_PATHS",
+                                            f"{{{ANDROID}}}resource": "@xml/companion_update_paths"})
     for activity in application.findall("activity"):
         if activity.get(name) == ".MainActivity":
             activity.set(f"{{{ANDROID}}}label", "@string/main_activity_title")
@@ -53,8 +61,16 @@ def prepare(project: Path, branding: Path | None = None, unsigned_test: bool = F
     tree.write(manifest, encoding="utf-8", xml_declaration=True)
     activity = project / "app/src/main/java/io/local/deepseekcompanion/MainActivity.kt"
     activity.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(Path(__file__).resolve().parents[1] / 'apps/companion/android/MainActivity.kt', activity)
+    native_files = Path(__file__).resolve().parents[1] / "apps/companion/android"
+    for kotlin in ["MainActivity.kt", "CompanionUpdatePlugin.kt"]:
+        shutil.copyfile(native_files / kotlin, activity.with_name(kotlin))
     res = project / "app/src/main/res"
+    paths_file = res / "xml/companion_update_paths.xml"
+    paths_file.parent.mkdir(parents=True, exist_ok=True)
+    paths = ET.Element("paths")
+    ET.SubElement(paths, "cache-path", {"name": "update", "path": "companion-updates/"})
+    ET.indent(paths, space="    ")
+    ET.ElementTree(paths).write(paths_file, encoding="utf-8", xml_declaration=True)
     strings_file = res / "values/strings.xml"
     strings_file.parent.mkdir(parents=True, exist_ok=True)
     strings = ET.parse(strings_file).getroot() if strings_file.is_file() else ET.Element("resources")

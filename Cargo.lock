@@ -136,8 +136,9 @@ dependencies = [
 
 [[package]]
 name = "companion-chat"
-version = "0.0.10"
+version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "companion-core",
  "companion-secrets",
  "futures-util",
@@ -152,8 +153,9 @@ dependencies = [
 
 [[package]]
 name = "companion-core"
-version = "0.0.10"
+version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "rusqlite",
  "serde",
  "serde_jcs",
@@ -166,7 +168,7 @@ dependencies = [
 
 [[package]]
 name = "companion-node"
-version = "0.0.10"
+version = "0.1.0"
 dependencies = [
  "companion-core",
  "serde_json",
@@ -175,7 +177,7 @@ dependencies = [
 
 [[package]]
 name = "companion-secrets"
-version = "0.0.10"
+version = "0.1.0"
 dependencies = [
  "thiserror",
  "uuid",
@@ -185,7 +187,7 @@ dependencies = [
 
 [[package]]
 name = "companion-sync"
-version = "0.0.10"
+version = "0.1.0"
 dependencies = [
  "companion-core",
  "companion-secrets",
@@ -206,8 +208,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "companion-update"
+version = "0.1.0"
+dependencies = [
+ "reqwest",
+ "semver",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
 name = "companion-video"
-version = "0.0.10"
+version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "companion-core",
@@ -779,6 +794,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
 
 [[package]]
+name = "mime"
+version = "0.3.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d5848f5a9e8117cf94f2f90faac24a87ff81600ff8628c1e3deaab572e76bfa1"
+
+[[package]]
+name = "mime_guess"
+version = "2.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f7c44f8e672c00fe5308fa235f821cb4198414e1c77935c1ab6948d3fd78550e"
+dependencies = [
+ "mime",
+ "unicase",
+]
+
+[[package]]
 name = "minimal-lexical"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1031,6 +1062,7 @@ dependencies = [
  "hyper-util",
  "js-sys",
  "log",
+ "mime_guess",
  "percent-encoding",
  "pin-project-lite",
  "quinn",
@@ -1178,6 +1210,12 @@ name = "scopeguard"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
+
+[[package]]
+name = "semver"
+version = "1.0.28"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8a7852d02fc848982e0c167ef163aaff9cd91dc640ba85e263cb1ce46fae51cd"
 
 [[package]]
 name = "serde"
@@ -1594,6 +1632,12 @@ name = "typenum"
 version = "1.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
+
+[[package]]
+name = "unicase"
+version = "2.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "357cc3acc6a036009fd6c973ed009037c732d60d0b4f6c673e9041497482a28f"
 
 [[package]]
 name = "unicode-ident"

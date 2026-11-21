@@ -1,6 +1,6 @@
 [package]
 name = "companion-app"
-version = "0.0.10"
+version = "0.1.0"
 edition = "2024"
 rust-version = "1.99"
 publish = false
@@ -20,6 +20,7 @@ tauri = { version = "=2.12.5", features = [] }
 companion-core = { path = "../../../crates/companion-core" }
 companion-chat = { path = "../../../crates/companion-chat" }
 companion-secrets = { path = "../../../crates/companion-secrets" }
+companion-update = { path = "../../../crates/companion-update" }
 tauri-plugin-companion-keystore = { path = "../../../plugins/companion-keystore" }
 uuid = { version = "=1.29.2", features = ["v4"] }
 
@@ -34,7 +35,7 @@ tokio = { version = "=1.54.1", features = ["time", "macros"] }
 [target.'cfg(windows)'.dependencies]
 tauri = { version = "=2.12.5", features = ["tray-icon"] }
 winreg = "=0.56.0"
-windows-sys = { version = "=0.61.2", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_UI_WindowsAndMessaging", "Win32_UI_Controls_Dialogs"] }
+windows-sys = { version = "=0.61.2", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_UI_WindowsAndMessaging", "Win32_UI_Controls_Dialogs", "Win32_Security_WinTrust", "Win32_Security_Cryptography", "Win32_System_Threading", "Win32_Storage_FileSystem"] }
 companion-video = { path = "../../../crates/companion-video" }
 tempfile = "=3.27.0"
 windows = { version = "=0.62.2", features = ["Media_Core", "Media_SpeechSynthesis", "Storage_Streams", "Win32_System_WinRT"] }

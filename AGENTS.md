@@ -1,3 +1,9 @@
+# 当前开发 · v0.1.0 验收候选
+
+v0.1.0 验收包由 `12c84651e6185ba90ef55c3b3cc3877952a8a1df` 构建，已通过 GitHub 的 `v0.1.0-acceptance.1` 交付。用户已授权将验收源码与文档同步到 main。创建正式 v0.1.0 Tag、正式 Release 和发布正式升级安装包仍以实机验收及用户明确表示“测试通过，同意发布正式版。”为准。
+
+正式 Android 使用原 `io.local.deepseekcompanion` 与原证书。当前验收 APK 使用 `io.local.deepseekcompanion.acceptance`，可与 v0.0.10 的 `.test2` 及原版并存。正式升级签名需核对原证书。资料见 `docs/V010_ACCEPTANCE.md`。
+
 # 当前开发 · 阶段 7 本机语音
 
 从 v0.0.7 主线接续阶段 7，分发 v0.0.8 / Android 1008 测试版。Windows 和 Android 共用现有客户端和 SQLite，沿用 v0.0.7 测试签名及应用身份。语音优先调用系统离线音色和设备端转写。授权素材不足时提供原创元音唱段。语音数据留在设备，转写经用户确认后可随聊天正常发送。真实设备、API 与授权音色研究另有验收范围。

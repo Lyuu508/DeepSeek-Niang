@@ -2,8 +2,10 @@ mod companion;
 #[cfg(target_os = "windows")]
 mod desktop_pet;
 mod sync;
+mod update;
 #[cfg(target_os = "windows")]
 mod video;
+mod video_cloud;
 mod voice;
 use companion_chat::{
     ChatFailure,
@@ -29,6 +31,16 @@ struct AppState(Arc<ChatService>);
 #[doc(hidden)]
 pub fn voice_self_test() -> i32 {
     voice::windows::probe()
+}
+#[cfg(target_os = "windows")]
+#[doc(hidden)]
+pub fn run_update_worker_if_requested() {
+    if std::env::args_os()
+        .nth(1)
+        .is_some_and(|arg| arg == update::windows::WORKER_ARG)
+    {
+        std::process::exit(i32::from(update::windows::run_worker().is_err()));
+    }
 }
 #[derive(Serialize)]
 struct KeyStatus {
@@ -290,6 +302,7 @@ async fn start_chat(
     input: StartChat,
     on_event: Channel<ChatEvent>,
     state: State<'_, AppState>,
+    image: Option<companion_core::chat_images::ChatImage>,
 ) -> Result<PreparedChat, ChatFailure> {
     {
         let store = state
@@ -299,9 +312,36 @@ async fn start_chat(
             .map_err(|_| ChatFailure::new("STORAGE_ERROR"))?;
         store.permanent_persona(&input.conversation_id)?;
     }
-    state
+    let observer = Arc::new(move |event| on_event.send(event).is_ok());
+    match image {
+        Some(image) => state.0.start_with_image(input, observer, image),
+        None => state.0.start(input, observer),
+    }
+}
+#[tauri::command]
+async fn chat_image_ids(
+    conversation_id: String,
+    state: State<'_, AppState>,
+) -> Result<Vec<String>, ChatFailure> {
+    Ok(state
         .0
-        .start(input, Arc::new(move |event| on_event.send(event).is_ok()))
+        .store
+        .lock()
+        .map_err(|_| ChatFailure::new("STORAGE_ERROR"))?
+        .local_chat_images(&conversation_id)?)
+}
+#[tauri::command]
+async fn chat_image(
+    conversation_id: String,
+    id: String,
+    state: State<'_, AppState>,
+) -> Result<Option<companion_core::chat_images::ChatImage>, ChatFailure> {
+    Ok(state
+        .0
+        .store
+        .lock()
+        .map_err(|_| ChatFailure::new("STORAGE_ERROR"))?
+        .local_chat_image(&conversation_id, &id)?)
 }
 #[tauri::command]
 async fn stop_generation(
@@ -368,12 +408,21 @@ pub fn run() {
     builder
         .plugin(tauri_plugin_companion_keystore::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(update::plugin())
         .setup(|app| {
             let directory = app.path().app_data_dir()?;
             std::fs::create_dir_all(&directory)?;
             let mut store = Store::open(directory.join("companion.sqlite3"))?;
             store.set_device_platform(std::env::consts::OS)?;
             let credentials = vault(app.handle(), &store.profile_id)?;
+            // Derive a separate stable UUID for the Qwen credential. It is not a LAN handoff slot.
+            let mut qwen_slot = *Uuid::parse_str(&store.profile_id)?.as_bytes();
+            qwen_slot[0] ^= 0x52;
+            qwen_slot[15] ^= 0x81;
+            app.manage(video_cloud::CloudVideoHost::new(vault(
+                app.handle(),
+                &Uuid::from_bytes(qwen_slot).to_string(),
+            )?));
             let service = Arc::new(ChatService::new(
                 Arc::new(Mutex::new(store)),
                 credentials,
@@ -441,6 +490,19 @@ pub fn run() {
             inspect_plugin,
             list_plugins,
             change_plugin,
+            chat_image_ids,
+            chat_image,
+            update::update_check,
+            update::update_download,
+            update::update_install,
+            video_cloud::qwen_status,
+            video_cloud::qwen_settings,
+            video_cloud::qwen_connection_test,
+            video_cloud::cloud_video_status,
+            video_cloud::cloud_video_plan,
+            video_cloud::cloud_video_recognize,
+            video_cloud::cloud_video_answer,
+            video_cloud::cloud_video_clear,
             due_plugin_reminders,
             sync::sync_status,
             sync::sync_command,

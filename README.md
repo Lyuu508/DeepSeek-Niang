@@ -6,7 +6,7 @@
 
 最新下载为 **v0.1.0 验收版**，包含双端界面调整、千问辅助视频问答，以及「关于」中的更新检查。真实设备安装、家庭网络及真实 API 体验待验收。[发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.0-acceptance.1)
 
-仓库 `main` 的源码版本为 v0.0.10。下方的历史截图和使用文档对应其标注的版本。
+仓库 `main` 的源码版本为 v0.1.0。下方的历史截图和使用文档对应其标注的版本。[验收说明](docs/V010_ACCEPTANCE.md)
 
 v0.0.10 为 Windows 和 Android 更新海洋主题，包含三视图生成的角色素材、主题配色、深海夜色和全套页面设计。[设计与验收](docs/V010_OCEAN_UI.md) · [素材清单](assets/branding/ocean-art.json)
 

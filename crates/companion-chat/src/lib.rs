@@ -3,6 +3,7 @@ pub mod service;
 pub mod sse;
 #[cfg(test)]
 mod tests;
+pub mod video_cloud;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -20,6 +21,8 @@ impl std::error::Error for ChatFailure {}
 impl ChatFailure {
     pub fn new(code: &str) -> Self {
         let (message, retryable) = match code {
+            "CHAT_IMAGE_INVALID" => ("图片无法保存，请重新选择常用格式的图片。", false),
+            "CHAT_IMAGE_LIMIT" => ("本机聊天图片数量达到上限。这条消息尚未发送。", false),
             "KEY_NOT_CONFIGURED" => ("请先在设置中配置本机 DeepSeek API Key。", false),
             "KEY_FORMAT_INVALID" => ("密钥格式不正确，请检查是否含空格或换行。", false),
             "SECURE_STORAGE_UNSUPPORTED" => {
@@ -90,7 +93,10 @@ impl From<companion_core::Error> for ChatFailure {
                 Self::new("CONTEXT_BUDGET_EXCEEDED")
             }
             companion_core::Error::Invalid(
-                code @ ("PERSONA_PROTECTED" | "PERSONA_RECYCLE_CHANGED"),
+                code @ ("PERSONA_PROTECTED"
+                | "PERSONA_RECYCLE_CHANGED"
+                | "CHAT_IMAGE_INVALID"
+                | "CHAT_IMAGE_LIMIT"),
             ) => Self::new(code),
             companion_core::Error::Invalid(
                 code @ ("PLUGIN_INVALID"

@@ -35,6 +35,7 @@ struct Plan {
 struct Request {
     headers: String,
     body: Value,
+    raw: Vec<u8>,
 }
 fn sse(content: &str, done: bool) -> Vec<u8> {
     let mut bytes=format!(": keepalive\r\n\r\ndata: {}\r\n\r\n",json!({"choices":[{"index":0,"delta":{"role":"assistant","content":content},"finish_reason":null}],"usage":null})).into_bytes();
@@ -71,16 +72,15 @@ async fn read_request(socket: &mut TcpStream) -> Request {
                 .filter(|(k, _)| k.eq_ignore_ascii_case("content-length"))
                 .map(|(_, v)| v.trim().parse().unwrap())
         })
-        .unwrap();
+        .unwrap_or_default();
     while bytes.len() < head + length {
         let n = socket.read(&mut buffer).await.unwrap();
         assert!(n > 0);
         bytes.extend_from_slice(&buffer[..n]);
     }
-    Request {
-        headers,
-        body: serde_json::from_slice(&bytes[head..head + length]).unwrap(),
-    }
+    let raw = bytes[head..head + length].to_vec();
+    let body = serde_json::from_slice(&raw).unwrap_or(Value::Null);
+    Request { headers, body, raw }
 }
 async fn server(plans: Vec<Plan>) -> (String, Arc<Mutex<Vec<Request>>>, JoinHandle<()>) {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -123,6 +123,132 @@ fn turns() -> Vec<PromptMessage> {
 }
 fn secret() -> Secret {
     Secret::new(FIXTURE_KEY.into()).unwrap()
+}
+
+fn json_response(value: Value) -> Plan {
+    Plan {
+        status: 200,
+        extra: "Content-Type: application/json\r\n".to_owned(),
+        body: value.to_string().into_bytes(),
+        stall: false,
+    }
+}
+
+#[tokio::test]
+async fn video_cloud_sends_visual_input_only_to_qwen_and_retries_the_deepseek_answer_only() {
+    use crate::video_cloud::{self, QwenClient, VideoInput, VideoRecord};
+    use base64::{Engine, engine::general_purpose::STANDARD};
+    let planning = json!({"focus":"蓝色物体的动作", "start_ms":100,"end_ms":1800});
+    let observations = json!({"observations":[{"at_ms":650,"scene":"蓝色方块向右移动","objects":["方块"],"action":"向右移动","text":""}],"limitations":"仅有画面"});
+    let success_evidence = json!({"output":{"choices":[{"finish_reason":"stop","message":{"content":[{"text":observations.to_string()}]}}]}});
+    let upload_policy = json!({"data":{
+        "upload_host":"https://fixture.oss-cn-hangzhou.aliyuncs.com", "upload_dir":"fixture/dir", "policy":"fake-policy",
+        "oss_access_key_id":"fake-oss-id","signature":"fake-oss-signature","x_oss_object_acl":"private","x_oss_forbid_overwrite":"true"
+    }});
+    let (qwen_endpoint, qwen_requests, qwen_task) = server(vec![
+        json_response(upload_policy),
+        json_response(success_evidence),
+    ])
+    .await;
+    let (upload_endpoint, upload_requests, upload_task) =
+        server(vec![json_response(json!({}))]).await;
+    let fail = Plan {
+        status: 503,
+        extra: String::new(),
+        body: Vec::new(),
+        stall: false,
+    };
+    let (deepseek_endpoint, deepseek_requests, deepseek_task) = server(vec![
+        success(&planning.to_string()),
+        fail,
+        success("在 0.6 秒附近，蓝色方块向右移动。"),
+    ])
+    .await;
+    let deepseek = DeepSeekClient::fixture(deepseek_endpoint, Duration::from_secs(5));
+    let qwen = QwenClient::fixture(
+        qwen_endpoint
+            .trim_end_matches("/chat/completions")
+            .to_owned(),
+        &upload_endpoint,
+    );
+    let qwen_key = Secret::new("fixture-qwen-only-synthetic-not-a-real-key".into()).unwrap();
+    let settings = ChatSettings::default();
+    let question = "视频中的方块做了什么？";
+    let plan = video_cloud::plan(&deepseek, &secret(), &settings, question, 2000)
+        .await
+        .unwrap();
+    let mut record = VideoRecord {
+        id: "fixture-record".into(),
+        question: question.into(),
+        duration_ms: 2000,
+        plan,
+        evidence: None,
+        answer: None,
+    };
+    assert!(
+        video_cloud::answer(&deepseek, &secret(), &settings, &record)
+            .await
+            .is_err()
+    );
+    let mp4 = STANDARD.encode(b"\0\0\0\x18ftypisomsynthetic-clip");
+    record.evidence = Some(
+        qwen.recognize(&qwen_key, &record, VideoInput::Clip { mp4 })
+            .await
+            .unwrap(),
+    );
+    assert_eq!(record.evidence.as_ref().unwrap().observations[0].at_ms, 650);
+    assert!(
+        video_cloud::answer(&deepseek, &secret(), &settings, &record)
+            .await
+            .is_err()
+    );
+    assert!(
+        video_cloud::answer(&deepseek, &secret(), &settings, &record)
+            .await
+            .unwrap()
+            .contains("蓝色方块")
+    );
+    upload_task.await.unwrap();
+    qwen_task.await.unwrap();
+    deepseek_task.await.unwrap();
+    let qwen_calls = qwen_requests.lock().unwrap();
+    assert_eq!(qwen_calls.len(), 2);
+    assert!(
+        qwen_calls[0]
+            .headers
+            .starts_with("GET /uploads?action=getPolicy&model=")
+    );
+    assert!(
+        qwen_calls[1]
+            .headers
+            .to_lowercase()
+            .contains("x-dashscope-ossresourceresolve: enable")
+    );
+    for call in qwen_calls.iter() {
+        assert!(call.headers.contains(qwen_key.expose()));
+        assert!(!call.headers.contains(FIXTURE_KEY));
+        assert!(!call.body.to_string().contains(question));
+    }
+    let upload_calls = upload_requests.lock().unwrap();
+    assert!(
+        !upload_calls[0]
+            .headers
+            .to_lowercase()
+            .contains("authorization:")
+    );
+    assert!(
+        upload_calls[0]
+            .raw
+            .windows(14)
+            .any(|bytes| bytes == b"synthetic-clip")
+    );
+    let calls = deepseek_requests.lock().unwrap();
+    assert_eq!(calls.len(), 3);
+    assert!(calls[0].body.to_string().contains(question));
+    assert_eq!(calls[1].body, calls[2].body);
+    assert!(calls[2].body.to_string().contains("蓝色方块向右移动"));
+    assert!(!calls[2].body.to_string().contains("oss://"));
+    assert!(!calls[2].headers.contains(qwen_key.expose()));
 }
 
 #[test]

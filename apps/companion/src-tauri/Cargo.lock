@@ -573,13 +573,14 @@ dependencies = [
 
 [[package]]
 name = "companion-app"
-version = "0.0.10"
+version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "companion-chat",
  "companion-core",
  "companion-secrets",
  "companion-sync",
+ "companion-update",
  "companion-video",
  "serde",
  "serde_json",
@@ -598,8 +599,9 @@ dependencies = [
 
 [[package]]
 name = "companion-chat"
-version = "0.0.10"
+version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "companion-core",
  "companion-secrets",
  "futures-util",
@@ -609,12 +611,14 @@ dependencies = [
  "thiserror 2.0.21",
  "tokio",
  "tokio-util",
+ "uuid",
 ]
 
 [[package]]
 name = "companion-core"
-version = "0.0.10"
+version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "rusqlite",
  "serde",
  "serde_jcs",
@@ -626,7 +630,7 @@ dependencies = [
 
 [[package]]
 name = "companion-secrets"
-version = "0.0.10"
+version = "0.1.0"
 dependencies = [
  "thiserror 2.0.21",
  "uuid",
@@ -636,7 +640,7 @@ dependencies = [
 
 [[package]]
 name = "companion-sync"
-version = "0.0.10"
+version = "0.1.0"
 dependencies = [
  "companion-core",
  "companion-secrets",
@@ -657,8 +661,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "companion-update"
+version = "0.1.0"
+dependencies = [
+ "reqwest 0.12.28",
+ "semver",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
 name = "companion-video"
-version = "0.0.10"
+version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "companion-core",
@@ -2401,6 +2418,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d5848f5a9e8117cf94f2f90faac24a87ff81600ff8628c1e3deaab572e76bfa1"
 
 [[package]]
+name = "mime_guess"
+version = "2.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f7c44f8e672c00fe5308fa235f821cb4198414e1c77935c1ab6948d3fd78550e"
+dependencies = [
+ "mime",
+ "unicase",
+]
+
+[[package]]
 name = "minimal-lexical"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3353,6 +3380,7 @@ dependencies = [
  "hyper-util",
  "js-sys",
  "log",
+ "mime_guess",
  "percent-encoding",
  "pin-project-lite",
  "quinn",
@@ -4340,7 +4368,7 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-companion-keystore"
-version = "0.0.10"
+version = "0.1.0"
 dependencies = [
  "companion-secrets",
  "companion-sync",
@@ -4352,7 +4380,7 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-companion-voice"
-version = "0.0.10"
+version = "0.1.0"
 dependencies = [
  "tauri",
  "tauri-plugin",
@@ -4869,6 +4897,12 @@ dependencies = [
  "tempfile",
  "windows-sys 0.61.2",
 ]
+
+[[package]]
+name = "unicase"
+version = "2.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "357cc3acc6a036009fd6c973ed009037c732d60d0b4f6c673e9041497482a28f"
 
 [[package]]
 name = "unicode-ident"

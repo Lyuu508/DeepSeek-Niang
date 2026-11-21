@@ -38,6 +38,59 @@ fn second_instance_cannot_recover_a_live_generation() {
 }
 
 #[test]
+fn an_attached_image_is_atomic_with_the_user_message_and_stays_out_of_context() {
+    let fixture = Fixture::new();
+    let mut store = Store::open(fixture.db()).unwrap();
+    let persona = store.active_persona_id().unwrap();
+    let thread = store.persona(&persona).unwrap().main_conversation_id;
+    let settings = store.chat_settings().unwrap();
+    let input = send(&thread, "只有这段文字进入对话");
+    let bad = crate::chat_images::ChatImage {
+        name: "invalid.jpg".into(),
+        jpeg: "bad".into(),
+    };
+    assert!(
+        store
+            .begin_chat_with_image(&input, &settings, Some(&bad))
+            .is_err()
+    );
+    assert!(store.chat_messages(&thread).unwrap().is_empty());
+    let good = crate::chat_images::ChatImage {
+        name: "fixture.jpg".into(),
+        jpeg: "/9j/Af/Z".into(),
+    };
+    let request = store
+        .begin_chat_with_image(&input, &settings, Some(&good))
+        .unwrap();
+    assert_eq!(
+        store.local_chat_images(&thread).unwrap().as_slice(),
+        std::slice::from_ref(&request.user_message_id)
+    );
+    assert!(
+        !serde_json::to_string(&store.companion_context(&thread, &settings).unwrap())
+            .unwrap()
+            .contains(&good.jpeg)
+    );
+    let other = store.create_persona("另一个人格", "冷静").unwrap();
+    assert!(
+        store
+            .local_chat_image(&other.main_conversation_id, &request.user_message_id)
+            .unwrap()
+            .is_none()
+    );
+    drop(store);
+    let store = Store::open(fixture.db()).unwrap();
+    assert_eq!(
+        store
+            .local_chat_image(&thread, &request.user_message_id)
+            .unwrap()
+            .unwrap()
+            .jpeg,
+        good.jpeg
+    );
+}
+
+#[test]
 fn escaped_output_limit_cannot_corrupt_the_recovery_checkpoint() {
     let (mut s, c) = setup();
     let p = s

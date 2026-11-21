@@ -44,7 +44,7 @@ export function FontSettings({ font }: { font: FontScale }) {
     <label>界面字号 <output>{font.percent}%</output>
       <input type="range" min="85" max="150" step="1" value={font.percent} onChange={e => font.change(e.target.valueAsNumber)}/>
     </label>
-    <div className="button-row">{[85, 95, 100, 110, 125, 140].map((value, index) =>
+    <div className="segment-control font-segments" role="group" aria-label="字号预设">{[85, 95, 100, 110, 125, 140].map((value, index) =>
       <button key={value} type="button" aria-pressed={font.percent === value} onClick={() => font.change(value)}>
         {['很小', '较小', '标准', '较大', '大', '特大'][index]}
       </button>)}</div>

@@ -1,4 +1,8 @@
-# 海洋主题 v0.0.10
+# v0.1.0 验收版
+
+本版更新双端海洋界面，加入授权视频识别与 DeepSeek 视频问答，以及「关于」中的更新检查。Windows EXE 和 Android 验收 APK 使用同一源码提交，已从 GitHub 回下载并确认摘要。实机安装、家庭网络、真实 API 和正式 Android 升级仍待验收。[验收下载](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.0-acceptance.1) · [验收清单](docs/V010_ACCEPTANCE.md)
+
+## 海洋主题 v0.0.10
 
 以 main 的 v0.0.9 为基线，更新 Windows 与 Android 的全套视觉体系。共享 UI 先完成设计，再接入用户三视图生成的独立素材。保持身份、签名和 schema 10。[实现与验收](docs/V010_OCEAN_UI.md)
 
@@ -24,7 +28,7 @@ Windows 客户端支持用户授权的本地视频。分段采样和语音转写
 
 ## 当前版本与完成状态
 
-当前公开测试版为 [v0.0.10](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.0.10)，发布源码为 `b4f56f55b4cbf567c0b57194a0936cc7c8eeb664`。双端签名和公开下载已核验。
+当前可下载的版本为 v0.1.0 验收版，共同构建提交为 `12c84651e6185ba90ef55c3b3cc3877952a8a1df`。两端下载与 SHA-256 校验已核验，Android 验收 APK 已验签。[验收发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.0-acceptance.1) · [构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.0-acceptance.1/BUILD-RESULTS.json)
 
 | 方向 | 已实现、可测试 | 仍需验收或完善 |
 | --- | --- | --- |

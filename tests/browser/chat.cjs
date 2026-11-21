@@ -138,7 +138,7 @@ async function configure(page){await settings(page);await page.getByLabel('API K
  });
  await check('companion controls show five dimensions and preserve explicit proactive opt in',async()=>{
   await page.getByRole('navigation',{name:'人格侧栏功能'}).getByRole('button',{name:'关系与日常',exact:true}).click();await page.getByRole('heading',{name:'我们的关系',exact:true}).waitFor();
-  assert.equal(await page.getByRole('progressbar').count(),5);assert.equal(await page.getByLabel('开启主动消息',{exact:true}).isChecked(),false);
+  assert.equal(await page.locator('.companion-content').getByRole('progressbar').count(),5);assert(await page.getByRole('progressbar',{name:'当前好感度',exact:true}).isVisible());assert.equal(await page.getByLabel('开启主动消息',{exact:true}).isChecked(),false);
   await page.getByLabel('开启主动消息',{exact:true}).check();await page.getByLabel('主动消息最小间隔').fill('180');await page.getByLabel('主动消息每日上限').fill('1');
   await page.getByRole('button',{name:'保存陪伴设置',exact:true}).click();await page.getByText('陪伴设置已保存，配对设备同步后生效。',{exact:true}).waitFor();
   await chat(page);await page.getByRole('navigation',{name:'人格侧栏功能'}).getByRole('button',{name:'关系与日常',exact:true}).click();assert(await page.getByLabel('开启主动消息',{exact:true}).isChecked());
@@ -185,6 +185,36 @@ async function configure(page){await settings(page);await page.getByLabel('API K
   await page.getByRole('button',{name:'保存聊天设置',exact:true}).click();await page.getByText('聊天与人设设置已保存，新消息将使用这些设置。',{exact:true}).waitFor();
   await page.getByRole('button',{name:'状态',exact:true}).click();assert(await page.locator('.companion-card').isVisible());
   await page.screenshot({path:path.join(artifact,'desktop-status-controls-ui-fixture.png'),animations:'disabled'});
+ });
+ await check('desktop navigation is quiet until hover and selection and settings fragments retain their highlight',async()=>{
+  const sidebar=page.getByRole('navigation',{name:'主要页面'});const setting=sidebar.getByRole('button',{name:'设置',exact:true});
+  assert.equal(await setting.evaluate(el=>getComputedStyle(el).boxShadow),'none');await setting.hover();
+  await page.waitForFunction(()=>Number(getComputedStyle(document.querySelector('.sidebar-bottom button[aria-label=设置]'),'::before').opacity)>.5);
+  await setting.click();assert.equal(await setting.getAttribute('aria-current'),'page');
+  const tab=page.getByRole('navigation',{name:'设置分类'}).getByRole('button',{name:'API 配置',exact:true});
+  await tab.click();assert.equal(await tab.getAttribute('aria-current'),'location');
+  await page.getByRole('heading',{name:'DeepSeek API',exact:true}).waitFor();
+  await page.screenshot({path:path.join(artifact,'formal-settings-fixture.png'),animations:'disabled'});
+ });
+ await check('video and update pages make provider roles clear and never call providers in preview',async()=>{
+  const video=page.getByRole('navigation',{name:'主要页面'}).getByRole('button',{name:'视频中心',exact:true});await video.click();
+  assert(await page.getByRole('heading',{name:'千问视频识别配置'}).isVisible());assert(await page.getByRole('button',{name:'分析并回答'}).isDisabled());
+  assert.equal(await page.getByText('选择 Whisper 模型',{exact:true}).count(),0);
+  await page.screenshot({path:path.join(artifact,'formal-video-fixture.png'),animations:'disabled'});
+  await page.getByRole('navigation',{name:'主要页面'}).getByRole('button',{name:'关于',exact:true}).click();
+  assert(await page.getByRole('button',{name:'检查更新',exact:true}).isDisabled());
+  await menu(phone);await phone.getByRole('button',{name:'视频中心',exact:true}).click();
+  assert(await phone.getByRole('heading',{name:'千问视频识别配置'}).isVisible());
+  assert(await phone.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  assert.deepEqual(outbound,[]);
+ });
+ await check('UTF-8 chat attachment fills an editable draft without auto sending',async()=>{
+  await chat(page);const input=page.getByLabel('发送给当前人格的消息');await input.fill('请读一下');
+  const chooser=page.waitForEvent('filechooser');await page.getByRole('button',{name:'添加附件',exact:true}).click();
+  await (await chooser).setFiles({name:'notes.txt',mimeType:'text/plain',buffer:Buffer.from('海洋实验记录')});
+  await page.waitForFunction(()=>document.querySelector('#chat-input').value.includes('海洋实验记录'));
+  assert.match(await input.inputValue(),/请读一下[\s\S]*notes\.txt/);
+  assert.equal(await page.getByText('海洋实验记录',{exact:true}).count(),0);
  });
  fs.writeFileSync(path.join(artifact,'results.json'),JSON.stringify({scope:'Explicit UI Mock; no real API, SQLite, file migration or OS credentials; camera lifecycle uses a synthetic browser stream',passed:checks.length,checks,browser:browser.version()},null,2)+'\n');console.log(JSON.stringify({scope:'explicit UI Mock',passed:checks.length,checks}));
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{await browser?.close();server?.kill('SIGTERM');});

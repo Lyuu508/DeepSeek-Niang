@@ -516,6 +516,8 @@ fn purge(db: &Connection, decision: &Decision) -> Result<()> {
         inventory(db, table, LEGACY_ENTITIES, id)?;
     }
     redact_history(db, id)?;
+    db.execute("DELETE FROM application_settings WHERE scope='device' AND key IN (
+        SELECT 'chat_image:'||m.id FROM messages m JOIN conversation_personas c ON c.conversation_id=m.conversation_id WHERE c.persona_id=?1)", [id])?;
     for (table, predicate) in CLEANUP {
         db.execute(&format!("DELETE FROM {table} WHERE {predicate}"), [id])?;
     }
@@ -526,7 +528,7 @@ fn purge(db: &Connection, decision: &Decision) -> Result<()> {
         )?;
     }
     db.execute(
-        "DELETE FROM application_settings WHERE scope='device' AND key='voice:'||?1",
+        "DELETE FROM application_settings WHERE scope='device' AND key IN ('voice:'||?1,'cloud_video:'||?1)",
         [id],
     )?;
     Ok(())
