@@ -97,7 +97,7 @@ export function VoiceSettings({ voice, platform }: { voice: VoiceController; pla
     </div>
     <p className="field-help">试听使用已保存的音量和语速。原创唱段用七个音符合成元音，可以试听音高与节奏。</p>
     {platform === 'windows'
-      ? <p className="field-help">录音转写需要本机已有的 whisper-cli 和多语种模型。{voice.model ? `本次选择 ${voice.model}。` : '模型选择可与视频中心共用。'}</p>
+      ? <p className="field-help">录音转写需要本机已有的 whisper-cli 和多语种模型。{voice.model ? `本次选择 ${voice.model}。` : '仅用于麦克风转写。'}</p>
       : <p className="field-help">录音用 Android 12 及以上设备提供的离线普通话识别。</p>}
     {notice && <p role="status">{notice}</p>}
     {error && <p className="inline-error" role="alert">{error}</p>}

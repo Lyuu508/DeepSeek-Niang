@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { ManagedMemory } from '@deepseek/contracts';
 import { Art, Icon, PageHeader, WhaleMark, expressions } from './OceanDesign';
+import { UpdateCard } from './UpdateCard';
 
 export const palettes = { ocean: '海洋蓝', shell: '贝壳紫', seafoam: '海沫青' } as const;
 export type Palette = keyof typeof palettes;
@@ -41,9 +42,9 @@ export function AppearanceSettings({ control }: { control: AppearanceControl }) 
   const { value, update } = control;
   return <section className="settings-card appearance-palette" aria-label="主题外观">
     <h2>主题外观</h2>
-    <div className="button-row" aria-label="色彩模式">
+    <div className="segment-control" role="group" aria-label="色彩模式">
       {(['system', 'light', 'dark'] as const).map((mode, index) => <button type="button" key={mode}
-        aria-pressed={value.mode === mode} onClick={() => update({mode})}>{['跟随系统', '浅色', '深海夜色'][index]}</button>)}
+        aria-pressed={value.mode === mode} onClick={() => update({mode})}><Icon name={(['settings','sun','moon'] as const)[index]}/>{['跟随系统', '浅色', '深海夜色'][index]}</button>)}
     </div>
     <div className="palette-options" aria-label="主题色">
       {(Object.entries(palettes) as [Palette,string][]).map(([palette,label]) => <button type="button" key={palette}
@@ -62,6 +63,7 @@ export function AboutPage({ version }: { version?: string }) {
         {version && <span className="badge">v{version}</span>}</div>
       <Art name="portrait-full" label="DeepSeek娘的全身立绘" eager/>
     </section>
+    <UpdateCard version={version}/>
     <section className="settings-card">
       <h2>角色表情</h2>
       <div className="expression-gallery">
@@ -76,16 +78,16 @@ export function AboutPage({ version }: { version?: string }) {
   </div>;
 }
 
-export function PhoneVideoPage({ memories, onMemories }: { memories: ManagedMemory[]; onMemories: () => void }) {
+export function PhoneVideoPage({ memories, onMemories, embedded = false }: { memories: ManagedMemory[]; onMemories: () => void; embedded?: boolean }) {
   const summaries = memories.flatMap(memory => {
     const match = /^本地视频《([^\r\n]{1,120})》的抽帧与语音分析摘要：([\s\S]+)$/u.exec(memory.text);
     return match ? [{ id: memory.id, title: match[1], content: match[2] }] : [];
   });
   return <div className="video-center">
-    <PageHeader title="视频中心" description="查看此人格已保存并同步到手机的视频摘要。" icon="video" scene="scene-video" art="thinking"/>
+    {!embedded && <PageHeader title="视频中心" description="查看此人格已保存的视频摘要。" icon="video" scene="scene-video" art="thinking"/>}
     <section className="settings-card">
       <h2>已保存的视频摘要</h2>
-      <p className="field-help">在 Windows 导入有权分析的视频，并将结果保存为长期记忆。同步后会在这里展示摘要。</p>
+      <p className="field-help">这里保留已在长期记忆中保存的视频摘要。</p>
       {summaries.length ? <div className="video-analysis">
         {summaries.map(summary => <details key={summary.id}><summary>{summary.title}</summary><p>{summary.content}</p></details>)}
       </div> : <div className="ocean-empty"><Art name="waiting"/><p>这里还没有视频摘要。</p></div>}

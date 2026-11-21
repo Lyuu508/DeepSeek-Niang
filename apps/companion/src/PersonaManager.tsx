@@ -122,11 +122,11 @@ export function PersonaManager({ boot, onSwitch, onRefresh, onError, onSettings,
           {p.personality && <p className="persona-summary">{p.personality}</p>}
         </div>
         <div className="button-row">
-          <button className="quiet-button" disabled={busy} onClick={() => void onSwitch(p.id)}>{boot.active_persona_id === p.id ? '进入聊天' : '切换人格'} →</button>
-          {boot.active_persona_id === p.id && <button className="quiet-button" onClick={onSettings}>编辑人物设定 →</button>}
+          <button className="quiet-button" disabled={busy} onClick={() => void onSwitch(p.id)}><Icon name="chat"/>{boot.active_persona_id === p.id ? '进入聊天' : '切换人格'}</button>
+          {boot.active_persona_id === p.id && <button className="quiet-button" onClick={onSettings}><Icon name="settings"/>编辑人物设定</button>}
         </div>
         <details className="persona-menu"><summary>操作</summary>
-          <button onClick={() => setDetail(p)}>查看人格信息</button>
+          <button onClick={() => setDetail(p)}><Icon name="about"/>查看人格信息</button>
           {boot.active_persona_id !== p.id && <button disabled={busy} onClick={() => void onSwitch(p.id, true)}>编辑人物设定</button>}
           {runtimeMode === 'native' && !p.is_builtin && <button className="danger" disabled={busy || boot.personas.length <= 1}
             onClick={() => { setLocalError(''); setPending({ kind: 'trash', persona: p }); }}>移入回收站</button>}

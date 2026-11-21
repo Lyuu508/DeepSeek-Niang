@@ -78,7 +78,16 @@ impl ChatService {
         input: StartChat,
         observer: Observer,
     ) -> Result<PreparedChat, ChatFailure> {
-        self.start_checked(input, None, observer)
+        self.start_checked(input, None, observer, None)
+    }
+
+    pub fn start_with_image(
+        self: &Arc<Self>,
+        input: StartChat,
+        observer: Observer,
+        image: companion_core::chat_images::ChatImage,
+    ) -> Result<PreparedChat, ChatFailure> {
+        self.start_checked(input, None, observer, Some(&image))
     }
 
     /// The desktop pet submits exactly to the persona shown beside its composer.
@@ -88,7 +97,7 @@ impl ChatService {
         persona_id: &str,
         observer: Observer,
     ) -> Result<PreparedChat, ChatFailure> {
-        self.start_checked(input, Some(persona_id), observer)
+        self.start_checked(input, Some(persona_id), observer, None)
     }
 
     fn start_checked(
@@ -96,6 +105,7 @@ impl ChatService {
         input: StartChat,
         required_persona: Option<&str>,
         observer: Observer,
+        image: Option<&companion_core::chat_images::ChatImage>,
     ) -> Result<PreparedChat, ChatFailure> {
         let mut active = self.active.lock().map_err(|_| ChatFailure::new("BUSY"))?;
         if active.changing_key || !active.runs.is_empty() {
@@ -116,7 +126,7 @@ impl ChatService {
                 return Err(ChatFailure::new("PET_PERSONA_CHANGED"));
             }
             let settings = store.settings_for_conversation(&input.conversation_id)?;
-            let prepared = store.begin_chat(&input, &settings)?;
+            let prepared = store.begin_chat_with_image(&input, &settings, image)?;
             let prompt = match store.companion_context(&prepared.conversation_id, &settings) {
                 Ok(prompt) => prompt,
                 Err(error) => {

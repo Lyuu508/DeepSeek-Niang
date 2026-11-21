@@ -39,7 +39,18 @@ class BuildPolicy(unittest.TestCase):
             tools="{http://schemas.android.com/tools}"
             enabled=[p for p in root.findall("uses-permission") if p.get(tools+"node")!="remove"]
             removed=[p.get(android+"name") for p in root.findall("uses-permission") if p.get(tools+"node")=="remove"]
-            self.assertEqual(len(enabled),4)
+            self.assertEqual({p.get(android+"name") for p in enabled}, {
+                "android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE",
+                "android.permission.ACCESS_LOCAL_NETWORK", "android.permission.CAMERA",
+                "android.permission.REQUEST_INSTALL_PACKAGES",
+            })
+            self.assertEqual(len(enabled),5)
+            providers = root.findall("application/provider")
+            self.assertEqual(len(providers),1)
+            self.assertEqual(providers[0].get(android+"authorities"),"${applicationId}.companion.update")
+            self.assertEqual(providers[0].get(android+"exported"),"false")
+            paths = ET.parse(project / "app/src/main/res/xml/companion_update_paths.xml").getroot()
+            self.assertEqual([(child.tag,child.get("path")) for child in paths], [("cache-path","companion-updates/")])
             self.assertEqual(set(removed),{"android.permission.RECEIVE_BOOT_COMPLETED","android.permission.WAKE_LOCK"})
             self.assertEqual(len(root.findall("application/receiver")),2)
             self.assertTrue(all(r.get(tools+"node")=="remove" for r in root.findall("application/receiver")))

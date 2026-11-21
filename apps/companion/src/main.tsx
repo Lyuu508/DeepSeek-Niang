@@ -1,5 +1,6 @@
 import {listen} from '@tauri-apps/api/event';
-import {VideoPanel} from './VideoPanel';
+import {invoke} from '@tauri-apps/api/core';
+import {CloudVideoPanel} from './CloudVideoPanel';
 import {PetSettingsCard} from './desktop-pet/PetSettingsCard';
 import {notifyShare} from './notifications';
 import {StrictMode,useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
@@ -12,11 +13,13 @@ import './style.css';
 import './interface.css';
 import './button-motion.css';
 import './ocean.css';
+import './release-ui.css';
 import { Art, Icon, PageHeader, WhaleMark, type IconName } from './OceanDesign';
-import { AboutPage, AppearanceSettings, MessageText, PhoneVideoPage, useAppearance, type AppearanceControl } from './OceanPages';
+import { AboutPage, AppearanceSettings, MessageText, useAppearance, type AppearanceControl } from './OceanPages';
 import {installButtonMotion} from './button-motion';
 import {FontSettings,useFontScale,type FontScale} from './appearance';
 import {ChatComposer} from './ChatComposer';
+import {ChatImagePreview,type ChatImage} from './ChatAttachment';
 import {DialogueFields} from './DialogueFields';
 import {PluginManager} from './plugins/PluginManager';
 import {useReminders} from './plugins/useReminders';
@@ -52,6 +55,7 @@ const navigation: { page: AppPage; label: string; icon: IconName }[] = [
 
 function SettingsPanel({boot,onRefresh,onError,voice,font,appearance,onNavigate,compact=false}:{compact?:boolean;appearance:AppearanceControl;onNavigate:(page:AppPage)=>void;boot:Bootstrap|null;voice:VoiceController;font:FontScale;onRefresh:()=>Promise<void>;onError:(e:ChatFailure|null)=>void}){
  const [settings,setSettings]=useState<ChatSettings>({...boot?.settings??previewSettings});
+ const [selectedSection,setSelectedSection]=useState('appearance');
  const sections = useRef<HTMLDivElement>(null);
  const [key,setKey]=useState('');const [busy,setBusy]=useState(false);const [notice,setNotice]=useState('');
  async function perform(work:()=>Promise<string>){setBusy(true);setNotice('');onError(null);try{setNotice(await work());await onRefresh();}catch(e){onError(failure(e));}finally{setBusy(false);setKey('');}}
@@ -63,8 +67,11 @@ function SettingsPanel({boot,onRefresh,onError,voice,font,appearance,onNavigate,
    {([['appearance','外观','sun'],['api','API 配置','key'],['character','聊天与人设','persona'],
      ...(voice.enabled ? [['voice','语音','voice']] : []),
      ...(boot?.platform === 'windows' ? [['pet','桌宠','pet']] : [])] as [string,string,IconName][]).map(([id,label,icon]) =>
-     <button key={id} onClick={()=>sections.current?.querySelector('[data-setting="'+id+'"]')?.scrollIntoView({block:'start'})}><Icon name={icon}/>{label}</button>)}
-   <button onClick={()=>onNavigate('storage')}><Icon name="memory"/>记忆</button>
+     <button key={id} aria-current={selectedSection===id?'location':undefined} onClick={()=>{
+       setSelectedSection(id);
+       sections.current?.querySelector('[data-setting="'+id+'"]')?.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+     }}><Icon name={icon}/>{label}</button>)}
+   <button onClick={()=>onNavigate('storage')}><Icon name="book"/>记忆</button>
    <button onClick={()=>onNavigate('sync')}><Icon name="sync"/>同步</button>
   </nav>}
   <div data-setting="appearance"><AppearanceSettings control={appearance}/><FontSettings font={font}/></div>
@@ -135,6 +142,9 @@ function App(){
 
  const [allMessages,setAllMessages]=useState<Record<string,ChatMessage[]>>({});
  const [drafts,setDrafts]=useState<Record<string,string>>({});
+ const [images,setImages]=useState<Record<string,ChatImage|null>>({});
+ const [localImages,setLocalImages]=useState<Record<string,string[]>>({});
+ const [copied,setCopied]=useState('');
  const [error,setError]=useState<ChatFailure|null>(null);const [loading,setLoading]=useState(false);
  const [active,setActive]=useState<{request:string;conversation:string;started:boolean;detached?:boolean}|null>(null);
  const activeRef=useRef(active);const initialized=useRef(false);const refreshSequence=useRef(0);const switchLock=useRef(false);const eventEpoch=useRef<Record<string,number>>({});
@@ -151,6 +161,14 @@ function App(){
  const settings=boot?.settings??previewSettings;
  const persona=boot?.personas.find(p=>p.id===boot.active_persona_id);
  const conversation=persona?.main_conversation_id??'';
+ useEffect(()=>{
+  if(!conversation||runtimeMode!=='native')return;
+  let current=true;
+  void invoke<string[]>('chat_image_ids',{conversationId:conversation}).then(ids=>{
+   if(current)setLocalImages(old=>({...old,[conversation]:ids}));
+  }).catch(()=>{});
+  return()=>{current=false;};
+ },[conversation]);
  const reminders=useReminders(persona?.id??'',runtimeMode==='native');
  const voice=useVoice(persona?.id??'',runtimeMode==='native' ? boot?.platform??'' : '',page,text=>{
   setDrafts(old=>{
@@ -236,7 +254,14 @@ function App(){
   const text=drafts[conversation]??'';if(!regenerateUserId&&!text.trim())return;
   const request=crypto.randomUUID();const selected=conversation;setError(null);nearBottom.current=true;updateActive({request,conversation:selected,started:false});
   if(!regenerateUserId)setDrafts(old=>({...old,[selected]:''}));
-  try{await native.startChat({request_id:request,conversation_id:selected,text:regenerateUserId?null:text,regenerate_user_id:regenerateUserId??null},onEvent);}
+  const picture=regenerateUserId?undefined:images[selected]??undefined;
+  try{
+   const result=await native.startChat({request_id:request,conversation_id:selected,text:regenerateUserId?null:text,regenerate_user_id:regenerateUserId??null},onEvent,picture);
+   if(picture){
+    setImages(old=>({...old,[selected]:old[selected]===picture?null:old[selected]}));
+    setLocalImages(old=>({...old,[selected]:[...new Set([...(old[selected]??[]),result.user_message_id])]}));
+   }
+  }
   catch(e){setError(failure(e));if(requestIsActive(request)){updateActive(null);if(!regenerateUserId)setDrafts(old=>({...old,[selected]:old[selected]||text}));}}
  }
  async function stopCurrent(){const job=activeRef.current;if(!job)return;try{await native.stop(job.request);const list=await native.messages(job.conversation);setAllMessages(old=>({...old,[job.conversation]:list}));if(activeRef.current?.request===job.request)updateActive(null);await refresh();}catch(e){setError(failure(e));}}
@@ -246,6 +271,10 @@ function App(){
  const title=page==='chat'?persona?.name??'DeepSeek娘':page==='sync'&&mobile?'设备连接':navigation.find(item=>item.page===page)?.label;
  const currentCompanion=companion?.persona_id===boot?.active_persona_id?companion:null;
  const navigate=(destination:AppPage)=>{setPage(destination);setDrawer(false);};
+ async function copyMessage(message:ChatMessage){
+  try{await navigator.clipboard.writeText(message.content);setCopied(message.id);}
+  catch{setError({code:'CLIPBOARD_UNAVAILABLE',message:'无法复制到系统剪贴板。可以选中文字后手动复制。',retryable:true});}
+ }
  return <div className="app" data-theme={dark?'dark':'light'} data-palette={appearance.value.palette} data-platform={mobile?'android':'desktop'} data-page={page} data-ime={imeOpen}>
   <header>
    <button className="menu-toggle" aria-label="打开侧栏" aria-expanded={drawer} onClick={()=>setDrawer(true)}>
@@ -270,7 +299,7 @@ function App(){
     </button>)}</nav>
    <button className="add-persona mobile-add-persona" disabled={!connected} onClick={()=>navigate('personas')}><Icon name="add"/>新增人格</button>
    <nav className="sidebar-bottom" aria-label="主要页面">
-    {navigation.filter(item=>runtimeMode==='native'||!['video','plugins'].includes(item.page)).map(item=>
+    {navigation.filter(item=>runtimeMode==='native'||item.page!=='plugins').map(item=>
      <button key={item.page} aria-label={item.label} aria-current={page===item.page?'page':undefined}
       className={(item.page==='companion'?'sidebar-companion-nav ':'')+(page===item.page?'selected':'')}
       onClick={()=>navigate(item.page)}><Icon name={item.icon}/>{item.label}</button>)}
@@ -287,21 +316,23 @@ function App(){
    {!brandingReady&&<div className="branding-pending">已指定海滩角色图；原始 PNG 文件待导入，暂不使用替代人物图标。</div>}
    {error&&<div className="error-banner" role="alert"><span>{error.message}<small>{error.code}</small></span><button aria-label="关闭错误提示" onClick={()=>setError(null)}>×</button></div>}
    {reminders.reminder&&<div className="notice plugin-reminder" role="status"><span>提醒 · {reminders.reminder.label}</span><button onClick={()=>void reminders.dismiss(reminders.reminder!.id).catch(e=>setError(failure(e)))}>知道了</button></div>}
-   {page==='about'?<div className="page-scroll"><AboutPage version={boot?.version}/></div>:page==='plugins'?<div className="page-scroll"><PluginManager key={persona?.id} persona={persona?.id??''} name={persona?.name??''}/></div>:page==='video'?<div className="page-scroll">{mobile ? <PhoneVideoPage memories={currentCompanion?.memories??[]} onMemories={()=>navigate('storage')}/>
-       : <VideoPanel key={boot?.active_persona_id} personaId={boot?.active_persona_id??''} onMemories={()=>navigate('storage')}/>}</div>:page==='companion'?<div className="page-scroll"><CompanionPanel key={boot?.active_persona_id} data={currentCompanion} onRefresh={refresh} onError={setError} onMemories={()=>setPage('storage')}/></div>:page==='sync'?<div className="page-scroll"><SyncPanel mobile={mobile} onPaired={refresh}/></div>:page==='settings'?<div className="page-scroll"><SettingsPanel key={boot?.active_persona_id??'loading'} boot={boot} voice={voice} font={font} appearance={appearance} onNavigate={navigate} onRefresh={refresh} onError={setError}/></div>:page==='storage'?<div className="page-scroll"><StoragePanel key={boot?.active_persona_id??'loading'} personaId={boot?.active_persona_id??''} onError={setError} onRefresh={refresh}/></div>:page==='personas'?<div className="page-scroll"><PersonaManager boot={boot} onSwitch={switchPersona} onRefresh={refresh} onError={setError} onSettings={()=>setPage('settings')} onErased={threads=>{
+   {page==='about'?<div className="page-scroll"><AboutPage version={boot?.version}/></div>:page==='plugins'?<div className="page-scroll"><PluginManager key={persona?.id} persona={persona?.id??''} name={persona?.name??''}/></div>:page==='video'?<div className="page-scroll"><CloudVideoPanel key={boot?.active_persona_id} personaId={boot?.active_persona_id??''} deepseekConfigured={!!boot?.key_status.configured} memories={currentCompanion?.memories??[]} previousWindows={boot?.platform==='windows'} onMemories={()=>navigate('storage')}/></div>:page==='companion'?<div className="page-scroll"><CompanionPanel key={boot?.active_persona_id} data={currentCompanion} persona={persona} onRefresh={refresh} onError={setError} onMemories={()=>setPage('storage')}/></div>:page==='sync'?<div className="page-scroll"><SyncPanel mobile={mobile} onPaired={refresh}/></div>:page==='settings'?<div className="page-scroll"><SettingsPanel key={boot?.active_persona_id??'loading'} boot={boot} voice={voice} font={font} appearance={appearance} onNavigate={navigate} onRefresh={refresh} onError={setError}/></div>:page==='storage'?<div className="page-scroll"><StoragePanel key={boot?.active_persona_id??'loading'} personaId={boot?.active_persona_id??''} onError={setError} onRefresh={refresh}/></div>:page==='personas'?<div className="page-scroll"><PersonaManager boot={boot} onSwitch={switchPersona} onRefresh={refresh} onError={setError} onSettings={()=>setPage('settings')} onErased={threads=>{
       setAllMessages(old=>Object.fromEntries(Object.entries(old).filter(([id])=>!threads.includes(id))));
       setDrafts(old=>Object.fromEntries(Object.entries(old).filter(([id])=>!threads.includes(id))));
+      setImages(old=>Object.fromEntries(Object.entries(old).filter(([id])=>!threads.includes(id))));
+      setLocalImages(old=>Object.fromEntries(Object.entries(old).filter(([id])=>!threads.includes(id))));
      }}/></div>:<div className="chat-layout"><section className="chat-main">
     <div className="chat-scenery" aria-hidden="true"/>
     <div className="message-scroll" ref={scroll} onScroll={()=>{const n=scroll.current;if(n)nearBottom.current=n.scrollHeight-n.scrollTop-n.clientHeight<100;}}>
      {!visible.length&&!loading&&<div className="welcome">{persona?.is_builtin!==false?<Art name="peeking" className="welcome-character" eager/>:<Avatar persona={persona}/>}<h1>和{persona?.name??'DeepSeek娘'}，接着聊</h1><div className="suggestions">{['聊聊今天的小事','一起想一个新点子','今天想学点什么？'].map(s=><button key={s} disabled={!connected} onClick={()=>{setDrafts(old=>({...old,[conversation]:s}));input.current?.focus();}}>{s}<span>↗</span></button>)}</div></div>}
      {loading&&<div className="loading-history" role="status"><Art name="waiting"/>正在读取人格时间线…</div>}
      <div className="messages" aria-label="永久聊天时间线">{visible.map(m=><article className={`message ${m.role==='user'?'user':'assistant'} ${!m.selected?'old-variant':''}`} key={m.id} data-message-id={m.id} data-state={m.state}>
-      {m.role!=='user'&&<Avatar persona={persona} small/>}<div className="message-body"><div className="message-meta"><strong>{m.role==='user'?'你':persona?.name??settings.character_name}</strong><time>{time(m.created_at_ms)}</time>{!m.selected&&<span>历史回复</span>}</div><div className={`bubble ${m.state==='failed'?'failed':''}`}>{m.content?<MessageText text={m.content}/>:('sending'===m.state||'generating'===m.state)?<span className="typing" aria-label="正在等待回复"><i/><i/><i/></span>:m.state==='failed'?'本次未收到回复。':'生成已中断，尚未收到正文。'}{m.state==='generating'&&<span className="stream-caret"/>}</div><div className="message-foot">{m.state==='sending'?'发送中 · 等待模型':m.state==='generating'?'正在生成':m.state==='interrupted'?(m.error_code==='APP_RESTARTED'?'应用退出时中断':'已停止 / 中断'):m.state==='failed'?'生成失败':'已保存本地'}{m.finish_reason==='length'&&<span> · 达到输出 Token 上限</span>}{voice.enabled&&m.role==='assistant'&&terminal(m)&&!!m.content.trim()&&<button type="button" disabled={!voice.prefs||switching||['starting','recording','transcribing'].includes(voice.phase)} onClick={()=>void voice.play(m.content)}>朗读</button>}{m.role==='assistant'&&m.selected&&m.user_message_id===lastUser?.id&&terminal(m)&&<button disabled={!!active||!boot?.key_status.configured} onClick={()=>void send(m.user_message_id!)}>↻ {m.state==='failed'?'重试':'重新生成'}</button>}</div></div>{m.role==='user'&&<span className="user-avatar" aria-label="你的头像"><Icon name="persona"/></span>}
+      {m.role!=='user'&&<Avatar persona={persona} small/>}<div className="message-body"><div className="message-meta"><strong>{m.role==='user'?'你':persona?.name??settings.character_name}</strong><time>{time(m.created_at_ms)}</time>{!m.selected&&<span>历史回复</span>}</div><div className={`bubble ${m.state==='failed'?'failed':''}`}>{m.content?<MessageText text={m.content}/>:('sending'===m.state||'generating'===m.state)?<span className="typing" aria-label="正在等待回复"><i/><i/><i/></span>:m.state==='failed'?'本次未收到回复。':'生成已中断，尚未收到正文。'}{m.state==='generating'&&<span className="stream-caret"/>}{m.role==='user'&&localImages[conversation]?.includes(m.id)&&<ChatImagePreview conversation={conversation} id={m.id}/>}</div><div className="message-foot">{m.state==='sending'?'发送中 · 等待模型':m.state==='generating'?'正在生成':m.state==='interrupted'?(m.error_code==='APP_RESTARTED'?'应用退出时中断':'已停止 / 中断'):m.state==='failed'?'生成失败':'已保存本地'}{m.finish_reason==='length'&&<span> · 达到输出 Token 上限</span>}{voice.enabled&&m.role==='assistant'&&terminal(m)&&!!m.content.trim()&&<button type="button" disabled={!voice.prefs||switching||['starting','recording','transcribing'].includes(voice.phase)} onClick={()=>void voice.play(m.content)} title="朗读"><Icon name="speaker"/>朗读</button>}{m.role==='assistant'&&m.selected&&m.user_message_id===lastUser?.id&&terminal(m)&&<button disabled={!!active||!boot?.key_status.configured} onClick={()=>void send(m.user_message_id!)}><Icon name="sync"/> {m.state==='failed'?'重试':'重新生成'}</button>}{m.content&&terminal(m)&&<button type="button" aria-label="复制消息" title="复制消息" onClick={()=>void copyMessage(m)}><Icon name="copy"/>{copied===m.id?'已复制':'复制'}</button>}</div></div>{m.role==='user'&&<span className="user-avatar" aria-label="你的头像"><Icon name="persona"/></span>}
      </article>)}</div>
      {variants>0&&<button className="variant-toggle" onClick={()=>setShowHistory(!showHistory)}>{showHistory?'收起历史回复':`查看历史回复（${variants}）`}</button>}<div ref={bottom}/>
     </div>
-    <ChatComposer field={input} draft={drafts[conversation]??''} name={persona?.name}
+    <ChatComposer field={input} draft={drafts[conversation]??''} name={persona?.name} image={images[conversation]}
+     onImage={image=>setImages(old=>({...old,[conversation]:image}))}
      connected={connected} disabled={!connected||!conversation||loading||switching} configured={!!boot?.key_status.configured}
      canSend={canSend} mobile={mobile} voice={voice} recording={!switching}
      historyTurns={settings.include_history?settings.history_turns:0}

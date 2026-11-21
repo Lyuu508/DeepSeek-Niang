@@ -2,16 +2,16 @@ import { PageHeader, moodArt } from './OceanDesign';
 import {LifePanel} from './LifePanel';
 import {enableNotifications} from './notifications';
 import {useEffect,useState} from 'react';
-import type {CompanionPreferences,CompanionSnapshot,ChatFailure} from '@deepseek/contracts';
+import type {CompanionPreferences,CompanionSnapshot,ChatFailure,Persona} from '@deepseek/contracts';
 import {native,nativeAvailable,failure,runtimeMode} from './native';
+import {BondDimensions,bondDimensions,MoodDisplay} from './RelationshipDisplay';
 
 export function dateTime(value:number|null){return value===null?'旧版未记录':new Date(value).toLocaleString();}
-const dimensions=[['familiarity','熟悉'],['trust','信任'],['affection','好感'],['intimacy','亲密'],['comfort','舒适']] as const;
 const activityNames:Record<string,string>={auto:'按日常顺序',wake:'起床',read:'阅读保存的话题',interest:'兴趣构想',create:'创作构思',journal:'记录生活',rest:'休息',study:'学习',video:'视频话题构想（不播放）',music:'音乐话题构想（不播放）',organize:'整理记忆',recall:'回忆往事',wait:'等待主人',share:'分享发现'};
 const minuteText=(value:number)=>String(Math.floor(value/60)).padStart(2,'0')+':'+String(value%60).padStart(2,'0');
 const parseMinute=(value:string)=>{const parts=value.split(':').map(Number);return parts[0]*60+parts[1];};
 
-export function CompanionPanel({data,onRefresh,onError,onMemories,compact=false}:{compact?:boolean;data:CompanionSnapshot|null;onRefresh:()=>Promise<void>;onError:(error:ChatFailure|null)=>void;onMemories:()=>void}){
+export function CompanionPanel({data,persona,onRefresh,onError,onMemories,compact=false}:{compact?:boolean;data:CompanionSnapshot|null;persona?:Persona;onRefresh:()=>Promise<void>;onError:(error:ChatFailure|null)=>void;onMemories:()=>void}){
  const [preferences,setPreferences]=useState<CompanionPreferences|null>(data?.preferences??null);
  const [dirty,setDirty]=useState(false);const [busy,setBusy]=useState(false);const [notice,setNotice]=useState('');
  useEffect(()=>{if(!dirty)setPreferences(data?.preferences??null);},[data,dirty]);
@@ -26,12 +26,12 @@ export function CompanionPanel({data,onRefresh,onError,onMemories,compact=false}
   {notice&&<p className="notice" role="status">{notice}</p>}
   {data.worker?.error_code&&<p className="notice inline-error" role="status">有一部分记忆或日常处理尚待重试，原聊天已保留。请稍后刷新检查。</p>}
   <section className="settings-card bond-card"><div className="card-heading"><div><h2>我们的关系</h2><p>{bond.applied_events} 次有效变化 · {bond.distinct_days} 个有记录的相处日</p></div><span className="relation-stage">{bond.stage}</span></div>
-   <div className="bond-dimensions">{dimensions.map(([key,label])=><div className="bond-dimension" key={key}><span>{label}<strong>{(bond[key]/1000).toFixed(1)}</strong></span><progress aria-label={label+'程度'} value={bond[key]} max={100000}/></div>)}</div>
+   <BondDimensions bond={bond}/>
    <p className="field-help">同类事件有冷却、重复递减与每日上限。关系会影响实际聊天语气，但不会替代稳定性格或要求你持续在线。</p>
-   <details><summary>关系变化历史</summary>{bond.history.length?<ol className="evidence-list">{bond.history.map(event=><li key={event.id}><strong>{event.explanation}</strong><time>{dateTime(event.occurred_at_ms)}</time><p>{event.decision}{event.applied?' · '+event.delta.map((value,index)=>value?dimensions[index][1]+' '+(value>0?'+':'')+(value/1000).toFixed(2):'').filter(Boolean).join('，'):''}</p><small>来源消息：{event.source_message_id}</small></li>)}</ol>:<p>还没有重要关系变化。日常聊天可以保持零变化。</p>}</details>
+   <details><summary>关系变化历史</summary>{bond.history.length?<ol className="evidence-list">{bond.history.map(event=><li key={event.id}><strong>{event.explanation}</strong><time>{dateTime(event.occurred_at_ms)}</time><p>{event.decision}{event.applied?' · '+event.delta.map((value,index)=>value?bondDimensions[index][1]+' '+(value>0?'+':'')+(value/1000).toFixed(2):'').filter(Boolean).join('，'):''}</p><small>来源消息：{event.source_message_id}</small></li>)}</ol>:<p>还没有重要关系变化。日常聊天可以保持零变化。</p>}</details>
   </section>
   <div className="companion-status-grid">
-   <section className="settings-card"><h2>此刻的心情</h2><strong className="mood-name">{mood.label}</strong><p>{mood.source}</p><p className="field-help">强度 {(mood.intensity_milli/10).toFixed(0)}%{mood.expires_at_ms?' · '+dateTime(mood.expires_at_ms)+' 前逐渐平复':''}。情绪是持久的应用状态，不是随机标签。</p></section>
+   <section className="settings-card"><h2>此刻的心情</h2><MoodDisplay data={data} persona={persona}/><p>{mood.source}</p><p className="field-help">强度 {(mood.intensity_milli/10).toFixed(0)}%{mood.expires_at_ms?' · '+dateTime(mood.expires_at_ms)+' 前逐渐平复':''}。情绪是持久的应用状态，不是随机标签。</p></section>
    <section className="settings-card"><div className="card-heading"><h2>她的虚拟日常</h2><span className="badge">{life.host_online?'电脑主机在线':'等待电脑主机'}</span></div><strong className="life-name">{life.current?`${life.current.label} · ${life.host_online?({queued:'等待执行',running:'进行中',paused:'已暂停',failed:'失败',uncertain:'待核对',completed:'已完成',cancelled:'已取消'}[life.current.state]??life.current.state):'状态已过期'}`:'尚未开始'}</strong><p>下一项：{life.next_activity??'电脑在线后安排'}</p><small>{life.heartbeat_at_ms?'最近状态：'+dateTime(life.heartbeat_at_ms):'手机仅查看同步状态，不独立重复调度。'}</small><p className="field-help">所有活动都是明确标记的本地虚拟安排；不执行网页浏览或媒体理解。电脑应用关闭后暂停。</p></section>
   </div>
   <section className="settings-card"><div className="card-heading"><h2>今天的小记</h2><button onClick={onMemories}>查看分层记忆 →</button></div>{life.today_events.length?<ol className="evidence-list">{life.today_events.map(event=><li key={event.id}><time>{dateTime(event.occurred_at_ms)}</time><p>{event.description}</p></li>)}</ol>:<p>今天还没有生活事件；不会填入未发生的经历。</p>}</section>

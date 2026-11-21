@@ -4,13 +4,15 @@
 
 **[下载 Windows 版](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.10/DeepSeek-Niang_0.0.10_windows-x64-setup.exe) · [下载 Android 版](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.10/DeepSeek-Niang_0.0.10_android-arm64-isolated-test.apk) · [首次使用](docs/USAGE.md)**
 
-当前版本为 **v0.0.10 测试版**。已有自动化测试和原生构建记录，真实设备、家庭网络及真实 API 体验待验收。
+本地开发版本为 **v0.1.0 验收候选**。新版包含双端海洋界面、授权视频问答和正式版更新检查。[改动说明](docs/RELEASE_0.1.0.md) · [签名及验收](docs/V010_ACCEPTANCE.md)。上方链接仍指向当前公开的 v0.0.10 测试包。
+
+当前公开版本为 **v0.0.10 测试版**。已有自动化测试和原生构建记录，真实设备、家庭网络及真实 API 体验待验收。
 
 v0.0.10 为 Windows 和 Android 更新海洋主题，包含三视图生成的角色素材、主题配色、深海夜色和全套页面设计。[设计与验收](docs/V010_OCEAN_UI.md) · [素材清单](assets/branding/ocean-art.json)
 
 v0.0.6 的桌宠已整合到 Windows 主客户端。透明角色能在桌面上自动走动，也支持直接拖动、点击挥手和双击聊天。[使用与验收](docs/phases/05-desktop-pet.md) · [dsh-pet 动画署名](apps/companion/src/desktop-pet/media/NOTICE.md)
 
-Windows 侧栏「视频中心」支持用户授权的本地视频分析，需要本机 FFmpeg、Ollama/Qwen3-VL。带音轨时使用本机 Whisper。[视频中心准备与使用](docs/phases/06-video-understanding.md)
+v0.0.10 的历史视频实现使用本地 FFmpeg、Ollama 和 Whisper。v0.1.0 改由千问识别画面、DeepSeek 最终回答，无需部署本地大模型。[视频中心准备与使用](docs/phases/06-video-understanding.md)
 
 两端可从聊天中使用本机朗读和语音输入。在「设置 → 语音与麦克风」为当前人格选择音色，或试听原创元音唱段。[语音试用与设备要求](docs/phases/07-voice-singing.md)
 

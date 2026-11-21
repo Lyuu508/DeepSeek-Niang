@@ -1,6 +1,7 @@
 //! Shared local-first domain kernel. No network listener, UI, or cloud database.
 mod appearance;
 pub mod chat;
+pub mod chat_images;
 pub mod companion;
 pub mod dialogue;
 pub mod event;
@@ -14,6 +15,7 @@ pub mod replication;
 pub mod storage;
 pub mod task;
 pub mod video;
+pub mod video_device;
 pub mod voice;
 
 #[derive(Debug, thiserror::Error)]

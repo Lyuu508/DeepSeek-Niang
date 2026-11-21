@@ -24,6 +24,15 @@ const iconPaths = {
   voice: 'M9 5a3 3 0 0 1 6 0v7a3 3 0 0 1-6 0V5Zm-3 6v1a6 6 0 0 0 12 0v-1m-6 7v4m-4 0h8',
   arrow: 'M5 12h14m-5-5 5 5-5 5',
   shield: 'M12 3 4 6v6c0 4 3 7 8 10 5-3 8-6 8-10V6l-8-3Zm-3 9 2 2 4-4',
+  pulse: 'M2 12h5l3-7 3.5 14 3-7H22',
+  star: 'm12 2 3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1 3-6Z',
+  pair: 'M16 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0ZM5 21v-2a7.5 4.5 0 0 1 15 0v2M5.5 6a2.8 2.8 0 1 0 0 5.6M4 15a4 4 0 0 0-2 3.5V21',
+  sofa: 'M5 12V9a3 3 0 0 1 3-3h8a3 3 0 0 1 3 3v3m-14 0a2.5 2.5 0 1 0-2 4v3h18v-3a2.5 2.5 0 0 0-2-4l-1 3H6l-1-3m0 7v2m14-2v2',
+  book: 'M3 5c4-1 7 0 9 2 2-2 5-3 9-2v14c-4-1-7 0-9 2-2-2-5-3-9-2V5Zm9 2v14',
+  speaker: 'M3 9h4l5-4v14l-5-4H3v-6Zm12 0a4 4 0 0 1 0 6m3-9a8 8 0 0 1 0 12',
+  copy: 'M8 8h12v13H8V8Zm8-3V3H3v13h2',
+  picture: 'M3 4h18v16H3V4Zm3 11 3-3 3 3 3-5 4 6M8 8h.01',
+  download: 'M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4',
 } as const;
 
 export type IconName = keyof typeof iconPaths;
