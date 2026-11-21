@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { chromium } = require('playwright');
 const { exerciseOcean } = require('./ocean-evidence.cjs');
+const { exerciseRework } = require('./rework-evidence.cjs');
 
 const root = path.resolve(__dirname, '../..');
 const output = process.env.COMPANION_V009_EVIDENCE || path.join(root, '.cache/v009');
@@ -16,11 +17,11 @@ const server = spawn(process.execPath, [vite, '--host', '127.0.0.1', '--port', '
   env: { ...process.env, VITE_COMPANION_TEST_PACKAGE: '1' },
   stdio: 'ignore',
 });
-const sizes = [[360, 800], [375, 812], [393, 852], [412, 915], [1024, 768], [812, 375]];
+const sizes = [[295, 663], [360, 800], [375, 812], [393, 852], [412, 915], [1024, 768], [812, 375]];
 const report = { scope: 'Chromium browser fixture; native IPC and keyboard geometry simulated', mobile: [], checks: [] };
 let browser;
 
-async function pageFor(platform, [width, height]) {
+async function pageFor(platform, [width, height], unconfigured = false) {
   const page = await browser.newPage({
     viewport: { width, height },
     deviceScaleFactor: 1,
@@ -30,7 +31,7 @@ async function pageFor(platform, [width, height]) {
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.route('**/*', route => route.request().url().startsWith(base + '/') ? route.continue() : route.abort());
-  await page.addInitScript(platform => {
+  await page.addInitScript(({ platform, unconfigured }) => {
     window.isTauri = true;
     const recycled = new Map();
     const erased = new Set();
@@ -43,7 +44,7 @@ async function pageFor(platform, [width, height]) {
         if (cmd.startsWith('plugin:event|')) return 1;
         const { fixtureApi } = await import('/src/test-fixture.ts');
         if (cmd === 'bootstrap') {
-          if (!initialized) { await fixtureApi.setKey('fixture-layout'); initialized = true; }
+          if (!initialized && !unconfigured) { await fixtureApi.setKey('fixture-layout'); initialized = true; }
           const boot = await fixtureApi.bootstrap();
           return { ...boot, platform, font_scale: Number(sessionStorage.getItem('fixture-font') ?? '100'),
             personas: boot.personas.filter(p => !recycled.has(p.id) && !erased.has(p.id)) };
@@ -73,7 +74,7 @@ async function pageFor(platform, [width, height]) {
           const { syncFixture } = await import('/src/sync-fixture.ts');
           return syncFixture.status();
         }
-        if (cmd === 'list_messages') return [{
+        if (cmd === 'list_messages') return unconfigured ? [] : [{
           id: 'layout-user', role: 'user', state: 'complete', selected: true, revision: 1, created_at_ms: 1795184400000,
           content: '今天在海边散步，风很舒服。',
         }, {
@@ -135,9 +136,10 @@ async function pageFor(platform, [width, height]) {
         throw 'FIXTURE_UNAVAILABLE';
       },
     };
-  }, platform);
+  }, { platform, unconfigured });
   await page.goto(base);
-  await page.getByText('今天在海边散步，风很舒服。', { exact: true }).waitFor();
+  if (unconfigured) await page.getByRole('heading', { name: '和DeepSeek娘，接着聊' }).waitFor();
+  else await page.getByText('今天在海边散步，风很舒服。', { exact: true }).waitFor();
   return { page, errors };
 }
 
@@ -204,6 +206,7 @@ async function exercisePhone() {
   await page.waitForFunction(()=>getComputedStyle(document.documentElement).fontSize==='22.4px');
   await button(page,'手机设置').click();
   await button(page,'标准').click();
+  await page.getByRole('navigation',{name:'设置分类'}).getByRole('button',{name:'聊天与人设',exact:true}).click();
   await page.getByLabel('对话模式',{exact:true}).selectOption('free');
   await shot(page,'dialogue-free');
   await page.getByLabel('对话模式',{exact:true}).selectOption('custom');
@@ -316,7 +319,10 @@ async function exercisePhone() {
   }
   assert.deepEqual(errors, []);
   await page.close();
-  if (!baseline) report.ocean = await exerciseOcean(pageFor, shot, button);
+  if (!baseline) {
+    report.ocean = await exerciseOcean(pageFor, shot, button);
+    report.rework = await exerciseRework(pageFor, shot, button, output);
+  }
   fs.writeFileSync(path.join(output, baseline ? 'before.json' : 'layout-results.json'), JSON.stringify(report, null, 2) + '\n');
   console.log(JSON.stringify(report));
 })().catch(error => { console.error(error); process.exitCode = 1; })

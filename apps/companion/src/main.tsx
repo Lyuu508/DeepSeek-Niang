@@ -1,6 +1,7 @@
 import {listen} from '@tauri-apps/api/event';
 import {invoke} from '@tauri-apps/api/core';
-import {CloudVideoPanel} from './CloudVideoPanel';
+import {CloudVideoPanel,runVideoQuestion,videoErrorText,type VideoQuestion} from './CloudVideoPanel';
+import {canSendClip,videoDuration,type VideoMode} from './video-media';
 import {PetSettingsCard} from './desktop-pet/PetSettingsCard';
 import {notifyShare} from './notifications';
 import {StrictMode,useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
@@ -54,33 +55,36 @@ const navigation: { page: AppPage; label: string; icon: IconName }[] = [
  {page:'about',label:'关于',icon:'about'},
 ];
 
-function SettingsPanel({boot,onRefresh,onError,voice,font,appearance,onNavigate,compact=false}:{compact?:boolean;appearance:AppearanceControl;onNavigate:(page:AppPage)=>void;boot:Bootstrap|null;voice:VoiceController;font:FontScale;onRefresh:()=>Promise<void>;onError:(e:ChatFailure|null)=>void}){
+type SettingsSection = 'appearance' | 'api' | 'character' | 'voice' | 'pet' | 'memory' | 'sync';
+
+function SettingsPanel({boot,onRefresh,onError,voice,font,appearance,initialSection='appearance',compact=false}:{compact?:boolean;initialSection?:SettingsSection;appearance:AppearanceControl;boot:Bootstrap|null;voice:VoiceController;font:FontScale;onRefresh:()=>Promise<void>;onError:(e:ChatFailure|null)=>void}){
  const [settings,setSettings]=useState<ChatSettings>({...boot?.settings??previewSettings});
- const [selectedSection,setSelectedSection]=useState('appearance');
- const sections = useRef<HTMLDivElement>(null);
+ const [selectedSection,setSelectedSection]=useState<SettingsSection>(initialSection);
  const [key,setKey]=useState('');const [busy,setBusy]=useState(false);const [notice,setNotice]=useState('');
+ const items: [SettingsSection,string,IconName][] = [['appearance','外观','sun'],['api','API 配置','key'],['character','聊天与人设','persona']];
+ if (voice.enabled) items.push(['voice','语音','voice']);
+ if (boot?.platform === 'windows') items.push(['pet','桌宠','pet']);
+ items.push(['memory','记忆','book'],['sync','同步','sync']);
+ const current = items.some(([id])=>id===selectedSection)?selectedSection:'appearance';
+ const hidden = (section:SettingsSection)=>!compact && current!==section;
  async function perform(work:()=>Promise<string>){setBusy(true);setNotice('');onError(null);try{setNotice(await work());await onRefresh();}catch(e){onError(failure(e));}finally{setBusy(false);setKey('');}}
  const change=<K extends keyof ChatSettings>(name:K,value:ChatSettings[K])=>setSettings(s=>({...s,[name]:value}));
- return <div ref={sections} className={`settings-content ${compact?'rail-settings':''}`}>
+ return <div className={`settings-content ${compact?'rail-settings':'settings-page'}`}>
   <PageHeader title="设置" icon="settings" art={compact?undefined:'wave'} scene={compact?undefined:'scene-settings'}
    description="管理本机外观、聊天与设备偏好。"/>
+  <div className="settings-workbench">
   {!compact && <nav className="settings-index" aria-label="设置分类">
-   {([['appearance','外观','sun'],['api','API 配置','key'],['character','聊天与人设','persona'],
-     ...(voice.enabled ? [['voice','语音','voice']] : []),
-     ...(boot?.platform === 'windows' ? [['pet','桌宠','pet']] : [])] as [string,string,IconName][]).map(([id,label,icon]) =>
-     <button key={id} aria-current={selectedSection===id?'location':undefined} onClick={()=>{
-       setSelectedSection(id);
-       sections.current?.querySelector('[data-setting="'+id+'"]')?.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
-     }}><Icon name={icon}/>{label}</button>)}
-   <button onClick={()=>onNavigate('storage')}><Icon name="book"/>记忆</button>
-   <button onClick={()=>onNavigate('sync')}><Icon name="sync"/>同步</button>
+   {items.map(([id,label,icon]) =>
+    <button type="button" key={id} aria-current={current===id?'location':undefined} aria-controls={`setting-${id}`}
+     onClick={()=>{setSelectedSection(id);setNotice('');}}><Icon name={icon}/><span>{label}</span></button>)}
   </nav>}
-  <div data-setting="appearance"><AppearanceSettings control={appearance}/><FontSettings font={font}/></div>
-  {runtimeMode==='native'&&boot?.platform==='windows'&&<div data-setting="pet"><PetSettingsCard/></div>}
-  {voice.enabled&&<div data-setting="voice"><VoiceSettings voice={voice} platform={boot?.platform??''}/>{runtimeMode==='native'&&boot?.active_persona_id&&
+  <div className="settings-workbench-body">
+  <div id="setting-appearance" data-setting="appearance" hidden={hidden('appearance')}><AppearanceSettings control={appearance}/><FontSettings font={font}/></div>
+  {boot?.platform==='windows'&&<div id="setting-pet" data-setting="pet" hidden={hidden('pet')}><PetSettingsCard/></div>}
+  {voice.enabled&&<div id="setting-voice" data-setting="voice" hidden={hidden('voice')}><VoiceSettings voice={voice} platform={boot?.platform??''}/>{runtimeMode==='native'&&boot?.active_persona_id&&
     <CloudVoiceSettings persona={boot.active_persona_id} voice={voice}/>}</div>}
   {notice&&<div className="notice" role="status">{notice}</div>}
-  <section className="settings-card" data-setting="api"><div className="card-heading"><span className="card-icon"><Icon name="key"/></span><div><h2>DeepSeek API</h2><p>直接连接官方服务，无云端中转。</p></div><span className={`badge ${boot?.key_status.configured?'success':''}`}>{boot?.key_status.configured?'已配置密钥':'未配置密钥'}</span></div>
+  <section className="settings-card" id="setting-api" data-setting="api" hidden={hidden('api')}><div className="card-heading"><span className="card-icon"><Icon name="key"/></span><div><h2>DeepSeek API</h2><p>直接连接官方服务。</p></div><span className={`badge ${boot?.key_status.configured?'success':''}`}>{boot?.key_status.configured?'已配置密钥':'未配置密钥'}</span></div>
    <div className="storage-status"><span>本机存储</span><strong>{boot?.key_status.backend??'原生安全存储未连接'}</strong></div>
    {boot?.key_status.error&&<p className="inline-error">{boot.key_status.error.message}</p>}
    <form onSubmit={e=>{e.preventDefault();void perform(async()=>{await native.setKey(key.trim());return runtimeMode==='mock'?'模拟测试：已更新配置标记，未保存真实凭据。':'密钥已保存并通过系统存储读取核对。';});}}>
@@ -89,14 +93,14 @@ function SettingsPanel({boot,onRefresh,onError,voice,font,appearance,onNavigate,
    </form>
    <div className="button-row"><button disabled={!nativeAvailable||busy||!boot?.key_status.configured} onClick={()=>void perform(async()=>{await native.deleteKey();return '本机密钥已删除。';})}>删除密钥</button><button disabled={!nativeAvailable||busy} onClick={()=>void perform(async()=>{const backend=await native.selfTestVault();return runtimeMode==='mock'?'模拟测试完成；未验证 Windows 或 Android 安全存储。':`${backend} 写入、读取、删除自测通过。`;})}>验证安全存储</button><small>替换或删除密钥会先停止正在生成的回复。</small></div>
   </section>
-  <form onSubmit={e=>{e.preventDefault();void perform(async()=>{if(!boot)throw new Error();await native.saveSettings(boot.active_persona_id,settings);return '聊天与人设设置已保存，新消息将使用这些设置。';});}}>
-   <section className="settings-card" data-setting="character"><div className="card-heading"><span className="card-icon"><Icon name="persona"/></span><div><h2>她的聊天风格</h2><p>保留稳定的基础性格，称呼和表达由你调整。</p></div></div>
+  <form id="setting-character" data-setting="character" hidden={hidden('character')} onSubmit={e=>{e.preventDefault();void perform(async()=>{if(!boot)throw new Error();await native.saveSettings(boot.active_persona_id,settings);return '聊天与人设设置已保存，新消息将使用这些设置。';});}}>
+   <section className="settings-card"><div className="card-heading"><span className="card-icon"><Icon name="persona"/></span><div><h2>她的聊天风格</h2><p>保留稳定的基础性格，称呼和表达由你调整。</p></div></div>
     <div className="two-fields"><div><label htmlFor="character-name">角色名称</label><input id="character-name" value={settings.character_name} maxLength={32} disabled={!nativeAvailable||busy} onChange={e=>change('character_name',e.target.value)}/></div><div><label htmlFor="user-title">如何称呼你</label><input id="user-title" value={settings.user_title} maxLength={32} disabled={!nativeAvailable||busy} onChange={e=>change('user_title',e.target.value)}/></div></div>
     <label htmlFor="personality">人物性格</label><textarea id="personality" className="personality" value={settings.personality} maxLength={3000} disabled={!nativeAvailable||busy} onChange={e=>change('personality',e.target.value)}/>
     <p className="field-help">关系阶段与未过期情绪参与聊天上下文。可在「关系与日常」查看来源和设置。</p>
     <DialogueFields value={settings.dialogue} disabled={!nativeAvailable||busy} onChange={value=>change('dialogue',value)}/>
    </section>
-   <section className="settings-card"><div className="card-heading"><span className="card-icon">≋</span><div><h2>生成偏好</h2><p>更改设置不会改变已经发出的请求。</p></div></div>
+    <section className="settings-card"><div className="card-heading"><span className="card-icon"><Icon name="pulse"/></span><div><h2>生成偏好</h2><p>新消息使用保存后的配置。</p></div></div>
     <div className="two-fields"><div><label htmlFor="model">模型</label><select id="model" value={settings.model} disabled={!nativeAvailable||busy} onChange={e=>change('model',e.target.value)}><option value="deepseek-flash">DeepSeek Flash</option><option value="deepseek-v4-pro">DeepSeek V4 Pro</option></select></div><div><label htmlFor="max-tokens">单次最大输出 Token</label><input id="max-tokens" type="number" min={256} max={8192} step={256} disabled={!nativeAvailable||busy} value={settings.max_tokens} onChange={e=>change('max_tokens',Number(e.target.value))}/></div><div><label htmlFor="temperature">表达温度 · {settings.temperature.toFixed(1)}</label><input id="temperature" type="range" min={0} max={2} step={.1} disabled={!nativeAvailable||busy} value={settings.temperature} onChange={e=>change('temperature',Number(e.target.value))}/></div><div><label htmlFor="timeout">请求超时（秒）</label><input id="timeout" type="number" min={15} max={300} disabled={!nativeAvailable||busy} value={settings.timeout_seconds} onChange={e=>change('timeout_seconds',Number(e.target.value))}/></div></div>
     <label className="check-row"><input type="checkbox" checked={settings.include_history} disabled={!nativeAvailable||busy} onChange={e=>change('include_history',e.target.checked)}/><span>发送当前人格的近期上下文</span></label>
     <button type="button" className="quiet-button" onClick={()=>change('history_turns',6)}>节省 Token：近期 6 轮 + 按需找回旧聊</button><label htmlFor="history-turns">最多保留轮数</label><input id="history-turns" type="number" min={1} max={40} value={settings.history_turns} disabled={!nativeAvailable||busy||!settings.include_history} onChange={e=>change('history_turns',Number(e.target.value))}/>
@@ -104,6 +108,14 @@ function SettingsPanel({boot,onRefresh,onError,voice,font,appearance,onNavigate,
     <button className="primary" disabled={!nativeAvailable||busy}>保存聊天设置</button>
    </section>
   </form>
+  {!compact && <div id="setting-memory" data-setting="memory" hidden={current!=='memory'}>
+   {current==='memory' && <MemoryPanel personaId={boot?.active_persona_id??''} onError={onError} onRefresh={onRefresh}/>}
+  </div>}
+  {!compact && <div id="setting-sync" data-setting="sync" hidden={current!=='sync'}>
+   {current==='sync' && <SyncPanel mobile={boot?.platform==='android'} onPaired={onRefresh}/>}
+  </div>}
+  </div>
+  </div>
  </div>;
 }
 function StoragePanel({personaId,onError,onRefresh}:{personaId:string;onError:(e:ChatFailure|null)=>void;onRefresh:()=>Promise<void>}){
@@ -116,6 +128,7 @@ function App(){
  const [boot,setBoot]=useState<Bootstrap|null>(null);
  const [companion,setCompanion]=useState<CompanionSnapshot|null>(null);
  const [page,setPage]=useState<AppPage>('chat');
+ const [settingsSection,setSettingsSection]=useState<SettingsSection>('appearance');
  const readingShares=useRef(new Set<string>());
  const notifyingShares=useRef(new Set<string>());
  useEffect(()=>{
@@ -145,7 +158,9 @@ function App(){
  const [allMessages,setAllMessages]=useState<Record<string,ChatMessage[]>>({});
  const [drafts,setDrafts]=useState<Record<string,string>>({});
  const [images,setImages]=useState<Record<string,ChatImage[]>>({});
- const [videoDraft,setVideoDraft]=useState<{persona:string;file:File;question:string}|undefined>();
+ const [videoDraft,setVideoDraft]=useState<{persona:string;file:File;question:string;mode:VideoMode}|undefined>();
+ const [videoStatus,setVideoStatus]=useState('');
+ const videoResume=useRef<{persona:string;file:File;record:VideoQuestion}|null>(null);
  const [localImages,setLocalImages]=useState<Record<string,string[]>>({});
  const [copied,setCopied]=useState('');
  const [error,setError]=useState<ChatFailure|null>(null);const [loading,setLoading]=useState(false);
@@ -270,18 +285,54 @@ function App(){
  async function switchPersona(id:string,toSettings=false){
   if(switchLock.current)return;switchLock.current=true;setSwitching(true);setError(null);
   voice.stop();
-  try{await native.selectPersona(id);await refresh();setPage(toSettings?'settings':'chat');setDrawer(false);}catch(e){setError(failure(e));}finally{switchLock.current=false;setSwitching(false);}
+  try{await native.selectPersona(id);await refresh();if(toSettings)setSettingsSection('character');setPage(toSettings?'settings':'chat');setDrawer(false);}catch(e){setError(failure(e));}finally{switchLock.current=false;setSwitching(false);}
  }
- async function send(regenerateUserId?:string){
+ async function sendVideo(file:File,personaId:string,draft:string,mode:VideoMode){
+  const question=draft.trim()||'请概述视频画面，并给出重要时间点。';
+  if(question.length>1000){setError({code:'VIDEO_QUESTION_INVALID',message:'视频问题最多 1000 个字符，原草稿已保留。',retryable:false});return;}
+  const request=crypto.randomUUID();const selected=conversation;
+  setError(null);nearBottom.current=true;
+  updateActive({request,conversation:selected,started:false});
+  try{
+   setVideoStatus('读取视频');
+   const duration=await videoDuration(file);
+   const resume=videoResume.current;
+   let previous:VideoQuestion|null=null;
+   if(resume?.persona===personaId&&resume.file===file&&resume.record.question===question){
+    const saved=await invoke<VideoQuestion|null>('cloud_video_status',{persona:personaId});
+    if(saved?.id===resume.record.id)previous=saved;
+   }
+   const result=await runVideoQuestion({persona:personaId,file,question,duration,mode,authorized:true},
+    previous,record=>{videoResume.current={persona:personaId,file,record};},setVideoStatus);
+   setVideoStatus('将问答保存到聊天');
+   await invoke('cloud_video_save_chat',{persona:personaId,id:result.id});
+   setVideoDraft(old=>old?.file===file?undefined:old);
+   setDrafts(old=>({...old,[selected]:old[selected]===draft?'':old[selected]}));
+   videoResume.current=null;
+   const rows=await native.messages(selected);
+   setAllMessages(old=>({...old,[selected]:rows}));
+   await refresh();
+  }catch(error){
+   setError({code:typeof error==='string'?error:'VIDEO_FAILED',message:videoErrorText(error),retryable:true});
+  }finally{
+   setVideoStatus('');
+   if(requestIsActive(request))updateActive(null);
+  }
+ }
+ async function send(regenerateUserId?:string,imageConsent=false,videoConsent=false){
   if(!conversation||activeRef.current||!boot?.key_status.configured||switching)return;
   const pictures=regenerateUserId?undefined:images[conversation];
   const draft=drafts[conversation]??'';
-  const text=draft.trim()?draft:pictures?.length?'［发送了本机图片附件，请等我描述画面。］':'';
+  if(!regenerateUserId && videoDraft && videoDraft.persona===boot?.active_persona_id){
+   if(videoConsent && !pictures?.length)await sendVideo(videoDraft.file,videoDraft.persona,draft,videoDraft.mode);
+   return;
+  }
+  const text=draft.trim()?draft:pictures?.length?(imageConsent?'请描述我发的图片。':'［发送了本机图片附件，请等我描述画面。］'):'';
   if(!regenerateUserId&&!text.trim())return;
   const request=crypto.randomUUID();const selected=conversation;setError(null);nearBottom.current=true;updateActive({request,conversation:selected,started:false});
   if(!regenerateUserId)setDrafts(old=>({...old,[selected]:''}));
   try{
-   const result=await native.startChat({request_id:request,conversation_id:selected,text:regenerateUserId?null:text,regenerate_user_id:regenerateUserId??null},onEvent,pictures);
+   const result=await native.startChat({request_id:request,conversation_id:selected,text:regenerateUserId?null:text,regenerate_user_id:regenerateUserId??null},onEvent,pictures,imageConsent);
    if(pictures?.length){
     setImages(old=>({...old,[selected]:old[selected]===pictures?[]:old[selected]}));
     setLocalImages(old=>({...old,[selected]:[...new Set([...(old[selected]??[]),result.user_message_id])]}));
@@ -295,7 +346,8 @@ function App(){
  const connected=nativeAvailable&&!!boot;const canSend=connected&&!!conversation&&boot.key_status.configured&&!active&&!loading&&!switching;
  const title=page==='chat'?persona?.name??'DeepSeek娘':page==='sync'&&mobile?'设备连接':navigation.find(item=>item.page===page)?.label;
  const currentCompanion=companion?.persona_id===boot?.active_persona_id?companion:null;
- const navigate=(destination:AppPage)=>{setPage(destination);setDrawer(false);};
+ const navigate=(destination:AppPage)=>{if(destination==='settings')setSettingsSection('appearance');setPage(destination);setDrawer(false);};
+ const openSettings=(section:SettingsSection)=>{setSettingsSection(section);setPage('settings');setDrawer(false);};
  async function copyMessage(message:ChatMessage){
   try{await navigator.clipboard.writeText(message.content);setCopied(message.id);}
   catch{setError({code:'CLIPBOARD_UNAVAILABLE',message:'无法复制到系统剪贴板。可以选中文字后手动复制。',retryable:true});}
@@ -344,7 +396,7 @@ function App(){
    {page==='about'?<div className="page-scroll"><AboutPage version={boot?.version}/></div>:page==='plugins'?<div className="page-scroll"><PluginManager key={persona?.id} persona={persona?.id??''} name={persona?.name??''}/></div>:page==='video'?<div className="page-scroll"><CloudVideoPanel key={boot?.active_persona_id} personaId={boot?.active_persona_id??''} deepseekConfigured={!!boot?.key_status.configured} memories={currentCompanion?.memories??[]} previousWindows={boot?.platform==='windows'}
         initialVideo={videoDraft?.persona===boot?.active_persona_id?videoDraft:undefined}
         onSaved={()=>{setVideoDraft(undefined);navigate('chat');void refresh();}}
-        onMemories={()=>navigate('storage')}/></div>:page==='companion'?<div className="page-scroll"><CompanionPanel key={boot?.active_persona_id} data={currentCompanion} persona={persona} onRefresh={refresh} onError={setError} onMemories={()=>setPage('storage')}/></div>:page==='sync'?<div className="page-scroll"><SyncPanel mobile={mobile} onPaired={refresh}/></div>:page==='settings'?<div className="page-scroll"><SettingsPanel key={boot?.active_persona_id??'loading'} boot={boot} voice={voice} font={font} appearance={appearance} onNavigate={navigate} onRefresh={refresh} onError={setError}/></div>:page==='storage'?<div className="page-scroll"><StoragePanel key={boot?.active_persona_id??'loading'} personaId={boot?.active_persona_id??''} onError={setError} onRefresh={refresh}/></div>:page==='personas'?<div className="page-scroll"><PersonaManager boot={boot} onSwitch={switchPersona} onRefresh={refresh} onError={setError} onSettings={()=>setPage('settings')} onErased={threads=>{
+        onMemories={()=>navigate('storage')}/></div>:page==='companion'?<div className="page-scroll"><CompanionPanel key={boot?.active_persona_id} data={currentCompanion} persona={persona} onRefresh={refresh} onError={setError} onMemories={()=>setPage('storage')}/></div>:page==='sync'?<div className="page-scroll"><SyncPanel mobile={mobile} onPaired={refresh}/></div>:page==='settings'?<div className="page-scroll"><SettingsPanel key={boot?.active_persona_id??'loading'} boot={boot} voice={voice} font={font} appearance={appearance} initialSection={settingsSection} onRefresh={refresh} onError={setError}/></div>:page==='storage'?<div className="page-scroll"><StoragePanel key={boot?.active_persona_id??'loading'} personaId={boot?.active_persona_id??''} onError={setError} onRefresh={refresh}/></div>:page==='personas'?<div className="page-scroll"><PersonaManager boot={boot} onSwitch={switchPersona} onRefresh={refresh} onError={setError} onSettings={()=>openSettings('character')} onErased={threads=>{
       setAllMessages(old=>Object.fromEntries(Object.entries(old).filter(([id])=>!threads.includes(id))));
       setDrafts(old=>Object.fromEntries(Object.entries(old).filter(([id])=>!threads.includes(id))));
       setImages(old=>Object.fromEntries(Object.entries(old).filter(([id])=>!threads.includes(id))));
@@ -360,17 +412,20 @@ function App(){
      {variants>0&&<button className="variant-toggle" onClick={()=>setShowHistory(!showHistory)}>{showHistory?'收起历史回复':`查看历史回复（${variants}）`}</button>}<div ref={bottom}/>
     </div>
     <ChatComposer key={conversation} field={input} draft={drafts[conversation]??''} name={persona?.name} personaId={persona?.id} images={images[conversation]??[]}
+     videoFile={videoDraft?.persona===boot?.active_persona_id?videoDraft?.file:undefined} videoMode={videoDraft?.mode} videoStatus={videoStatus}
+     onRemoveVideo={()=>{setVideoDraft(undefined);videoResume.current=null;}}
      onImages={images=>setImages(old=>({...old,[conversation]:images}))}
-     onVideo={file=>{if(boot?.active_persona_id){setVideoDraft({persona:boot.active_persona_id,file,question:(drafts[conversation]??'').slice(0,1000)});navigate('video');}}}
-     connected={connected} disabled={!connected||!conversation||loading||switching} configured={!!boot?.key_status.configured}
+     onVideo={file=>{if(boot?.active_persona_id&&!videoStatus)setVideoDraft({persona:boot.active_persona_id,file,question:(drafts[conversation]??'').slice(0,1000),mode:canSendClip(file)?'clip':'frames'});}}
+     onVideoMode={mode=>{videoResume.current=null;setVideoDraft(previous=>previous?{...previous,mode}:undefined);}}
+     connected={connected} disabled={!connected||!conversation||loading||switching||!!videoStatus} configured={!!boot?.key_status.configured}
      canSend={canSend} mobile={mobile} voice={voice} recording={!switching}
      generation={active?{started:active.started,elsewhere:active.conversation!==conversation}:undefined}
-     onEdit={text=>setDrafts(old=>({...old,[conversation]:text}))} onSend={()=>void send()}
-     onStop={()=>void stopCurrent()} onSettings={()=>setPage('settings')}/>
-   </section>{!mobile&&<CompanionRail key={boot?.active_persona_id} boot={boot} data={currentCompanion} onRefresh={refresh} onError={setError} onMemories={()=>setPage('storage')} settingsContent={<SettingsPanel compact boot={boot} voice={voice} font={font} appearance={appearance} onNavigate={navigate} onRefresh={refresh} onError={setError}/>}/>}</div>}
+     onEdit={text=>setDrafts(old=>({...old,[conversation]:text}))} onSend={(imageConsent,videoConsent)=>void send(undefined,imageConsent,videoConsent)}
+     onStop={()=>void stopCurrent()} onConfigure={()=>openSettings('api')} onSettings={()=>openSettings('voice')}/>
+   </section>{!mobile&&<CompanionRail key={boot?.active_persona_id} boot={boot} data={currentCompanion} onRefresh={refresh} onError={setError} onMemories={()=>setPage('storage')} settingsContent={<SettingsPanel compact boot={boot} voice={voice} font={font} appearance={appearance} onRefresh={refresh} onError={setError}/>}/>}</div>}
   </main>
   </div>
-  <MobileNav page={page} onSelect={destination=>{if(destination==='more'){setDrawer(v=>!v);return;}setPage(destination);setDrawer(false);}}/>
+  <MobileNav page={page} onSelect={destination=>{if(destination==='more'){setDrawer(v=>!v);return;}navigate(destination);}}/>
  </div>;
 }
 installButtonMotion();

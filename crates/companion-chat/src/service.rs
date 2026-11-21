@@ -79,7 +79,7 @@ impl ChatService {
         input: StartChat,
         observer: Observer,
     ) -> Result<PreparedChat, ChatFailure> {
-        self.start_checked(input, None, observer, &[])
+        self.start_checked(input, None, observer, &[], None)
     }
 
     pub fn start_with_image(
@@ -97,7 +97,24 @@ impl ChatService {
         observer: Observer,
         images: &[companion_core::chat_images::ChatImage],
     ) -> Result<PreparedChat, ChatFailure> {
-        self.start_checked(input, None, observer, images)
+        self.start_checked(input, None, observer, images, None)
+    }
+
+    pub fn start_with_visual_evidence(
+        self: &Arc<Self>,
+        input: StartChat,
+        persona_id: &str,
+        observer: Observer,
+        images: &[companion_core::chat_images::ChatImage],
+        observations: &str,
+    ) -> Result<PreparedChat, ChatFailure> {
+        self.start_checked(
+            input,
+            Some(persona_id),
+            observer,
+            images,
+            Some(observations),
+        )
     }
 
     /// The desktop pet submits exactly to the persona shown beside its composer.
@@ -107,7 +124,7 @@ impl ChatService {
         persona_id: &str,
         observer: Observer,
     ) -> Result<PreparedChat, ChatFailure> {
-        self.start_checked(input, Some(persona_id), observer, &[])
+        self.start_checked(input, Some(persona_id), observer, &[], None)
     }
 
     fn start_checked(
@@ -116,6 +133,7 @@ impl ChatService {
         required_persona: Option<&str>,
         observer: Observer,
         images: &[companion_core::chat_images::ChatImage],
+        observations: Option<&str>,
     ) -> Result<PreparedChat, ChatFailure> {
         let mut active = self.active.lock().map_err(|_| ChatFailure::new("BUSY"))?;
         if active.changing_key || !active.runs.is_empty() {
@@ -136,11 +154,19 @@ impl ChatService {
                 && (store.active_persona_id()? != persona
                     || store.permanent_persona(&input.conversation_id)?.id != persona)
             {
-                return Err(ChatFailure::new("PET_PERSONA_CHANGED"));
+                return Err(ChatFailure::new(if observations.is_some() {
+                    "IMAGE_PERSONA_CHANGED"
+                } else {
+                    "PET_PERSONA_CHANGED"
+                }));
             }
             let settings = store.settings_for_conversation(&input.conversation_id)?;
             let prepared = store.begin_chat_with_images(&input, &settings, images)?;
-            let prompt = match store.companion_context(&prepared.conversation_id, &settings) {
+            let prompt = match store.companion_context_with_images(
+                &prepared.conversation_id,
+                &settings,
+                observations,
+            ) {
                 Ok(prompt) => prompt,
                 Err(error) => {
                     store.finish_chat(

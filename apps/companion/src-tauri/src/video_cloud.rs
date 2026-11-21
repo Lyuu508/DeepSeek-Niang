@@ -109,6 +109,25 @@ fn key_error(error: VaultError) -> &'static str {
     }
 }
 
+pub(crate) async fn chat_image_observations(
+    state: &AppState,
+    host: &CloudVideoHost,
+    persona: &str,
+    images: &[companion_core::chat_images::ChatImage],
+    question: &str,
+) -> Reply<String> {
+    {
+        let database = store(state)?;
+        active(&database, persona).map_err(|_| "IMAGE_PERSONA_CHANGED")?;
+    }
+    let _guard = host.request.try_lock().map_err(|_| "VIDEO_BUSY")?;
+    let settings = read_settings(state)?;
+    let key = host.credentials.get().map_err(key_error)?;
+    QwenClient::new(settings)?
+        .describe_chat_images(&key, images, question)
+        .await
+}
+
 #[tauri::command]
 pub async fn qwen_status(
     window: WebviewWindow,
@@ -224,17 +243,15 @@ pub async fn cloud_video_plan(
         return Err("VIDEO_CONSENT_REQUIRED");
     }
     let _guard = host.request.try_lock().map_err(|_| "VIDEO_BUSY")?;
-    let key = deepseek_key(&state)?;
+    let _ = deepseek_key(&state)?;
     let _ = host.credentials.get().map_err(key_error)?;
     read_settings(&state)?.validate()?;
-    let settings = {
+    {
         let store = store(&state)?;
         active(&store, &persona)?;
-        store.chat_settings().map_err(storage_error)?
-    };
+    }
     let question = question.trim().to_owned();
-    let engine = DeepSeekClient::official().map_err(|_| "VIDEO_DEEPSEEK_FAILED")?;
-    let plan = video_cloud::plan(&engine, &key, &settings, &question, duration_ms).await?;
+    let plan = video_cloud::plan(&question, duration_ms)?;
     let value = VideoRecord {
         id: uuid::Uuid::new_v4().to_string(),
         question,
@@ -290,7 +307,17 @@ pub async fn cloud_video_answer(
     let (mut saved, settings) = saved_and_settings(&state, &persona, &id)?;
     let key = deepseek_key(&state)?;
     let engine = DeepSeekClient::official().map_err(|_| "VIDEO_DEEPSEEK_FAILED")?;
-    saved.answer = Some(video_cloud::answer(&engine, &key, &settings, &saved).await?);
+    let context = {
+        let database = store(&state)?;
+        let conversation = database
+            .persona(&persona)
+            .map_err(storage_error)?
+            .main_conversation_id;
+        database
+            .companion_context(&conversation, &settings)
+            .map_err(storage_error)?
+    };
+    saved.answer = Some(video_cloud::answer(&engine, &key, &settings, &saved, context).await?);
     write_record(&state, &persona, &saved)?;
     Ok(saved)
 }

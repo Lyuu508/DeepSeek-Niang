@@ -29,9 +29,9 @@
 .app :is(.settings-card, .persona-tile, .companion-rail, .composer, .about-hero, .ocean-page-heading) { box-shadow: var(--card-shadow); }
 
 .app .settings-index {
-  position: sticky; top: 0; z-index: 2;
-  display: flex; gap: .28rem; padding: .35rem;
-  border-radius: 1rem; background: var(--surface-soft);
+  display: flex; gap: .22rem; padding: .38rem;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-soft) 65%, transparent);
 }
 .app .settings-index button {
   flex: 1 1 6.5rem;
@@ -41,7 +41,20 @@
   white-space: nowrap;
   text-align: center;
 }
-.app [data-setting] { scroll-margin-top: 4.1rem; }
+.app [hidden] { display: none !important; }
+.settings-page .settings-workbench {
+  border: 1px solid var(--line); border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--surface) 93%, var(--bg));
+  box-shadow: var(--card-shadow); overflow: clip;
+}
+.settings-page .settings-workbench-body { padding: clamp(.75rem, 2.2vw, 1.28rem); }
+.settings-page .settings-workbench-body :is(.settings-card, .settings-content) {
+  padding: .8rem; width: 100%; box-shadow: none; border-color: transparent;
+}
+.settings-page .settings-workbench-body .settings-card + .settings-card {
+  border-top: 1px solid var(--line); border-radius: 0;
+}
+.settings-page .settings-workbench-body .settings-card:last-child { margin-block-end: 0; }
 .app .segment-control, .app .palette-options {
   display: flex; flex-wrap: wrap; align-items: stretch; gap: .32rem;
   width: min(100%, 28rem); padding: .25rem; margin: .56rem 0;
@@ -65,12 +78,8 @@
 .app .message-foot button { display: inline-flex; align-items: center; gap: .32rem; padding: .28rem .48rem; }
 .app .composer { border-color: color-mix(in srgb, var(--focus) 33%, var(--line)); }
 .app .composer textarea { display: block; width: 100%; height: auto; min-height: 2.8rem; max-height: min(7rem, 28dvh); resize: none; field-sizing: content; overflow-y: auto; }
-.app[data-platform=desktop] .composer :is(.send-button, .stop-button) { display: grid; place-items: center; border-radius: 999px; padding: .45rem .92rem; min-height: 42px; min-width: 50px; }
-.app[data-platform=desktop] .composer .send-button { background: linear-gradient(125deg,var(--button-accent),var(--button-accent-end)); color: var(--button-on-accent); }
-.app .composer-tools { display: flex; align-items: center; flex-wrap: wrap; gap: .28rem .55rem; }
 .app .composer-attachments { display: inline-flex; gap: .3rem; }
-.app .composer-attachments > button { display: grid; place-items: center; width: 40px; height: 38px; padding: 0; border-radius: 999px; color: var(--blue); }
-.app .composer-privacy { margin-inline-start: auto; }
+.app .composer-attachments > button { color: var(--blue); }
 .attachment-preview { display: flex; align-items: center; gap: .58rem; padding: .4rem .6rem; min-width: 0; }
 .attachment-preview > img { width: 3rem; height: 3rem; object-fit: cover; border-radius: .6rem; }
 .attachment-preview > div { flex: 1; min-width: 0; }
@@ -120,7 +129,7 @@
 .app .update-versions dd { margin: .24rem 0 0; font-weight: 680; }
 .app .update-notes p { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 16rem; overflow-y: auto; padding: .45rem; }
 
-.app[data-platform=android] :is(.settings-card, .persona-manager, .rail-tabs, .settings-index, .composer-tools, .sidebar-bottom, dialog) button:not(.image-close),
+.app[data-platform=android] :is(.settings-card, .persona-manager, .rail-tabs, .settings-index, .sidebar-bottom, dialog) button:not(.image-close),
 .app[data-platform=android] .message-foot button { min-height: 44px; }
 .app[data-platform=android] :is(.settings-index,.persona-manager,.cloud-video,.update-card) button {
   transition: transform var(--interaction-time), background-color var(--interaction-time);
@@ -154,7 +163,7 @@
     box-shadow var(--interaction-time), transform 140ms ease;
 }
 .app[data-platform=desktop] :is(main, header, aside, dialog)
-  button:not(.primary, .danger, .send-button, .stop-button, .drawer-backdrop, .file-drop, .setup-hint, [data-danger=true], [aria-current]:not([aria-current=false]), [aria-pressed=true]) {
+  button:not(.primary, .danger, .send-button, .stop-button, .drawer-backdrop, .file-drop, [data-danger=true], [aria-current]:not([aria-current=false]), [aria-pressed=true]) {
   background-color: transparent;
   border-color: transparent;
   box-shadow: none;
@@ -177,22 +186,6 @@
   border-color: color-mix(in srgb, var(--blue) 21%, transparent);
   color: var(--blue);
 }
-.app .setup-hint {
-  display: inline-flex;
-  align-items: center;
-  justify-content: start;
-  gap: .55rem;
-  width: fit-content;
-  max-width: 100%;
-  margin: 0 0 .48rem;
-  padding: .46rem .65rem;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface-soft);
-  font-size: .82rem;
-  text-align: start;
-}
-.app .composer-toolbar .send-button { width: 44px; height: 44px; min-width: 44px; padding: 0; }
 .app .attachment-gallery, .app .message-gallery { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
 .app .attachment-gallery .attachment-preview { position: relative; padding: 0; background: none; border: 0; }
 .app .attachment-gallery .attachment-preview img { width: 58px; height: 58px; object-fit: cover; border-radius: 10px; }
@@ -216,7 +209,10 @@
 .app .file-drop-area progress { width: 5rem; accent-color: var(--blue); }
 .app :is(.page-scroll, .message-scroll, .companion-rail, .sidebar) {
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--blue) 31%, var(--surface)) transparent;
+  scrollbar-color: color-mix(in srgb, var(--blue) 17%, transparent) transparent;
+}
+.app :is(.page-scroll, .message-scroll, .companion-rail, .sidebar):is(:hover,:focus-within) {
+  scrollbar-color: color-mix(in srgb, var(--blue) 47%, transparent) transparent;
 }
 .app .relation-item { align-items: center; }
 @media (max-width: 620px) {
@@ -240,3 +236,111 @@
 .app .sticker-grid img { display: block; width: 100%; aspect-ratio: 1; object-fit: contain; }
 .app .sticker-remove { position: absolute; right: 0; top: 0; padding: .15rem; background: var(--surface); }
 .app .cloud-voice-settings > summary { display: flex; align-items: center; gap: .5rem; }
+
+.app .composer {
+  padding: clamp(.52rem, 1.05vw, .88rem);
+  border-radius: var(--radius-card);
+  background: linear-gradient(140deg, var(--surface), var(--surface-soft));
+}
+.app .composer-row, .app[data-platform=android] .composer-row { display: block; }
+.app .composer textarea { padding: .55rem .4rem; min-height: 2.55rem; }
+.app .composer-controls { display: flex; align-items: flex-end; justify-content: space-between; gap: .45rem; }
+.app .composer-attachments { min-width: 0; flex-wrap: wrap; gap: .18rem; }
+.app .composer-toolbar { position: relative; width: auto; flex: none; display: grid; justify-items: end; gap: .22rem; }
+.app .composer-toolbar .composer-shortcut { color: var(--muted); font-size: .66rem; white-space: nowrap; }
+.app .composer :is(.send-button,.stop-button,.composer-attachments button) {
+  display: grid; place-items: center;
+  min-width: 44px; min-height: 44px; width: 44px; height: 44px;
+  border-radius: 50%; padding: 0; box-shadow: none;
+}
+.app .composer :is(.send-button,.stop-button,.composer-attachments button) .ocean-icon { width: 1.2rem; height: 1.2rem; }
+.app .composer .send-button {
+  border: 0;
+  color: var(--button-on-accent);
+  background: linear-gradient(135deg, var(--button-accent), var(--button-accent-end));
+}
+.app .composer .stop-button { border: 1px solid var(--line); color: var(--danger); background: var(--surface-soft); }
+.app .composer button.composer-access {
+  display: inline-flex; align-items: center; gap: .38rem; padding: .2rem .55rem; min-height: 32px;
+  width: fit-content; color: var(--blue); border: 1px solid var(--line);
+  border-radius: .65rem; background: var(--surface-soft); font-size: .77rem; box-shadow: none;
+}
+.app .composer-access .ocean-icon { width: .9rem; height: .9rem; }
+.composer-vision { flex: 1 1 10rem; display: flex; align-items: start; font-size: .78rem; gap: .35rem; }
+.composer-vision small { display: block; color: var(--muted); }
+.app .message .bubble { padding: .7rem .95rem; line-height: 1.72; }
+.app .message-meta time { color: var(--muted); font-size: .72rem; }
+.app .message-foot { color: var(--muted); }
+
+@media (hover:hover) and (pointer:fine) {
+  .app[data-platform=desktop] .message-foot button { opacity: 0; transition: opacity var(--motion-quick); }
+  .app[data-platform=desktop] .message:is(:hover,:focus-within) .message-foot button { opacity: 1; }
+}
+
+.app[data-platform] main :is(.persona-actions, .persona-menu, .plugin-examples) button:not(.primary,.danger,[data-danger=true]) {
+  display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  min-height: 40px; padding: .45rem .7rem; line-height: 1.4; border-radius: var(--radius-small);
+  border: 1px solid color-mix(in srgb, var(--blue) 23%, var(--line)); box-shadow: none;
+}
+.app .persona-tile .persona-actions { display: flex; flex-wrap: wrap; margin: .45rem 0 0; gap: .46rem; justify-content: center; }
+.app[data-platform] .persona-tile .persona-actions button { width: auto; }
+.app .plugin-examples { gap: .48rem; }
+.app .companion-content .settings-card { padding: clamp(.88rem, 2vw, 1.3rem); margin-block-end: .8rem; }
+.app .companion-content .companion-status-grid { gap: .8rem; margin-block-end: .8rem; align-items: start; }
+.app .companion-content .companion-status-grid .settings-card { margin: 0; }
+.app .companion-rail .rail-content { padding: .72rem; }
+.app .rail-content .rail-settings .settings-card {
+  padding: .85rem;
+  border: 1px solid var(--line); border-radius: var(--radius-control);
+  background: var(--surface); box-shadow: none;
+}
+.app .companion-content .card-heading > div { min-width: 0; }
+.app .companion-content .card-heading .relation-stage { margin-inline-start: auto; }
+.app .companion-content .card-heading .ocean-icon { margin-inline-end: .32rem; }
+
+.app[data-platform=android] .settings-index {
+  display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: .15rem; margin: 0;
+}
+.app[data-platform=android] .settings-index button {
+  font-size: .78rem; border: 0; box-shadow: none;
+  border-radius: .68rem; background: transparent; padding: .28rem .12rem; white-space: normal;
+}
+.app[data-platform=android] .settings-index button[aria-current] { background: var(--nav-fill); }
+.app[data-platform=android] :is(.segment-control,.palette-options) {
+  display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: .18rem;
+  padding: .14rem; background: transparent;
+}
+.app[data-platform=android] :is(.segment-control,.palette-options) button {
+  min-width: 0; min-height: 44px; padding: .24rem .12rem; font-size: .75rem; white-space: normal;
+  border-color: transparent; box-shadow: none; background: var(--surface-soft);
+}
+.app[data-platform=android] :is(.segment-control,.palette-options) button[aria-pressed=true] { background: var(--nav-fill); }
+.app[data-platform=android] :is(.persona-actions, .persona-menu, .plugin-examples) button { min-height: 44px; }
+.app[data-platform=android] .composer button.composer-access { min-height: 36px; }
+.app[data-platform=android] .composer textarea { min-height: 2rem; }
+.app[data-platform=android] .composer .composer-attachments:not(:focus-within) > button { background: transparent; }
+.app[data-platform=android] .composer[data-tools-expanded=false] {
+  display: grid; align-items: end; padding: .18rem .25rem;
+  grid-template-columns: 44px minmax(0,1fr) 44px;
+  grid-template-areas: "tools field send";
+}
+.app[data-platform=android] .composer[data-tools-expanded=false] > :not(.composer-row,.composer-controls) { grid-column: 1 / -1; }
+.app[data-platform=android] .composer[data-tools-expanded=false] .composer-access { grid-row: 1; }
+.app[data-platform=android] .composer[data-tools-expanded=false]:has(.composer-access) { grid-template-areas: "hint hint hint" "tools field send"; }
+.app[data-platform=android] .composer[data-tools-expanded=false] .composer-controls { display: contents; }
+.app[data-platform=android] .composer[data-tools-expanded=false] .composer-row { grid-area: field; }
+.app[data-platform=android] .composer[data-tools-expanded=false] .composer-attachments { grid-area: tools; }
+.app[data-platform=android] .composer[data-tools-expanded=false] .composer-toolbar { grid-area: send; }
+.app[data-platform=android] .composer[data-tools-expanded=false] .composer textarea { min-height: 44px; }
+.composer-video {
+  display: grid; gap: .4rem; padding: .48rem .6rem; margin-block: .25rem;
+  border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--surface-soft);
+}
+.composer-video-name { display: flex; align-items: center; gap: .45rem; }
+.composer-video-name > span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.composer-video-name > small { white-space: nowrap; color: var(--muted); }
+.composer-video-name button { display: grid; place-items: center; min-width: 44px; min-height: 44px; }
+.app .composer-video-mode { justify-self: start; padding: .3rem .56rem; color: var(--blue); font-size: .76rem; }
+.app[data-platform=android] .composer-video-mode { min-height: 44px; }
+.composer-video [role=status] { display: flex; align-items: center; gap: .4rem; margin: 0; font-size: .76rem; }
+.composer-video progress { width: 4rem; accent-color: var(--button-accent); }

@@ -109,7 +109,7 @@ export function PersonaManager({ boot, onSwitch, onRefresh, onError, onSettings,
         <Avatar persona={item.persona}/>
         <div><h2>{item.persona.name}</h2><p className="persona-summary">{item.personality}</p>
           <p><time>{new Date(item.changed_at_ms).toLocaleString()}</time> · {syncText[item.sync_state]}</p></div>
-        <div className="button-row">
+        <div className="button-row persona-actions">
           <button data-tone="success" disabled={busy} onClick={() => void change({ kind: 'restore', entry: item.entry })}>恢复</button>
           <button className="danger" disabled={busy} onClick={() => setPending({ kind: 'purge', items: [item], all: false })}>永久删除</button>
         </div>
@@ -121,7 +121,7 @@ export function PersonaManager({ boot, onSwitch, onRefresh, onError, onSettings,
           <p>{p.is_builtin ? '默认人格' : '自定义人格'}{boot.active_persona_id === p.id ? ' · 使用中' : ''}</p>
           {p.personality && <p className="persona-summary">{p.personality}</p>}
         </div>
-        <div className="button-row">
+        <div className="button-row persona-actions">
           <button className="quiet-button" disabled={busy} onClick={() => void onSwitch(p.id)}><Icon name="chat"/>{boot.active_persona_id === p.id ? '进入聊天' : '切换人格'}</button>
           {boot.active_persona_id === p.id && <button className="quiet-button" onClick={onSettings}><Icon name="settings"/>编辑人物设定</button>}
         </div>

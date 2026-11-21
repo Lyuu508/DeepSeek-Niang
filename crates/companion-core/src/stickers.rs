@@ -24,6 +24,13 @@ pub struct StickerCatalog {
     pub automatic: bool,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct StickerImport {
+    pub tag: String,
+    pub image: ChatImage,
+}
+
 fn get<T: serde::de::DeserializeOwned>(
     db: &Connection,
     profile: &str,
@@ -81,26 +88,40 @@ impl Store {
     }
 
     pub fn add_sticker(&self, persona: &str, tag: String, image: ChatImage) -> Result<()> {
-        let tag = tag.trim();
-        if tag.is_empty() || tag.chars().count() > 20 || tag.chars().any(char::is_control) {
-            return Err(Error::Invalid("sticker tag"));
-        }
-        image.validate()?;
-        if self.stickers(persona)?.entries.len() >= CATALOG_SIZE {
+        self.import_stickers(persona, vec![StickerImport { tag, image }])
+    }
+
+    pub fn import_stickers(&self, persona: &str, entries: Vec<StickerImport>) -> Result<()> {
+        if entries.is_empty()
+            || entries.len() > CATALOG_SIZE
+            || self.stickers(persona)?.entries.len() + entries.len() > CATALOG_SIZE
+        {
             return Err(Error::Invalid("sticker catalog limit"));
         }
-        let id = uuid::Uuid::new_v4().to_string();
-        write(
-            &self.conn,
-            &self.profile_id,
-            &self.device_id,
-            &format!("sticker:{persona}:{id}"),
-            &Sticker {
-                id,
-                tag: tag.into(),
-                image,
-            },
-        )
+        for entry in &entries {
+            let tag = entry.tag.trim();
+            if tag.is_empty() || tag.chars().count() > 20 || tag.chars().any(char::is_control) {
+                return Err(Error::Invalid("sticker tag"));
+            }
+            entry.image.validate()?;
+        }
+        let transaction = self.conn.unchecked_transaction()?;
+        for StickerImport { tag, image } in entries {
+            let id = uuid::Uuid::new_v4().to_string();
+            write(
+                &transaction,
+                &self.profile_id,
+                &self.device_id,
+                &format!("sticker:{persona}:{id}"),
+                &Sticker {
+                    id,
+                    tag: tag.trim().into(),
+                    image,
+                },
+            )?;
+        }
+        transaction.commit()?;
+        Ok(())
     }
 
     pub fn remove_sticker(&self, persona: &str, id: &str) -> Result<()> {

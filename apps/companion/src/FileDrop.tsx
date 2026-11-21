@@ -5,6 +5,7 @@ interface Props {
   id?: string;
   label: string;
   accept: string;
+  hint: string;
   icon?: IconName;
   disabled?: boolean;
   busy?: string;
@@ -13,7 +14,7 @@ interface Props {
   onClear?: () => void;
 }
 
-export function FileDrop({ id, label, accept, icon = 'add', disabled, busy, file, onFile, onClear }: Props) {
+export function FileDrop({ id, label, accept, hint, icon = 'add', disabled, busy, file, onFile, onClear }: Props) {
   const input = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
   const inactive = disabled || Boolean(busy);
@@ -24,7 +25,7 @@ export function FileDrop({ id, label, accept, icon = 'add', disabled, busy, file
         event.currentTarget.value = '';
         if (value && !inactive) onFile(value);
       }}/>
-    <button type="button" className="file-drop" data-dragging={dragging} disabled={inactive}
+    <button type="button" className="file-drop" aria-label={label} data-dragging={dragging} disabled={inactive}
       onClick={() => input.current?.click()} onDragOver={event => {
         if (!event.dataTransfer.types.includes('Files')) return;
         event.preventDefault();
@@ -38,7 +39,7 @@ export function FileDrop({ id, label, accept, icon = 'add', disabled, busy, file
       }}>
       <Icon name={icon}/>
       <span><strong>{file?.name ?? label}</strong>
-        <small>{file ? `${file.type || file.name.split('.').at(-1)} · ${(file.size / 1048576).toFixed(2)} MiB` : accept}</small>
+        <small>{file ? `${file.type || file.name.split('.').at(-1)} · ${(file.size / 1048576).toFixed(2)} MiB` : hint}</small>
       </span>
     </button>
     {busy && <p role="status"><progress aria-label={busy}/> {busy}</p>}

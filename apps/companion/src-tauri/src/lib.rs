@@ -302,18 +302,44 @@ async fn start_chat(
     input: StartChat,
     on_event: Channel<ChatEvent>,
     state: State<'_, AppState>,
+    window: tauri::WebviewWindow,
+    host: State<'_, video_cloud::CloudVideoHost>,
     image: Option<companion_core::chat_images::ChatImage>,
     images: Option<Vec<companion_core::chat_images::ChatImage>>,
+    image_consent: Option<bool>,
 ) -> Result<PreparedChat, ChatFailure> {
-    {
+    let persona = {
         let store = state
             .0
             .store
             .lock()
             .map_err(|_| ChatFailure::new("STORAGE_ERROR"))?;
-        store.permanent_persona(&input.conversation_id)?;
-    }
+        store.permanent_persona(&input.conversation_id)?.id
+    };
     let observer = Arc::new(move |event| on_event.send(event).is_ok());
+    if image_consent == Some(true) {
+        if window.label() != "main" || input.regenerate_user_id.is_some() || image.is_some() {
+            return Err(ChatFailure::new("CHAT_IMAGE_INVALID"));
+        }
+        let images = images
+            .as_deref()
+            .ok_or_else(|| ChatFailure::new("CHAT_IMAGE_INVALID"))?;
+        let question = input
+            .text
+            .as_deref()
+            .ok_or_else(|| ChatFailure::new("CHAT_IMAGE_INVALID"))?;
+        let observations =
+            video_cloud::chat_image_observations(&state, &host, &persona, images, question)
+                .await
+                .map_err(ChatFailure::new)?;
+        return state.0.start_with_visual_evidence(
+            input,
+            &persona,
+            observer,
+            images,
+            &observations,
+        );
+    }
     match (image, images) {
         (None, Some(images)) => state.0.start_with_images(input, observer, &images),
         (Some(image), None) => state.0.start_with_image(input, observer, image),
@@ -372,6 +398,9 @@ enum StickerAction {
         tag: String,
         image: companion_core::chat_images::ChatImage,
     },
+    Import {
+        entries: Vec<companion_core::stickers::StickerImport>,
+    },
     Remove {
         id: String,
     },
@@ -401,6 +430,7 @@ async fn sticker_catalog(
     match action {
         StickerAction::List => {}
         StickerAction::Add { tag, image } => store.add_sticker(&persona, tag, image)?,
+        StickerAction::Import { entries } => store.import_stickers(&persona, entries)?,
         StickerAction::Remove { id } => store.remove_sticker(&persona, &id)?,
         StickerAction::Automatic { enabled } => store.set_automatic_stickers(&persona, enabled)?,
     }

@@ -4,7 +4,7 @@
 
 **[下载 v0.1.1 Windows EXE](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/DeepSeek-Niang_0.1.1_windows-x64-setup.exe) · [下载 v0.1.1 Android APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/DeepSeek-Niang_0.1.1_android-arm64-acceptance.apk) · [安装与首次使用](#安装与首次使用)**
 
-最新验收预发布为 **v0.1.1**，Android 版本代码为 1012。本版优化双端布局，加入多图附件、表情库和自定义音色。实机覆盖升级、家庭网络及真实 API 体验待验收。[发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.1-acceptance.1) · [更新日志](CHANGELOG.md)
+当前公开下载为 **v0.1.1 验收包**，Android 版本代码为 1012。返工分支继续使用 0.1.1，上面的下载链接对应原验收包。返工的改动、测试范围和发布条件见独立记录。[发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.1-acceptance.1) · [返工验收记录](docs/V011_REWORK.md) · [更新日志](CHANGELOG.md)
 
 v0.0.10 为 Windows 和 Android 更新海洋主题，包含三视图生成的角色素材、主题配色、深海夜色和全套页面设计。[设计与验收](docs/V010_OCEAN_UI.md) · [素材清单](assets/branding/ocean-art.json)
 

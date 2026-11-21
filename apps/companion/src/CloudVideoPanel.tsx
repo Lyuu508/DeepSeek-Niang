@@ -7,12 +7,12 @@ import { Art, Icon, PageHeader } from './OceanDesign';
 import { MessageText, PhoneVideoPage } from './OceanPages';
 import { PreviousVideoResults } from './VideoPanel';
 import { runtimeMode } from './native';
-import { canSendClip, prepareVideo, videoDuration, type Plan } from './video-media';
+import { canSendClip, prepareVideo, videoDuration, type Plan, type VideoMode } from './video-media';
 
 type ProviderConfig = { base_url: string; model: string; timeout_seconds: number };
 type Provider = { settings: ProviderConfig; configured: boolean; connection: 'ready' | 'untested' | 'error' | 'unconfigured' };
 type Evidence = { at_ms: number; scene: string; objects: string[]; action: string; text: string };
-type Record = { id: string; question: string; duration_ms: number; plan: Plan; evidence: { observations: Evidence[]; limitations: string } | null; answer: string | null };
+export type VideoQuestion = { id: string; question: string; duration_ms: number; plan: Plan; evidence: { observations: Evidence[]; limitations: string } | null; answer: string | null };
 const defaults: ProviderConfig = { base_url: 'https://dashscope.aliyuncs.com/api/v1', model: 'qwen3-vl-plus', timeout_seconds: 120 };
 const errorMessages: { [key: string]: string } = {
   VIDEO_FILE_LIMIT: '请选择不超过 128 MiB 的视频。原片上传限 12 MiB 的 MP4。',
@@ -21,7 +21,7 @@ const errorMessages: { [key: string]: string } = {
   VIDEO_MEDIA_INVALID: '没有得到有效视频或采样帧，请重新选择文件。',
   VIDEO_MEDIA_LIMIT: '发送素材超过大小或数量限制。请重新选择或裁剪视频。',
   VIDEO_QUESTION_INVALID: '请填写视频问题并确认时长。',
-  VIDEO_PLAN_INVALID: 'DeepSeek 未返回可用的识别计划。请尝试补充对象或所关注的时间段。',
+  VIDEO_PLAN_INVALID: '未取得可用的视频时间范围，请重新选择视频。',
   VIDEO_DEEPSEEK_KEY_REQUIRED: '请先在设置保存 DeepSeek API Key。',
   VIDEO_DEEPSEEK_AUTH: 'DeepSeek 拒绝身份验证，请核对它的 Key 和服务权限。',
   VIDEO_DEEPSEEK_BUDGET: 'DeepSeek 当前额度不足或请求太频繁。',
@@ -46,7 +46,8 @@ const errorMessages: { [key: string]: string } = {
   QWEN_TIMEOUT: '百炼请求超时，请检查网络和超时设置后再试。',
   QWEN_UNAVAILABLE: '无法连接百炼，请检查网络、区域和模型。',
 };
-const errorText = (error: unknown) => errorMessages[String(error)] ?? '视频操作未完成，请稍后重试。';
+export const videoErrorText = (error: unknown) => errorMessages[String(error)] ?? '视频操作未完成，请稍后重试。';
+const errorText = videoErrorText;
 const connectionLabels = { ready: '连接已验证', untested: '已配置 · 待验证', error: '连接测试失败', unconfigured: '未配置' };
 
 function timestamp(milliseconds: number) {
@@ -54,8 +55,36 @@ function timestamp(milliseconds: number) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}.${Math.floor(milliseconds % 1000 / 100)}`;
 }
 
+export async function runVideoQuestion(
+  task: { persona: string; file: File; question: string; duration: number; mode: VideoMode; authorized: boolean },
+  previous: VideoQuestion | null,
+  onRecord: (record: VideoQuestion) => void,
+  progress: (message: string) => void,
+) {
+  if (!task.authorized) throw 'VIDEO_CONSENT_REQUIRED';
+  const { persona, file, question, duration, mode } = task;
+  let current = previous;
+  if (!current || current.question !== question.trim() || current.duration_ms !== duration) {
+    progress('读取视频时间范围');
+    current = await invoke<VideoQuestion>('cloud_video_plan', { persona, question, durationMs: duration, authorized: true });
+    onRecord(current);
+  }
+  if (!current.evidence) {
+    progress(mode === 'clip' ? '上传原片并由千问识别画面' : '提取并提交抽样画面给千问');
+    const input = await prepareVideo(file, mode, current.plan);
+    current = await invoke<VideoQuestion>('cloud_video_recognize', { persona, id: current.id, input, authorized: true });
+    onRecord(current);
+  }
+  if (!current.answer) {
+    progress('DeepSeek 正在组织回答');
+    current = await invoke<VideoQuestion>('cloud_video_answer', { persona, id: current.id, authorized: true });
+    onRecord(current);
+  }
+  return current;
+}
+
 export function CloudVideoPanel({ personaId, deepseekConfigured, memories, previousWindows, initialVideo, onSaved, onMemories }: {
-  personaId: string; deepseekConfigured: boolean; memories: ManagedMemory[]; previousWindows: boolean; initialVideo?: { file: File; question: string }; onSaved: () => void; onMemories: () => void;
+  personaId: string; deepseekConfigured: boolean; memories: ManagedMemory[]; previousWindows: boolean; initialVideo?: { file: File; question: string; mode: VideoMode }; onSaved: () => void; onMemories: () => void;
 }) {
   const native = runtimeMode === 'native';
   const [provider, setProvider] = useState<Provider>({ settings: defaults, configured: false, connection: 'unconfigured' });
@@ -63,10 +92,10 @@ export function CloudVideoPanel({ personaId, deepseekConfigured, memories, previ
   const [key, setKey] = useState('');
   const [file, setFile] = useState<File>();
   const [duration, setDuration] = useState(0);
-  const [mode, setMode] = useState<'clip' | 'frames'>('frames');
+  const [mode, setMode] = useState<VideoMode>('frames');
   const [question, setQuestion] = useState(initialVideo?.question ?? '');
   const [consent, setConsent] = useState(false);
-  const [record, setRecord] = useState<Record | null>(null);
+  const [record, setRecord] = useState<VideoQuestion | null>(null);
   const [matchingPlan, setMatchingPlan] = useState('');
   const [busy, setBusy] = useState('');
   const [problem, setProblem] = useState('');
@@ -75,7 +104,7 @@ export function CloudVideoPanel({ personaId, deepseekConfigured, memories, previ
   useEffect(() => {
     if (!native || !personaId) return;
     let disposed = false;
-    void Promise.all([invoke<Provider>('qwen_status'), invoke<Record | null>('cloud_video_status', { persona: personaId })])
+    void Promise.all([invoke<Provider>('qwen_status'), invoke<VideoQuestion | null>('cloud_video_status', { persona: personaId })])
       .then(([value, saved]) => {
         if (disposed) return;
         setProvider(value);
@@ -110,7 +139,7 @@ export function CloudVideoPanel({ personaId, deepseekConfigured, memories, previ
       if (cancelled) return;
       setDuration(duration);
       setFile(initialVideo.file);
-      setMode(canSendClip(initialVideo.file) ? 'clip' : 'frames');
+      setMode(initialVideo.mode);
     }).catch(error => {
       if (!cancelled) setProblem(errorText(error));
     }).finally(() => { if (!cancelled) setBusy(''); });
@@ -119,33 +148,24 @@ export function CloudVideoPanel({ personaId, deepseekConfigured, memories, previ
 
   async function analyze() {
     if (!file || !consent) return;
-    let current = record;
-    if (!current || current.id !== matchingPlan || current.question !== question.trim()) {
-      setBusy('DeepSeek 正在拟定识别计划');
-      current = await invoke<Record>('cloud_video_plan', { persona: personaId, question, durationMs: duration, authorized: true });
-      setRecord(current);
-      setMatchingPlan(current.id);
-    }
-    if (!current.evidence) {
-      setBusy(mode === 'clip' ? '千问正在识别画面' : '正在提取并识别抽样帧');
-      const input = await prepareVideo(file, mode, current.plan);
-      current = await invoke<Record>('cloud_video_recognize', { persona: personaId, id: current.id, input, authorized: true });
-      setRecord(current);
-    }
-    setBusy('DeepSeek 正在组织回答');
-    await finalAnswer(current.id);
+    await runVideoQuestion(
+      { persona: personaId, file, question, duration, mode, authorized: consent },
+      record?.id === matchingPlan ? record : null,
+      value => { setRecord(value); setMatchingPlan(value.id); },
+      setBusy,
+    );
     setConsent(false);
   }
 
   async function finalAnswer(id: string) {
-    setRecord(await invoke<Record>('cloud_video_answer', { persona: personaId, id, authorized: true }));
+    setRecord(await invoke<VideoQuestion>('cloud_video_answer', { persona: personaId, id, authorized: true }));
   }
 
   return <div className="video-center cloud-video">
     <PageHeader title="视频中心" icon="video" scene="scene-video" art="thinking" description="千问提取画面证据，DeepSeek结合你的问题给出回答。" />
     <section className="settings-card">
       <div className="card-heading"><span className="card-icon"><Icon name="video"/></span><div><h2>视频提问</h2><p>选择有权分析的本地视频。</p></div></div>
-      <FileDrop label="选择或拖入视频" accept="video/*,.mp4,.mov,.webm" icon="video" file={file}
+      <FileDrop label="选择或拖入视频" hint="MP4、MOV、WebM · 最长 5 分钟" accept="video/*,.mp4,.mov,.webm" icon="video" file={file}
         disabled={!native} busy={busy} onFile={next => void act('读取视频', () => select(next))}
         onClear={() => { setFile(undefined); setDuration(0); setMatchingPlan(''); setConsent(false); }}/>
       {file && <p className="field-help">视频时长 · {timestamp(duration)}</p>}
@@ -167,7 +187,7 @@ export function CloudVideoPanel({ personaId, deepseekConfigured, memories, previ
     {record && <section className="settings-card">
       <h2>最近一次分析</h2>
       <p className="field-help">问题 · {record.question}</p>
-      {!record.evidence && <p>DeepSeek 观察计划 · {record.plan.focus}（{timestamp(record.plan.start_ms)} – {timestamp(record.plan.end_ms)}）</p>}
+      {!record.evidence && <p>观察范围 · {record.plan.focus}（{timestamp(record.plan.start_ms)} – {timestamp(record.plan.end_ms)}）</p>}
       {record.answer && <div className="video-answer"><h3>DeepSeek娘的回答</h3><MessageText text={record.answer}/></div>}
       {record.evidence && <details className="video-analysis"><summary>画面证据 · {record.evidence.observations.length} 个观察节点</summary>
         {record.evidence.observations.map((item, index) => <article key={index}><strong>{timestamp(item.at_ms)}</strong><p>{item.scene}{item.objects.length > 0 && ` · ${item.objects.join('、')}`}</p>

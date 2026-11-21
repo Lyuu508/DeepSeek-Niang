@@ -2,6 +2,8 @@
 
 本轮沿用 schema 10，推进双端交互、视频问答、表情、云语音、配对配置和安全更新。Windows EXE、Android 验收 APK、校验清单和测试报告已公开。完整长视频、B站官方账号接口、虚拟媒体生成、正式 Android 升级与实机验收仍待完成。[验收发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.1-acceptance.1) · [v0.1.1 进度与限制](docs/V011_DEVELOPMENT.md)
 
+返工候选以 `b6b05cd` 为基线，继续使用 0.1.1 / 1012。已重排输入区、设置、人格卡和陪伴区。图片与视频问答走授权的千问识别加 DeepSeek 回答，表情库可读本地 dsh-meme 清单。既有公开附件由原构建提交提供，候选另行验收。[逐图核对与验证范围](docs/V011_REWORK.md)
+
 ## v0.1.0 验收版
 
 本版更新双端海洋界面，加入授权视频识别与 DeepSeek 视频问答，以及「关于」中的更新检查。Windows EXE 和 Android 验收 APK 使用同一源码提交，已从 GitHub 回下载并确认摘要。实机安装、家庭网络、真实 API 和正式 Android 升级仍待验收。[验收下载](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.0-acceptance.1) · [验收清单](docs/V010_ACCEPTANCE.md)

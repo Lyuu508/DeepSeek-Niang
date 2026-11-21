@@ -24,6 +24,18 @@ impl ChatFailure {
         let (message, retryable) = match code {
             "CHAT_IMAGE_INVALID" => ("图片无法保存，请重新选择常用格式的图片。", false),
             "CHAT_IMAGE_LIMIT" => ("本机聊天图片数量达到上限。这条消息尚未发送。", false),
+            "IMAGE_PERSONA_CHANGED" => ("识别期间已切换人格，草稿和图片已保留。", false),
+            "QWEN_KEY_REQUIRED" => ("先在视频中心配置千问 API Key，才能识别聊天图片。", false),
+            "QWEN_AUTH_FAILED" => ("千问拒绝身份验证，请核对区域、模型和密钥。", false),
+            "QWEN_STORAGE_FAILED" => ("无法从系统安全存储读取千问凭据。", false),
+            "QWEN_BUDGET" => ("千问额度不足或请求过于频繁，图片仍在草稿中。", true),
+            "QWEN_TIMEOUT" | "QWEN_UNAVAILABLE" => ("连接千问失败，图片仍在草稿中。", true),
+            "QWEN_UPLOAD_POLICY_INVALID" | "QWEN_UPLOAD_FAILED" | "QWEN_MEDIA_REJECTED" => (
+                "千问未接收图片，请核对区域、模型和文件。图片仍在草稿中。",
+                true,
+            ),
+            "QWEN_EVIDENCE_INVALID" => ("千问未返回可用的图片观测结果。", true),
+            "VIDEO_BUSY" => ("千问正在处理另一个请求，请稍后重试。", true),
             "KEY_NOT_CONFIGURED" => ("请先在设置中配置本机 DeepSeek API Key。", false),
             "KEY_FORMAT_INVALID" => ("密钥格式不正确，请检查是否含空格或换行。", false),
             "SECURE_STORAGE_UNSUPPORTED" => {

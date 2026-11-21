@@ -15,6 +15,10 @@ pub struct ChatImage {
 
 impl ChatImage {
     pub(crate) fn validate(&self) -> Result<()> {
+        self.jpeg_bytes().map(|_| ())
+    }
+
+    pub fn jpeg_bytes(&self) -> Result<Vec<u8>> {
         if self.name.trim().is_empty()
             || self.name.len() > 384
             || self.name.chars().any(char::is_control)
@@ -31,7 +35,7 @@ impl ChatImage {
         {
             return Err(Error::Invalid("CHAT_IMAGE_INVALID"));
         }
-        Ok(())
+        Ok(data)
     }
 }
 

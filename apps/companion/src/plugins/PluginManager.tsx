@@ -173,7 +173,7 @@ export function PluginManager({ persona, name }: { persona: string; name: string
     <PageHeader title="插件管理" description={name ? `当前人格 · ${name}` : undefined} icon="plugin" art="thinking" scene="scene-plugins"/>
     <section className="settings-card">
       <h2>导入本地插件</h2>
-      <FileDrop id={fileId} label="选择或拖入插件清单" accept=".json,application/json" icon="plugin"
+      <FileDrop id={fileId} label="选择或拖入插件清单" hint="JSON · 最大 16 KB" accept=".json,application/json" icon="plugin"
         disabled={!enabled || busy} onFile={file => {
           if (!file.name.toLowerCase().endsWith('.json') || file.size > 16_384) {
             setProblem('请选择不超过 16 KB 的 JSON 清单。');
@@ -181,7 +181,7 @@ export function PluginManager({ persona, name }: { persona: string; name: string
           }
           void file.text().then(value => inspect(value, file.name)).catch(() => setProblem('读取本地清单失败。'));
         }}/>
-      <div className="button-row">
+      <div className="button-row plugin-examples">
         <button disabled={!enabled || busy} onClick={() => void inspect(exampleStyle, '应用内示例 · 简洁聊天风格')}>示例 · 简洁聊天风格</button>
         <button disabled={!enabled || busy} onClick={() => void inspect(exampleTime, '应用内示例 · 本地时间与提醒')}>示例 · 本地时间与提醒</button>
       </div>

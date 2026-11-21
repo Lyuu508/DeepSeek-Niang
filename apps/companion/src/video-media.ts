@@ -1,6 +1,7 @@
 export const clipLimit = 12 * 1024 * 1024;
 const readLimit = 128 * 1024 * 1024;
 export type Plan = { focus: string; start_ms: number; end_ms: number };
+export type VideoMode = 'clip' | 'frames';
 type Frame = { at_ms: number; jpeg: string };
 export type VideoInput = { kind: 'clip'; mp4: string } | { kind: 'frames'; frames: Frame[] };
 
@@ -69,7 +70,7 @@ function jpeg(canvas: HTMLCanvasElement, quality: number) {
     blob => blob?.type === 'image/jpeg' ? resolve(blob) : reject('VIDEO_WEBVIEW_DECODE'), 'image/jpeg', quality));
 }
 
-export async function prepareVideo(file: File, mode: 'clip' | 'frames', plan: Plan): Promise<VideoInput> {
+export async function prepareVideo(file: File, mode: VideoMode, plan: Plan): Promise<VideoInput> {
   if (mode === 'clip') {
     if (!canSendClip(file)) throw 'VIDEO_FILE_LIMIT';
     return { kind: 'clip', mp4: await encode(file) };

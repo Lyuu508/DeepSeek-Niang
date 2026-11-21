@@ -135,10 +135,84 @@ fn json_response(value: Value) -> Plan {
 }
 
 #[tokio::test]
+async fn approved_gallery_sends_actual_picture_bytes_to_vision_only() {
+    use crate::video_cloud::QwenClient;
+    use base64::{Engine, engine::general_purpose::STANDARD};
+    use companion_core::chat_images::ChatImage;
+    let policy = json!({"data":{
+        "upload_host":"https://fixture.oss-cn-hangzhou.aliyuncs.com",
+        "upload_dir":"fixture/images","policy":"fixture","oss_access_key_id":"fixture",
+        "signature":"fixture","x_oss_object_acl":"private","x_oss_forbid_overwrite":"true"
+    }});
+    let response = json!({"output":{"choices":[{"finish_reason":"stop","message":{"content":[
+        {"text":"两张图上分别有蓝色和粉色的图形。"}
+    ]}}]}});
+    let (base, api_calls, api_task) =
+        server(vec![json_response(policy), json_response(response)]).await;
+    let (upload, uploads, upload_task) =
+        server(vec![json_response(json!({})), json_response(json!({}))]).await;
+    let client = QwenClient::fixture(
+        base.trim_end_matches("/chat/completions").to_owned(),
+        &upload,
+    );
+    let first = b"\xff\xd8\xffgallery-blue\xff\xd9";
+    let second = b"\xff\xd8\xffgallery-pink\xff\xd9";
+    let images = [first.as_slice(), second.as_slice()].map(|value| ChatImage {
+        name: "fixture.jpg".into(),
+        jpeg: STANDARD.encode(value),
+    });
+    assert_eq!(
+        client.describe_chat_images(&secret(), &[], "").await,
+        Err("CHAT_IMAGE_INVALID")
+    );
+    let result = client
+        .describe_chat_images(&secret(), &images, "它们是什么颜色？")
+        .await
+        .unwrap();
+    assert!(result.contains("粉色"));
+    api_task.await.unwrap();
+    upload_task.await.unwrap();
+    let uploads = uploads.lock().unwrap();
+    for (index, expected) in [first.as_slice(), second.as_slice()]
+        .into_iter()
+        .enumerate()
+    {
+        assert!(
+            uploads[index]
+                .raw
+                .windows(expected.len())
+                .any(|part| part == expected)
+        );
+        assert!(
+            !uploads[index]
+                .headers
+                .to_ascii_lowercase()
+                .contains("authorization:")
+        );
+    }
+    let api_calls = api_calls.lock().unwrap();
+    let content = api_calls[1].body["input"]["messages"][0]["content"]
+        .as_array()
+        .unwrap();
+    assert_eq!(content.len(), 3);
+    assert!(content[..2].iter().all(|value| {
+        value["image"]
+            .as_str()
+            .unwrap()
+            .starts_with("oss://fixture/images/")
+    }));
+    assert!(
+        content[2]["text"]
+            .as_str()
+            .unwrap()
+            .contains("它们是什么颜色")
+    );
+}
+
+#[tokio::test]
 async fn video_cloud_sends_visual_input_only_to_qwen_and_retries_the_deepseek_answer_only() {
     use crate::video_cloud::{self, QwenClient, VideoInput, VideoRecord};
     use base64::{Engine, engine::general_purpose::STANDARD};
-    let planning = json!({"focus":"蓝色物体的动作", "start_ms":100,"end_ms":1800});
     let observations = json!({"observations":[{"at_ms":650,"scene":"蓝色方块向右移动","objects":["方块"],"action":"向右移动","text":""}],"limitations":"仅有画面"});
     let success_evidence = json!({"output":{"choices":[{"finish_reason":"stop","message":{"content":[{"text":observations.to_string()}]}}]}});
     let upload_policy = json!({"data":{
@@ -158,12 +232,8 @@ async fn video_cloud_sends_visual_input_only_to_qwen_and_retries_the_deepseek_an
         body: Vec::new(),
         stall: false,
     };
-    let (deepseek_endpoint, deepseek_requests, deepseek_task) = server(vec![
-        success(&planning.to_string()),
-        fail,
-        success("在 0.6 秒附近，蓝色方块向右移动。"),
-    ])
-    .await;
+    let (deepseek_endpoint, deepseek_requests, deepseek_task) =
+        server(vec![fail, success("在 0.6 秒附近，蓝色方块向右移动。")]).await;
     let deepseek = DeepSeekClient::fixture(deepseek_endpoint, Duration::from_secs(5));
     let qwen = QwenClient::fixture(
         qwen_endpoint
@@ -174,9 +244,8 @@ async fn video_cloud_sends_visual_input_only_to_qwen_and_retries_the_deepseek_an
     let qwen_key = Secret::new("fixture-qwen-only-synthetic-not-a-real-key".into()).unwrap();
     let settings = ChatSettings::default();
     let question = "视频中的方块做了什么？";
-    let plan = video_cloud::plan(&deepseek, &secret(), &settings, question, 2000)
-        .await
-        .unwrap();
+    let plan = video_cloud::plan(question, 2000).unwrap();
+    assert_eq!((plan.start_ms, plan.end_ms), (0, 2000));
     let mut record = VideoRecord {
         id: "fixture-record".into(),
         question: question.into(),
@@ -186,7 +255,7 @@ async fn video_cloud_sends_visual_input_only_to_qwen_and_retries_the_deepseek_an
         answer: None,
     };
     assert!(
-        video_cloud::answer(&deepseek, &secret(), &settings, &record)
+        video_cloud::answer(&deepseek, &secret(), &settings, &record, Vec::new())
             .await
             .is_err()
     );
@@ -198,12 +267,12 @@ async fn video_cloud_sends_visual_input_only_to_qwen_and_retries_the_deepseek_an
     );
     assert_eq!(record.evidence.as_ref().unwrap().observations[0].at_ms, 650);
     assert!(
-        video_cloud::answer(&deepseek, &secret(), &settings, &record)
+        video_cloud::answer(&deepseek, &secret(), &settings, &record, Vec::new())
             .await
             .is_err()
     );
     assert!(
-        video_cloud::answer(&deepseek, &secret(), &settings, &record)
+        video_cloud::answer(&deepseek, &secret(), &settings, &record, Vec::new())
             .await
             .unwrap()
             .contains("蓝色方块")
@@ -243,12 +312,12 @@ async fn video_cloud_sends_visual_input_only_to_qwen_and_retries_the_deepseek_an
             .any(|bytes| bytes == b"synthetic-clip")
     );
     let calls = deepseek_requests.lock().unwrap();
-    assert_eq!(calls.len(), 3);
+    assert_eq!(calls.len(), 2);
     assert!(calls[0].body.to_string().contains(question));
-    assert_eq!(calls[1].body, calls[2].body);
-    assert!(calls[2].body.to_string().contains("蓝色方块向右移动"));
-    assert!(!calls[2].body.to_string().contains("oss://"));
-    assert!(!calls[2].headers.contains(qwen_key.expose()));
+    assert_eq!(calls[0].body, calls[1].body);
+    assert!(calls[1].body.to_string().contains("蓝色方块向右移动"));
+    assert!(!calls[1].body.to_string().contains("oss://"));
+    assert!(!calls[1].headers.contains(qwen_key.expose()));
 }
 
 #[test]

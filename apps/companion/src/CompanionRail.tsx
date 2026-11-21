@@ -10,6 +10,7 @@ export function CompanionRail({boot,data,onRefresh,onError,onMemories,settingsCo
  const persona=boot?.personas.find(p=>p.id===boot.active_persona_id);
  const living=data?.life.host_online&&data.life.current?.state==='running';
  const level=data?relationLevel(data.relationship.stage):null;
+ const recent=data?.life.today_events.at(-1);
  return <section className="companion-panel companion-rail" aria-label="当前人格资料">
   <div className="companion-showcase">
    {persona?.is_builtin!==false?<Art name="portrait-half" className="showcase-portrait" eager/>:<div className="showcase-custom"><Avatar persona={persona}/></div>}
@@ -23,6 +24,10 @@ export function CompanionRail({boot,data,onRefresh,onError,onMemories,settingsCo
   <div className="rail-content page-scroll">
    {mode==='status'?<><div className="companion-card">
     <MoodDisplay data={data} persona={persona}/>
+    {data && <div className="rail-mood-detail">
+      <span>心情强度 {Math.round(data.mood.intensity_milli/10)}%</span>
+      {recent && <p><time dateTime={new Date(recent.occurred_at_ms).toISOString()}>{new Date(recent.occurred_at_ms).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</time> · {recent.description}</p>}
+    </div>}
     <BondDimensions bond={data?.relationship}/>
     <div className="relation-meta"><span>称呼你 · {boot?.settings.user_title??'主人'}</span><span>{living?data?.life.current?.label:'等待电脑主机'}</span></div>
    </div><button className="quiet-button rail-memory" onClick={onMemories}><Icon name="book"/><span>记忆与上下文</span><small>{boot?.persona_summary.memory_count??0} 条</small><Icon name="arrow"/></button>

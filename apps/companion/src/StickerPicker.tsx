@@ -1,13 +1,15 @@
 import { invoke } from '@tauri-apps/api/core';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { attachmentSource, readChatImage, type ChatImage } from './ChatAttachment';
 import { FileDrop } from './FileDrop';
 import { Icon } from './OceanDesign';
+import { readDshPack, type ImportedSticker } from './sticker-import';
 
 type Sticker = { id: string; image: ChatImage; tag: string };
 type Catalog = { entries: Sticker[]; automatic: boolean };
 type Action = { kind: 'list' } | { kind: 'add'; image: ChatImage; tag: string }
-  | { kind: 'remove'; id: string } | { kind: 'automatic'; enabled: boolean };
+  | { kind: 'remove'; id: string } | { kind: 'automatic'; enabled: boolean }
+  | { kind: 'import'; entries: ImportedSticker[] };
 
 export function StickerPicker({ persona, onPick }: { persona: string; onPick: (image: ChatImage) => void }) {
   const [catalog, setCatalog] = useState<Catalog>();
@@ -15,6 +17,7 @@ export function StickerPicker({ persona, onPick }: { persona: string; onPick: (i
   const [tag, setTag] = useState('平静');
   const [problem, setProblem] = useState('');
   const [busy, setBusy] = useState(false);
+  const packInput = useRef<HTMLInputElement>(null);
   useEffect(() => {
     let active = true;
     void invoke<Catalog>('sticker_catalog', { persona, action: { kind: 'list' } }).then(result => {
@@ -23,12 +26,12 @@ export function StickerPicker({ persona, onPick }: { persona: string; onPick: (i
     return () => { active = false; };
   }, [persona]);
 
-  async function perform(work: () => Promise<Action>) {
+  async function perform(work: () => Promise<Action>, errorMessage = '操作失败。请选择有效的图片和分类，表情库最多保存 24 张。') {
     if (busy) return;
     setBusy(true);
     setProblem('');
     try { setCatalog(await invoke<Catalog>('sticker_catalog', { persona, action: await work() })); }
-    catch { setProblem('操作失败。请选择有效的图片和分类，表情库最多保存 24 张。'); }
+    catch { setProblem(errorMessage); }
     finally { setBusy(false); }
   }
 
@@ -38,8 +41,16 @@ export function StickerPicker({ persona, onPick }: { persona: string; onPick: (i
       <label>搜索表情<input type="search" value={query} onChange={event => setQuery(event.target.value)}/></label>
       <label>导入分类<input value={tag} maxLength={20} onChange={event => setTag(event.target.value)}/></label>
     </div>
-    <FileDrop label="导入有权使用的表情图片" accept="image/png,image/jpeg,image/webp" icon="picture" disabled={busy || !catalog}
+    <FileDrop label="导入有权使用的表情图片" hint="PNG、JPEG、WebP" accept="image/png,image/jpeg,image/webp" icon="picture" disabled={busy || !catalog}
       onFile={file => void perform(async () => ({ kind: 'add', image: await readChatImage(file), tag }))}/>
+    <input ref={packInput} type="file" hidden multiple accept=".json,image/png,image/jpeg,image/webp" onChange={event=>{
+      const files=Array.from(event.currentTarget.files??[]);
+      event.currentTarget.value='';
+      if(files.length && catalog)void perform(async()=>({
+        kind:'import',entries:await readDshPack(files,24-catalog.entries.length),
+      }),'请同时选中一个 dsh-meme JSON 清单和其中同名的本机图片，并预留表情库容量。');
+    }}/>
+    <button type="button" disabled={busy || !catalog} onClick={()=>packInput.current?.click()}><Icon name="plugin"/>导入 dsh-meme 清单与本机图片</button>
     {catalog && <label className="check-row">
       <input type="checkbox" checked={catalog.automatic} disabled={busy} onChange={event => {
         const enabled = event.target.checked;
