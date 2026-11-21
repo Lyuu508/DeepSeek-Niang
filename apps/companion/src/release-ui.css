@@ -128,6 +128,7 @@
 .app[data-platform=android] button:not(:disabled,.drawer-backdrop):active { transform: scale(.97); }
 .app[data-platform=android] .settings-index { position: static; margin-top: .62rem; margin-bottom: .62rem; }
 .app[data-platform=android] .settings-index button { flex-basis: 28%; }
+.app[data-platform=android] .font-segments { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .app[data-platform=android] :is(.settings-index, .sidebar-bottom, .segment-control, .palette-options) button:is([aria-current],[aria-pressed=true]) { background: var(--nav-fill); color: var(--blue); font-weight: 680; }
 .app[data-platform=android] .persona-manager :is(.button-row,.persona-menu) > button { display: inline-flex; align-items: center; justify-content: center; text-align: center; gap: .44rem; }
 .app[data-platform=android] .persona-manager .persona-tile { display: grid; grid-template-columns: 1fr; justify-items: center; text-align: center; padding: 1rem; }

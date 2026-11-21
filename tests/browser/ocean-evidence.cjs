@@ -96,6 +96,12 @@ async function exerciseOcean(pageFor, shot, button) {
         await button(page,'特大').click();
         await page.waitForFunction(()=>getComputedStyle(document.documentElement).fontSize==='22.4px');
         assert(await page.locator('.page-scroll').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
+        if (mobile) {
+          const sizes = await page.getByRole('group', {name:'字号预设'}).getByRole('button')
+            .evaluateAll(buttons => buttons.map(button => button.getBoundingClientRect().width));
+          assert.equal(sizes.length, 6);
+          assert(Math.max(...sizes) - Math.min(...sizes) < 1, 'font presets should keep equal touch targets');
+        }
         await capture(page,label+'-large-font');
         await button(page,'标准').click();
         await button(page,'海洋蓝').click();

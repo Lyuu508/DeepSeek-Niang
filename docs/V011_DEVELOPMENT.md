@@ -23,4 +23,5 @@ Windows 与 Android 的版本均为 0.1.1。Android versionCode 为 1012。基�
 
 - GitHub 最新公开的 v0.1.0 APK 使用 `io.local.deepseekcompanion.acceptance` 与证书 `5d92ada7e0187559964c075fb7b285697f6b4357fcea877b5def20b7a15b6c12`。
 - 正式应用使用 `io.local.deepseekcompanion`。v0.0.1 APK 的原证书为 `9de96ea5fb1d0b3f91ea73d9a16c030428453b15838927a85f86773eaef208a1`。这两个安装身份分别绑定各自的应用数据。
+- 独立交付的 v0.1.1 验收 APK 使用 GitHub v0.1.0 APK 的 `.acceptance` 安装身份和现有相同证书。使用 `apksigner` 验证两份 APK，并检查版本号从 1011 增至 1012。保留正式应用的包名配置，真机覆盖安装仍待验收。
 - 当前云环境缺少原证书对应的签名配置。在具备原签名、安装验收及必要功能验证后再创建正式 v0.1.1 Release。仓库 Actions Secrets 列表接口的 403 只反映调用权限。
