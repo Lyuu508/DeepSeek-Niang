@@ -293,7 +293,8 @@ async function exercisePhone() {
     if (!baseline) {
       assert.equal(measured.overflow,false);
       assert.equal(measured.nav,53);
-      assert(measured.message_px >= size[1] - 165);
+      assert(measured.message_px >= size[1] - 165,
+        `Mobile viewport ${size[0]}x${size[1]} reserved ${Math.ceil(size[1] - measured.message_px)}px outside the messages. Composer height is ${Math.ceil(measured.composer)}px.`);
     }
     if (size[0] === 375) await page.screenshot({ path: path.join(output, baseline ? 'android-before.png' : 'android-after.png'), animations: 'disabled' });
     assert.deepEqual(errors, []);
@@ -330,7 +331,9 @@ async function exercisePhone() {
   const location = error?.stack?.match(/\b(v009|ocean-evidence|rework-evidence)\.cjs:(\d+):\d+/);
   if (process.env.GITHUB_ACTIONS === 'true' && location) {
     const [, file, line] = location;
-    console.error(`::error file=tests/browser/${file}.cjs,line=${line},title=Browser fixture failed::Review the fixture assertion or browser action on this line.`);
+    const geometry = error?.message?.match(/^Mobile viewport \d+x\d+ reserved \d+px outside the messages\. Composer height is \d+px\.$/);
+    const detail = geometry?.[0] ?? 'Review the fixture assertion or browser action on this line.';
+    console.error(`::error file=tests/browser/${file}.cjs,line=${line},title=Browser fixture failed::${detail}`);
   }
   process.exitCode = 1;
 })

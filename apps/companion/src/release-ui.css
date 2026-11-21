@@ -328,10 +328,13 @@
 .app[data-platform=android] .composer[data-tools-expanded=false] .composer-access { grid-row: 1; }
 .app[data-platform=android] .composer[data-tools-expanded=false]:has(.composer-access) { grid-template-areas: "hint hint hint" "tools field send"; }
 .app[data-platform=android] .composer[data-tools-expanded=false] .composer-controls { display: contents; }
-.app[data-platform=android] .composer[data-tools-expanded=false] .composer-row { grid-area: field; }
+.app[data-platform=android] .composer[data-tools-expanded=false] .composer-row { grid-area: field; min-width: 0; }
 .app[data-platform=android] .composer[data-tools-expanded=false] .composer-attachments { grid-area: tools; }
 .app[data-platform=android] .composer[data-tools-expanded=false] .composer-toolbar { grid-area: send; }
 .app[data-platform=android] .composer[data-tools-expanded=false] .composer textarea { min-height: 44px; }
+.app[data-platform=android] .composer[data-tools-expanded=false] .composer textarea:placeholder-shown {
+  field-sizing: fixed; height: 44px; overflow-y: hidden;
+}
 .composer-video {
   display: grid; gap: .4rem; padding: .48rem .6rem; margin-block: .25rem;
   border: 1px solid var(--line); border-radius: var(--radius-small); background: var(--surface-soft);
