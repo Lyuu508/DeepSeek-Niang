@@ -31,9 +31,15 @@ async function exerciseOcean(pageFor, shot, button) {
     for (const [id,name] of selectors) {
       if (id !== 'chat') await go(id,name);
       if (id === 'video') {
-        if (mobile) await page.getByText('海边的船', {exact:true}).click();
-        else await page.getByRole('heading',{name:'海边的船',exact:true}).waitFor();
-        await page.getByText('镜头中出现一艘小船。', {exact:false}).first().waitFor();
+        if (mobile) {
+          await page.getByText('海边的船', {exact:true}).click();
+          await page.getByText('镜头中出现一艘小船。', {exact:false}).first().waitFor();
+        } else {
+          const previous = page.locator('details.settings-card').filter({hasText:'旧版本地视频记录'});
+          await previous.getByText('旧版本地视频记录', {exact:true}).click();
+          await previous.getByText('海边的船 · 已完成', {exact:true}).click();
+          await previous.getByText('镜头中出现一艘小船。', {exact:true}).waitFor();
+        }
       }
       if (id === 'about') {
         await button(page,'比耶').click();
