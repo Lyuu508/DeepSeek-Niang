@@ -1,12 +1,12 @@
 # 验证范围与待核实问题
 
-## v0.1.1 验收预发布证据
+## v0.1.1 双端返工验证
 
-Windows EXE 和 Android ARM64 APK 均来自 `06aecb35506ac96225d0637484f131754444cc29`。从 GitHub 公开地址重新下载了八个附件，SHA-256 均与上传前一致。[发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.1-acceptance.1) · [构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/BUILD-RESULTS.json)
+Windows EXE 和 Android ARM64 APK 均来自 `6b762c9de0619af7e9f285f75c35de90bd4ee1c1`。两端公开包与 SHA-256 校验清单可在现有 v0.1.1 发布页获得。[发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.1-acceptance.1) · [构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/BUILD-RESULTS.json)
 
-Linux 测试、Windows 原生安装启动和 Android ARM64 编译均通过。同源 CI 验证了 Windows 原生构建。Release 的 Windows 附件为已通过包体校验的验收构建。用 v0.1.0 源码创建的样本数据库验证了 v0.1.1 可以读取旧数据，生成的 SQLite 快照也能由旧版打开。[同源 CI](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44889212148) · [测试报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/TEST-REPORT.md)
+Linux 测试、Windows 原生安装启动和 Android ARM64 编译均通过。Release 的 Windows 附件是通过包体检查的同源跨平台构建。旧 SQLite 样本库、备份重开和浏览器布局回归均通过。[同源 CI](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44926535425) · [测试报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/TEST-REPORT.md) · [界面对照 ZIP](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/UI-COMPARISON.zip)
 
-官方工具已确认 Android 验收 APK 与 v0.1.0 验收 APK 包名和签名一致，版本代码从 1011 增至 1012。真机覆盖安装、家庭局域网和真实第三方服务仍待验收。[验签记录](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/ANDROID-ACCEPTANCE-VERIFICATION.json) · [实机验收范围](V011_DEVELOPMENT.md#仍需完成的能力和验收)
+Android 保留首轮 v0.1.1 验收包名、证书和版本代码 1012。已在模拟器完成覆盖安装，首轮与返工包都在该环境复现系统 WebView 崩溃。真机界面、家庭局域网和真实第三方服务仍待验收。[验签记录](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/ANDROID-ACCEPTANCE-VERIFICATION.json) · [模拟器记录](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/ANDROID-RUNTIME-VERIFICATION.json)
 
 ## v0.0.10 发布证据
 

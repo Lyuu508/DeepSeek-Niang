@@ -1,8 +1,8 @@
-# v0.1.1 验收预发布
+# v0.1.1 双端界面返工
 
 本轮沿用 schema 10，推进双端交互、视频问答、表情、云语音、配对配置和安全更新。Windows EXE、Android 验收 APK、校验清单和测试报告已公开。完整长视频、B站官方账号接口、虚拟媒体生成、正式 Android 升级与实机验收仍待完成。[验收发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.1-acceptance.1) · [v0.1.1 进度与限制](docs/V011_DEVELOPMENT.md)
 
-返工候选以 `b6b05cd` 为基线，继续使用 0.1.1 / 1012。已重排输入区、设置、人格卡和陪伴区。图片与视频问答走授权的千问识别加 DeepSeek 回答，表情库可读本地 dsh-meme 清单。既有公开附件由原构建提交提供，候选另行验收。[逐图核对与验证范围](docs/V011_REWORK.md)
+返工以 `b6b05cd` 为基线，继续使用 0.1.1 / 1012。已重排输入区、设置、人格卡和陪伴区。图片与视频问答走授权的千问识别加 DeepSeek 回答，表情库可读本地 dsh-meme 清单。现有发布页提供 `6b762c9` 的双端包。[逐图核对与验证范围](docs/V011_REWORK.md)
 
 ## v0.1.0 验收版
 
@@ -34,7 +34,7 @@ Windows 客户端支持用户授权的本地视频。分段采样和语音转写
 
 ## 当前版本与完成状态
 
-当前验收版 v0.1.1 的共同构建提交为 `06aecb35506ac96225d0637484f131754444cc29`。两个安装包的公开下载与 SHA-256 已核验，Android 验收 APK 已验签。[构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/BUILD-RESULTS.json)
+当前验收版 v0.1.1 的共同构建提交为 `6b762c9de0619af7e9f285f75c35de90bd4ee1c1`。Android 验收 APK 已验签，公开附件包含同版 SHA-256。[构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/BUILD-RESULTS.json)
 
 | 方向 | 已实现、可测试 | 仍需验收或完善 |
 | --- | --- | --- |

@@ -6,7 +6,7 @@
 
 ## 先确认安装身份
 
-本版使用 `io.local.deepseekcompanion.acceptance`，版本代码为 1012。官方工具已核对与 v0.1.0 验收 APK（1011）的包名和证书一致。真机覆盖升级仍待验收。[APK 验签记录](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/ANDROID-ACCEPTANCE-VERIFICATION.json)
+本次返工包使用 `io.local.deepseekcompanion.acceptance`，版本代码为 1012。已核对与首轮 v0.1.1 验收 APK 的包名和证书一致，并在模拟器完成覆盖安装。可从发布页手动下载同号修订，真机覆盖及启动仍待验收。[APK 验签记录](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/ANDROID-ACCEPTANCE-VERIFICATION.json)
 
 原正式版和早期 `.test`、`.test2` 测试版使用各自的应用身份和数据空间。请保留旧应用及数据。提示安装冲突时先停止安装。[升级与数据保护](USAGE.md#升级与数据保护)
 

@@ -1,6 +1,6 @@
 # 文档导航
 
-当前验收预发布为 **v0.1.1**。历史报告中的版本和验收状态以各自记录时点为准。[发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.1-acceptance.1)
+当前验收包为 **v0.1.1 双端界面返工**。历史报告中的版本和验收状态以各自记录时点为准。[发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.1-acceptance.1)
 
 ## 软件用户
 
@@ -28,7 +28,7 @@
 
 | 版本／阶段 | 报告与原始资料 |
 | --- | --- |
-| v0.1.1 验收预发布 | [开发与验收](V011_DEVELOPMENT.md)、[构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/BUILD-RESULTS.json)、[测试报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/TEST-REPORT.md) |
+| v0.1.1 双端界面返工 | [逐图核对与验收](V011_REWORK.md)、[构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/BUILD-RESULTS.json)、[测试报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/TEST-REPORT.md) |
 | v0.1.0 验收版 | [验收说明](V010_ACCEPTANCE.md)、[发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.0-acceptance.1) |
 | v0.0.5 虚拟生活 | [实现](PHASE4_REPORT.md)、[迁移](PHASE4_MIGRATION.md)、[费用](PHASE4_COSTS.md)、[发布构建结果](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.5/BUILD-RESULTS.json) |
 | v0.0.4 同步与旧聊修复 | [报告](PHASE3_FOLLOWUP_REPORT.md)、[根因](PHASE3_SCAN_REPAIR.md)、[测试资料](validation-phase3-followup/README.md) |

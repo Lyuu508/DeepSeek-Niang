@@ -32,4 +32,4 @@
 
 ## 构建和公开下载身份
 
-版本号为 0.1.1，Android 版本代码为 1012。GitHub 现有 `v0.1.1-acceptance.1` 的安装包来自 `06aecb35506ac96225d0637484f131754444cc29`，公开 Android 验收包使用 `io.local.deepseekcompanion.acceptance`。原正式身份为 `io.local.deepseekcompanion`，使用不同的签名证书。现有 GitHub Actions 的检查只允许读取配置是否可用，四项正式 Android 签名配置在该次运行中均不可用。仓库 Secrets 清单接口对当前授权返回 HTTP 403。[原验收包 Release](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.1-acceptance.1) · [签名配置检查](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44892930901/job/136812440983)
+现有 `v0.1.1-acceptance.1` 已刷新为 `6b762c9de0619af7e9f285f75c35de90bd4ee1c1` 的构建，Android 版本代码为 1012，沿用首轮验收包的 `io.local.deepseekcompanion.acceptance` 和证书。原正式应用使用独立的 `io.local.deepseekcompanion` 与对应证书。[返工发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.1-acceptance.1) · [测试报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/TEST-REPORT.md) · [GitHub Actions](https://github.com/Lyuu508/DeepSeek-Niang/actions/runs/44926535425)

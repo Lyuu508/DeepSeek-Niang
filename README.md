@@ -4,7 +4,7 @@
 
 **[下载 v0.1.1 Windows EXE](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/DeepSeek-Niang_0.1.1_windows-x64-setup.exe) · [下载 v0.1.1 Android APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/DeepSeek-Niang_0.1.1_android-arm64-acceptance.apk) · [安装与首次使用](#安装与首次使用)**
 
-当前公开下载为 **v0.1.1 验收包**，Android 版本代码为 1012。返工分支继续使用 0.1.1，上面的下载链接对应原验收包。返工的改动、测试范围和发布条件见独立记录。[发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.1-acceptance.1) · [返工验收记录](docs/V011_REWORK.md) · [更新日志](CHANGELOG.md)
+当前公开下载为 **v0.1.1 双端界面返工验收包**，Android 版本代码为 1012。更新了聊天输入、设置切换和手机窄屏布局，并接通授权图片识别、聊天视频问答和本地表情包导入。[发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.1-acceptance.1) · [返工验收记录](docs/V011_REWORK.md) · [更新日志](CHANGELOG.md)
 
 v0.0.10 为 Windows 和 Android 更新海洋主题，包含三视图生成的角色素材、主题配色、深海夜色和全套页面设计。[设计与验收](docs/V010_OCEAN_UI.md) · [素材清单](assets/branding/ocean-art.json)
 
@@ -27,7 +27,7 @@ v0.0.6 的桌宠已整合到 Windows 主客户端。透明角色能在桌面上�
 
 ## 界面预览
 
-以下是 v0.0.10 的测试截图。双端界面与聊天区测量来自使用合成数据的浏览器夹具。该版本的签名安装包也分别在 Windows runner 和 Android 模拟器渲染了应用界面。[双端截图包](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.10/UI-EVIDENCE.zip) · [Windows 原生截图](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.10/windows-installed-window.png) · [Android 模拟器截图](docs/validation-v010/android-native-chat.png) · [图标遮罩预览](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.10/ANDROID-ICON-MASKS.png)
+v0.1.1 返工的桌面与竖屏修改前后截图、布局测量及浏览页已打包，使用合成数据的浏览器窗口验证。[v0.1.1 界面对照 ZIP](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/UI-COMPARISON.zip) · [v0.0.10 海洋主题预览](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.10/UI-EVIDENCE.zip)
 
 ## 主要功能
 
@@ -46,16 +46,16 @@ v0.0.6 的桌宠已整合到 Windows 主客户端。透明角色能在桌面上�
 
 ## 下载安装
 
-### v0.1.1 验收预发布
+### v0.1.1 双端界面返工验收包
 
 | 平台 | 安装包 | 系统要求 |
 | --- | --- | --- |
 | Windows | [下载安装程序 EXE](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/DeepSeek-Niang_0.1.1_windows-x64-setup.exe) | Windows 10/11，x64 |
 | Android | [下载 ARM64 APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/DeepSeek-Niang_0.1.1_android-arm64-acceptance.apk) | Android 10 及以上，ARM64 |
 
-两个安装文件均来自源码提交 `06aecb3`，已从 GitHub 重新下载并核对 SHA-256。[发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.1-acceptance.1) · [SHA-256 校验清单](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/SHA256SUMS.txt) · [构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/BUILD-RESULTS.json) · [测试报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/TEST-REPORT.md)
+两个安装文件均来自源码提交 `6b762c9`，可从现有发布页下载并核对 SHA-256。[发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.1-acceptance.1) · [SHA-256 校验清单](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/SHA256SUMS.txt) · [构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/BUILD-RESULTS.json) · [测试报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/TEST-REPORT.md)
 
-Android 继续使用 v0.1.0 验收版的包名 `io.local.deepseekcompanion.acceptance` 和证书，版本代码从 1011 升至 1012。已核对同身份覆盖升级条件，真机覆盖安装仍待验收。原正式应用和早期测试应用各自拥有独立的数据空间。[APK 验签记录](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/ANDROID-ACCEPTANCE-VERIFICATION.json) · [v0.1.0 历史下载](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.0-acceptance.1)
+Android 继续沿用已公开 v0.1.1 验收包的包名 `io.local.deepseekcompanion.acceptance`、证书和版本代码 1012，已在模拟器核对覆盖安装。原正式应用和早期测试应用各自拥有独立的数据空间。已装验收版的用户可以从发布页手动下载本次同版本修订。[APK 验签记录](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/ANDROID-ACCEPTANCE-VERIFICATION.json) · [Android 安装说明](docs/INSTALL_ANDROID.md)
 
 ### v0.0.10 测试版
 
@@ -86,8 +86,8 @@ Android 继续使用 v0.1.0 验收版的包名 `io.local.deepseekcompanion.accep
 
 ## v0.1.1 更新重点
 
-- 桌面导航、聊天和关系面板反馈更清晰。手机设置适配窄屏，字号预设保持等宽。
-- 聊天支持最多四张本机图片，可导入文字附件、使用表情库，还可为不同人格配置云端语音音色。
+- 聊天移除「发送范围」并重排工具栏。设置分类、人格卡、陪伴面板与手机窄屏布局均已调整。
+- 聊天支持多图拖放、粘贴、预览与授权识别，亦可直接发起视频问答。表情库可导入 dsh-meme 清单与本地图片。
 - 配对可从电脑安全交接三类 API 配置。应用更新显示下载进度，并在安装前保存 SQLite 快照。
 
 [查看完整更新日志](CHANGELOG.md)
