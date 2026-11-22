@@ -1,8 +1,14 @@
+# GitHub 版本交付
+
+用户要求把某个版本上传到 GitHub 时，按该版本的完整改动清单同步到默认分支 `main`，覆盖该版本实际变更和新增的客户端、核心库、素材、数据库迁移、脚本、测试和文档。同时更新 README 的版本与下载入口、CHANGELOG 和发布说明。构建和验证完成后，把该版的 Windows EXE、Android APK、SHA-256、构建结果和测试报告一起更新到对应 Release。
+
+交付前核对默认分支的完整文件差异、发布标签、安装包和构建报告的源码提交。交付后从 GitHub 公开链接重新下载并校验安装包。最终报告提供源码改动清单、仓库首页、发布页和双端直接下载链接。
+
 # v0.1.1 开发与发布
 
 用户授权提交、推送、构建与正式发布 v0.1.1，版本整数为 Android 1012。基线为 GitHub main `71bf470cd2cc53f0240150d98b434d2e621a84f4`。正式发布依赖真实构建与数据兼容验收，保留签名和应用身份。通过 GitHub 公布的 v0.1.0 APK 使用独立验收标识 `io.local.deepseekcompanion.acceptance`，正式原身份为 `io.local.deepseekcompanion`。本轮建置保留正式 ID，需要对应的原证书签名与安装验证。[验证范围](docs/V011_DEVELOPMENT.md)
 
-v0.1.1 验收预发布由 `06aecb35506ac96225d0637484f131754444cc29` 构建，包含 Windows EXE 和同签名 Android 验收 APK。用户要求将发布版本源码和当前 README 同步至默认分支。交付时应核对 GitHub 默认分支的源码与下载链接，以及验收标签对应的构建提交。[验收发布](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.1-acceptance.1)
+当前 v0.1.1 返工验收包由 `6b762c9de0619af7e9f285f75c35de90bd4ee1c1` 构建，双端附件已替换到原发布页。Android 沿用首轮验收包的包名、签名和版本代码 1012。[验收发布](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.1-acceptance.1) · [完整改动清单](https://github.com/Lyuu508/DeepSeek-Niang/compare/b6b05cd6da5e749b7cd4aae0f458fdf3ccaff696...bfe9a8fa20cf7ab38d1f1d2f21901248bc4d60bd)
 
 # v0.1.0 验收记录
 

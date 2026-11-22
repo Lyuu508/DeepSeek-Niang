@@ -6,6 +6,8 @@
 
 当前公开下载为 **v0.1.1 双端界面返工验收包**，Android 版本代码为 1012。更新了聊天输入、设置切换和手机窄屏布局，并接通授权图片识别、聊天视频问答和本地表情包导入。[发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.1-acceptance.1) · [返工验收记录](docs/V011_REWORK.md) · [更新日志](CHANGELOG.md)
 
+本次返工的客户端、核心库、测试和发布文档已同步到默认分支 `main`。双端安装包的构建提交为 `6b762c9`。[查看完整改动的 33 个文件](https://github.com/Lyuu508/DeepSeek-Niang/compare/b6b05cd6da5e749b7cd4aae0f458fdf3ccaff696...bfe9a8fa20cf7ab38d1f1d2f21901248bc4d60bd) · [安装包对应源码](https://github.com/Lyuu508/DeepSeek-Niang/tree/6b762c9de0619af7e9f285f75c35de90bd4ee1c1)
+
 v0.0.10 为 Windows 和 Android 更新海洋主题，包含三视图生成的角色素材、主题配色、深海夜色和全套页面设计。[设计与验收](docs/V010_OCEAN_UI.md) · [素材清单](assets/branding/ocean-art.json)
 
 v0.0.6 的桌宠已整合到 Windows 主客户端。透明角色能在桌面上自动走动，也支持直接拖动、点击挥手和双击聊天。[使用与验收](docs/phases/05-desktop-pet.md) · [dsh-pet 动画署名](apps/companion/src/desktop-pet/media/NOTICE.md)

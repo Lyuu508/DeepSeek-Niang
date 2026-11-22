@@ -9,7 +9,7 @@
 - 图片支持拖放、粘贴、预览及逐张移除。每次发送单独授权千问识别，DeepSeek 使用画面证据回答。选择仅保存本地时，图片不会上传。
 - 可从源聊天时间线提交视频。支持小型 MP4 原片和抽样帧，切换范围时重新授权。千问返回画面证据后由 DeepSeek 结合当前人格上下文回答；已保存的证据可用于重试。
 - 可导入 dsh-meme 清单与用户选定的本地图片，并沿用人格表情库、情绪分类和发送频率限制。
-- 现有 v0.1.1 发布页的双端附件更新为 `6b762c9` 构建。Android 保留验收包名、原验收签名和版本代码 1012。[下载与改动说明](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.1-acceptance.1) · [截图清单和测试范围](docs/V011_REWORK.md)
+- 现有 v0.1.1 发布页的双端附件更新为 `6b762c9` 构建。Android 保留验收包名、原验收签名和版本代码 1012。[下载与改动说明](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.1-acceptance.1) · [完整改动文件](https://github.com/Lyuu508/DeepSeek-Niang/compare/b6b05cd6da5e749b7cd4aae0f458fdf3ccaff696...bfe9a8fa20cf7ab38d1f1d2f21901248bc4d60bd) · [截图清单和测试范围](docs/V011_REWORK.md)
 
 ## v0.1.1 · 首轮验收记录
 
