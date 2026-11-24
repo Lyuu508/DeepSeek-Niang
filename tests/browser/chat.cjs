@@ -245,6 +245,9 @@ async function configure(page){await settings(page);await setting(page,'API 配�
    const story=surface.locator('.shared-memory-timeline .memory');
    await story.getByRole('button',{name:'收藏',exact:true}).click();
    await story.getByRole('button',{name:'取消收藏',exact:true}).waitFor();
+   const heading=story.getByRole('heading');
+   assert((await heading.boundingBox()).width >= (await story.boundingBox()).width * .8, 'The memory heading must have the full card width');
+   assert(await story.evaluate(card=>card.scrollWidth<=card.clientWidth), 'The memory actions must wrap within the card');
    await story.scrollIntoViewIfNeeded();
    await surface.screenshot({path:path.join(artifact,`shared-memory-${display}-fixture.png`),animations:'disabled'});
    await story.getByRole('button',{name:'查看来源聊天',exact:true}).click();

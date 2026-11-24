@@ -149,15 +149,17 @@ export function MemoryPanel({ personaId, onError, onRefresh, onSource }: Props) 
       <option value="all">全部类别</option><option value="event">事件</option>{Object.entries(kinds).map(([kind, label]) => <option value={kind} key={kind}>{label}</option>)}
     </select></label>}
     <div className={tab === 'shared' ? 'shared-memory-timeline' : undefined}>
-      {currentRows.map(memory => <article className="memory" key={memory.id}>
+      {currentRows.map(memory => {
+        const title = Array.from(memory.text.split(/[。！？\n]/, 1)[0]).slice(0, 28).join('');
+        return <article className="memory" key={memory.id}>
         <div className="memory-tags">
           <span className="badge">{tab === 'shared' ? dateTime(memory.context?.occurred_at_ms ?? memory.created_at_ms) : memory.context?.is_event ? '事件记忆' : kinds[memory.kind] ?? memory.kind}</span>
           {memory.pinned && <span className="badge">重要</span>}
           {memory.context && memory.context.state !== 'active' && <span className="badge">{states[memory.context.state]}</span>}
           {memory.owner_locked && tab === 'memories' && <span className="badge">手动保护</span>}
         </div>
-        {tab === 'shared' ? <h3>{Array.from(memory.text.split(/[。！？\n]/, 1)[0]).slice(0, 28).join('')}</h3> : <p>{memory.text}</p>}
-        {tab === 'shared' && <p>{memory.text}</p>}
+        {tab === 'shared' && <h3>{title || memory.text}</h3>}
+        {(tab === 'memories' || (title && title !== memory.text)) && <p>{memory.text}</p>}
         <details><summary>来源与时间</summary>
           <p>{memory.source_kind === 'chat' ? '从明确聊天整理' : memory.source_kind === 'life' ? '虚拟生活事件' : memory.source_kind === 'legacy' ? '旧版保留记忆' : '主人手动保存'}</p>
           {memory.source_excerpt && <blockquote>{memory.source_excerpt}</blockquote>}
@@ -171,7 +173,8 @@ export function MemoryPanel({ personaId, onError, onRefresh, onSource }: Props) 
           {onSource && memory.source_message_id && memory.source_excerpt && <button disabled={busy} onClick={() => onSource(memory.source_message_id!)}>查看来源聊天</button>}
           <button disabled={busy} onClick={() => void perform(() => native.deleteMemory(personaId, memory.id))}>删除</button>
         </div>
-      </article>)}
+      </article>;
+      })}
     </div>
     {data && !currentRows.length && <p>{term ? '没有匹配的记忆。' : tab === 'shared' ? '还没有收录来自聊天的共同回忆。' : '当前人格还没有符合条件的长期记忆。'}</p>}
   </section>;

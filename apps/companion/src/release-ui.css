@@ -345,5 +345,8 @@
 .composer-video progress { width: 4rem; accent-color: var(--button-accent); }
 .memory-tabs button[aria-current='page'] { font-weight: 650; }
 .shared-memory-timeline { display: grid; gap: .6rem; border-inline-start: 2px solid var(--line); padding-inline-start: .75rem; }
-.shared-memory-timeline .memory h3 { margin-block: .35rem; overflow-wrap: anywhere; }
+.memory-panel .memory { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; gap: .55rem; min-width: 0; }
+.memory-panel .memory :is(h3, p, blockquote) { margin-block: 0; min-width: 0; overflow-wrap: anywhere; }
+.memory-panel .memory details { min-width: 0; }
+.memory-panel .memory .button-row { justify-content: flex-start; flex-wrap: wrap; }
 .message[data-source-highlight='true'] .bubble { outline: 2px solid var(--focus); outline-offset: .15rem; }
