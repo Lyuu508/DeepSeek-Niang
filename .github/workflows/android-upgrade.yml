@@ -13,22 +13,22 @@ on:
         type: string
       draft_asset_id:
         description: APK asset ID from the unpublished release
-        required: true
+        required: false
         type: string
       apk_sha256:
         description: Expected SHA-256 of the signed production APK
-        required: true
+        required: false
         type: string
 permissions:
   contents: read
 jobs:
   emulator:
+    if: github.event_name != 'workflow_dispatch' || inputs.draft_asset_id != ''
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
       ANDROID_SERIAL: emulator-5554
       SOURCE_SHA: ${{ inputs.source_sha }}
-      EVIDENCE: ${{ runner.temp }}/deepseek-android-upgrade
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
@@ -39,7 +39,8 @@ jobs:
         run: |
           [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ && "$(git rev-parse HEAD)" = "$SOURCE_SHA" ]]
           git merge-base --is-ancestor "$SOURCE_SHA" origin/main
-          mkdir -p "$EVIDENCE"
+          mkdir -p "$RUNNER_TEMP/deepseek-android-upgrade"
+          echo "EVIDENCE=$RUNNER_TEMP/deepseek-android-upgrade" >> "$GITHUB_ENV"
       - if: inputs.draft_asset_id == ''
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
         with:
@@ -104,3 +105,40 @@ jobs:
           path: ${{ env.EVIDENCE }}/
           if-no-files-found: warn
           retention-days: 30
+  acceptance-signer:
+    if: github.event_name == 'workflow_dispatch' && inputs.draft_asset_id == ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check configured test certificate against public v0.1.1 identity
+        env:
+          CANDIDATE_KEYSTORE: ${{ secrets.ANDROID_TEST_KEYSTORE_B64 }}
+          CANDIDATE_ALIAS: ${{ secrets.ANDROID_TEST_KEY_ALIAS }}
+          CANDIDATE_STORE_PASS: ${{ secrets.ANDROID_TEST_KEYSTORE_PASSWORD }}
+          CANDIDATE_KEY_PASS: ${{ secrets.ANDROID_TEST_KEY_PASSWORD }}
+        run: |
+          python3 - <<'PY'
+          import base64
+          import hashlib
+          import os
+          from pathlib import Path
+          import subprocess
+          import tempfile
+          required = ['CANDIDATE_KEYSTORE','CANDIDATE_ALIAS','CANDIDATE_STORE_PASS','CANDIDATE_KEY_PASS']
+          if not all(os.environ.get(name) for name in required):
+              print('No complete stored Android test signing configuration.')
+              raise SystemExit(0)
+          with tempfile.TemporaryDirectory(dir=os.environ['RUNNER_TEMP']) as directory:
+              key = Path(directory) / 'candidate.p12'
+              key.write_bytes(base64.b64decode(os.environ['CANDIDATE_KEYSTORE'], validate=True))
+              key.chmod(0o600)
+              children = {name: value for name, value in os.environ.items() if name != 'CANDIDATE_KEYSTORE'}
+              flags = ['-keystore', str(key), '-alias', os.environ['CANDIDATE_ALIAS'], '-storepass:env', 'CANDIDATE_STORE_PASS']
+              cert = subprocess.run(['keytool', '-exportcert', *flags], env=children, capture_output=True)
+              proof = subprocess.run(['keytool', '-certreq', *flags, '-keypass:env', 'CANDIDATE_KEY_PASS'], env=children, capture_output=True)
+              if cert.returncode or proof.returncode:
+                  raise SystemExit('Could not verify the stored Android test identity.')
+              fingerprint = hashlib.sha256(cert.stdout).hexdigest()
+              print('Test certificate SHA-256: ' + fingerprint)
+              print('v0.1.1 acceptance signature matches: ' + str(fingerprint == '5d92ada7e0187559964c075fb7b285697f6b4357fcea877b5def20b7a15b6c12'))
+          PY
