@@ -27,28 +27,55 @@ def install_time(version_code, version_name):
     return first[1].strip()
 
 
-def chat_visible():
+def app_nodes():
     try:
         shell('uiautomator', 'dump', '--compressed', DUMP, timeout=12)
         window = ET.fromstring(adb('exec-out', 'cat', DUMP, timeout=5))
     except (ET.ParseError, subprocess.SubprocessError):
-        return False
-    nodes = [node for node in window.iter('node') if node.get('package') == APP]
+        return []
+    return [node for node in window.iter('node') if node.get('package') == APP]
+
+
+def chat_visible():
+    nodes = app_nodes()
     labels = {node.get(key) for node in nodes for key in ('text', 'content-desc')}
     return (any(node.get('class') == 'android.webkit.WebView' for node in nodes)
             and bool(labels.intersection({'聊天', '手机聊天', '手机设置', 'DeepSeek娘'}))
             and not any('OPERATION_FAILED' in label for label in labels if label))
 
 
-def snapshot(evidence):
+def snapshot(evidence, name='ANDROID-APP.png'):
     try:
         image = adb('exec-out', 'screencap', '-p', timeout=12)
     except subprocess.SubprocessError:
         return False
     if not image.startswith(b'\x89PNG\r\n\x1a\n'):
         return False
-    (evidence / 'ANDROID-APP.png').write_bytes(image)
+    (evidence / name).write_bytes(image)
     return True
+
+
+def tap(text):
+    for node in app_nodes():
+        if text not in (node.get('text'), node.get('content-desc')):
+            continue
+        points = list(map(int, re.findall(r'\d+', node.get('bounds', ''))))
+        if len(points) == 4 and points[2] > points[0] and points[3] > points[1]:
+            x1, y1, x2, y2 = points
+            shell('input', 'tap', str((x1+x2)//2), str((y1+y2)//2))
+            time.sleep(0.75)
+            return True
+    return False
+
+
+def capture_shared_memories(evidence):
+    try:
+        if not (tap('打开侧栏') and tap('本地数据') and tap('共同回忆')):
+            return False
+        labels = {node.get(key) for node in app_nodes() for key in ('text', 'content-desc')}
+        return '共同回忆时间轴' in labels and snapshot(evidence, 'ANDROID-MEMORIES.png')
+    except subprocess.SubprocessError:
+        return False
 
 
 def main(original, candidate, evidence):
@@ -80,6 +107,7 @@ def main(original, candidate, evidence):
             time.sleep(3)
         assert report['webview_chat_visible'], 'Installed Android chat was not verified in WebView'
         assert snapshot(evidence), 'Android chat screenshot could not be captured'
+        report['shared_memories_view_verified'] = capture_shared_memories(evidence)
     finally:
         (evidence / 'ANDROID-UPGRADE.json').write_text(json.dumps(report, indent=2) + '\n')
         try:
