@@ -29,7 +29,7 @@ def install_time(version_code, version_name):
 
 def chat_visible():
     try:
-        shell('uiautomator', 'dump', DUMP, timeout=12)
+        shell('uiautomator', 'dump', '--compressed', DUMP, timeout=12)
         window = ET.fromstring(adb('exec-out', 'cat', DUMP, timeout=5))
     except (ET.ParseError, subprocess.SubprocessError):
         return False
@@ -37,7 +37,18 @@ def chat_visible():
     labels = {node.get(key) for node in nodes for key in ('text', 'content-desc')}
     return (any(node.get('class') == 'android.webkit.WebView' for node in nodes)
             and bool(labels.intersection({'聊天', '手机聊天', '手机设置', 'DeepSeek娘'}))
-            and 'OPERATION_FAILED' not in labels)
+            and not any('OPERATION_FAILED' in label for label in labels if label))
+
+
+def snapshot(evidence):
+    try:
+        image = adb('exec-out', 'screencap', '-p', timeout=12)
+    except subprocess.SubprocessError:
+        return False
+    if not image.startswith(b'\x89PNG\r\n\x1a\n'):
+        return False
+    (evidence / 'ANDROID-APP.png').write_bytes(image)
+    return True
 
 
 def main(original, candidate, evidence):
@@ -60,18 +71,21 @@ def main(original, candidate, evidence):
         activity = shell('cmd', 'package', 'resolve-activity', '--brief', APP).splitlines()[-1]
         assert activity.startswith(APP + '/')
         assert re.search(r'Status:\s*ok', shell('am', 'start', '-W', '-n', activity, timeout=90))
-        for _ in range(12):
+        report['launch_status_ok'] = True
+        for _ in range(10):
+            snapshot(evidence)
             if chat_visible():
                 report['webview_chat_visible'] = True
                 break
             time.sleep(3)
-        image = adb('exec-out', 'screencap', '-p')
-        assert image.startswith(b'\x89PNG\r\n\x1a\n')
-        (evidence / 'ANDROID-APP.png').write_bytes(image)
         assert report['webview_chat_visible'], 'Installed Android chat was not verified in WebView'
+        assert snapshot(evidence), 'Android chat screenshot could not be captured'
     finally:
         (evidence / 'ANDROID-UPGRADE.json').write_text(json.dumps(report, indent=2) + '\n')
-        (evidence / 'android-errors.log').write_bytes(adb('logcat', '-d', '-b', 'crash', '-t', '200'))
+        try:
+            (evidence / 'android-errors.log').write_bytes(adb('logcat', '-d', '-b', 'crash', '-t', '200', timeout=10))
+        except subprocess.SubprocessError:
+            (evidence / 'android-errors.log').write_text('Android logcat was unavailable. See the emulator log.\n')
 
 
 if __name__ == '__main__':
