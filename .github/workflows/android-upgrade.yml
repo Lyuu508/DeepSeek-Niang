@@ -11,8 +11,8 @@ on:
         description: Exact main commit for the signed candidate
         required: true
         type: string
-      draft_asset_id:
-        description: APK asset ID from the unpublished release
+      staged_commit:
+        description: Exact commit of the candidate staged for offline signing
         required: false
         type: string
       apk_sha256:
@@ -23,7 +23,7 @@ permissions:
   contents: read
 jobs:
   emulator:
-    if: github.event_name != 'workflow_dispatch' || inputs.draft_asset_id != ''
+    if: github.event_name != 'workflow_dispatch' || inputs.staged_commit != ''
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -41,21 +41,24 @@ jobs:
           git merge-base --is-ancestor "$SOURCE_SHA" origin/main
           mkdir -p "$RUNNER_TEMP/deepseek-android-upgrade"
           echo "EVIDENCE=$RUNNER_TEMP/deepseek-android-upgrade" >> "$GITHUB_ENV"
-      - if: inputs.draft_asset_id == ''
+      - if: inputs.staged_commit == ''
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
         with:
           pattern: android-package-*
           path: ${{ runner.temp }}/signed-package
-      - if: inputs.draft_asset_id != ''
+      - if: inputs.staged_commit != ''
         name: Retrieve exact staged signed APK
         env:
-          GH_TOKEN: ${{ github.token }}
-          DRAFT_ASSET: ${{ inputs.draft_asset_id }}
+          STAGED_COMMIT: ${{ inputs.staged_commit }}
           EXPECTED_HASH: ${{ inputs.apk_sha256 }}
         run: |
-          [[ "$DRAFT_ASSET" =~ ^[0-9]+$ && "$EXPECTED_HASH" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$STAGED_COMMIT" =~ ^[a-f0-9]{40}$ && "$EXPECTED_HASH" =~ ^[0-9a-f]{64}$ ]]
+          version=$(python3 -c 'import json; print(json.load(open("VERSION.json"))["version"])')
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          git fetch --no-tags origin "refs/heads/codex/v$version-release-inputs"
+          [[ "$(git rev-parse FETCH_HEAD)" = "$STAGED_COMMIT" ]]
           mkdir -p "$RUNNER_TEMP/signed-package"
-          gh api -H 'Accept: application/octet-stream' "repos/$GITHUB_REPOSITORY/releases/assets/$DRAFT_ASSET" > "$RUNNER_TEMP/signed-package/candidate.apk"
+          git show "$STAGED_COMMIT:assets/DeepSeek-Niang_${version}_android-arm64.apk" > "$RUNNER_TEMP/signed-package/candidate.apk"
           printf '%s  %s\n' "$EXPECTED_HASH" "$RUNNER_TEMP/signed-package/candidate.apk" | sha256sum --check
       - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407
         with:
@@ -106,7 +109,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
   acceptance-signer:
-    if: github.event_name == 'workflow_dispatch' && inputs.draft_asset_id == ''
+    if: github.event_name == 'workflow_dispatch' && inputs.staged_commit == ''
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
