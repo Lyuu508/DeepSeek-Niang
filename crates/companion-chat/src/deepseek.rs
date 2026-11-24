@@ -73,12 +73,57 @@ impl DeepSeekClient {
         settings: &ChatSettings,
         messages: &[PromptMessage],
         cancel: &CancellationToken,
+        progress: impl FnMut(&str) -> bool + Send,
+    ) -> StreamResult {
+        self.stream_request(
+            key,
+            settings,
+            request_body(settings, messages),
+            cancel,
+            progress,
+        )
+        .await
+    }
+
+    pub async fn stream_conversation(
+        &self,
+        key: &Secret,
+        settings: &ChatSettings,
+        context: &companion_core::companion::intelligence::ConversationContext,
+        cancel: &CancellationToken,
+        progress: impl FnMut(&str) -> bool + Send,
+    ) -> StreamResult {
+        use companion_core::companion::intelligence::DialogueIntent;
+        let body = request_body(settings, &context.messages).map(|mut body| {
+            if context.intent == DialogueIntent::Technical && settings.max_tokens >= 1024 {
+                body["thinking"] = json!({"type":"enabled"});
+                body["reasoning_effort"] = json!("high");
+                body.as_object_mut()
+                    .expect("request body object")
+                    .remove("temperature");
+            }
+            body
+        });
+        self.stream_request(key, settings, body, cancel, progress)
+            .await
+    }
+
+    async fn stream_request(
+        &self,
+        key: &Secret,
+        settings: &ChatSettings,
+        body: Result<Value, ChatFailure>,
+        cancel: &CancellationToken,
         mut progress: impl FnMut(&str) -> bool + Send,
     ) -> StreamResult {
         let mut output = StreamResult::empty();
-        let result = self
-            .run(key, settings, messages, cancel, &mut output, &mut progress)
-            .await;
+        let result = match body {
+            Ok(body) => {
+                self.run(key, settings, body, cancel, &mut output, &mut progress)
+                    .await
+            }
+            Err(error) => Err(error),
+        };
         if let Err(e) = result {
             output.error = Some(e);
         }
@@ -88,12 +133,11 @@ impl DeepSeekClient {
         &self,
         key: &Secret,
         settings: &ChatSettings,
-        messages: &[PromptMessage],
+        body: Value,
         cancel: &CancellationToken,
         output: &mut StreamResult,
         progress: &mut (impl FnMut(&str) -> bool + Send),
     ) -> Result<(), ChatFailure> {
-        let body = request_body(settings, messages)?;
         let mut authorization = HeaderValue::from_str(&format!("Bearer {}", key.expose()))
             .map_err(|_| ChatFailure::new("KEY_FORMAT_INVALID"))?;
         authorization.set_sensitive(true);

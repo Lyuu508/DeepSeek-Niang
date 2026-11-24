@@ -51,7 +51,9 @@ pub(crate) const TABLES: &[(&str, &str)] = &[
     ("companion_activities", "id"),
     ("companion_life_events", "id"),
     ("character_interests", "id"),
+    ("companion_interest_overrides", "interest_id"),
     ("companion_memory_meta", "memory_id"),
+    ("companion_memory_context", "memory_id"),
     ("companion_bond_events", "id"),
     ("companion_mood_events", "id"),
     ("companion_proactive", "id"),
@@ -794,6 +796,9 @@ fn legacy_default(table: &str, column: &str) -> Option<Value> {
         ("life_plans", "host_device_id")
         | ("companion_activities", "task_id" | "plan_id")
         | ("companion_memory_meta", "source_life_event_id") => Some(Value::Null),
+        ("companion_proactive", "source_memory_id" | "source_memory_revision" | "intent") => {
+            Some(Value::Null)
+        }
         ("life_plans", "state") => Some(json!("active")),
         ("life_plans", "created_at_ms" | "next_due_at_ms")
         | ("companion_activities", "elapsed_ms" | "progress_milli" | "checkpoint_seq")
@@ -962,6 +967,16 @@ fn validate_row(db: &Connection, e: &Change, local: &str) -> Result<()> {
             return Err(Error::Untrusted);
         }
     }
+    if e.table == "companion_proactive" && !e.row["source_memory_id"].is_null() {
+        let valid: bool = db.query_row(
+            "SELECT EXISTS(SELECT 1 FROM sync_events WHERE event_id=?1 AND entity_type='memory' AND entity_id=?2)",
+            params![to_sql(&e.row["source_memory_revision"]), to_sql(&e.row["source_memory_id"])],
+            |r| r.get(0),
+        )?;
+        if !valid {
+            return Err(Error::Untrusted);
+        }
+    }
     if matches!(
         e.table.as_str(),
         "companion_bond_events"
@@ -1074,6 +1089,8 @@ fn validate_row(db: &Connection, e: &Change, local: &str) -> Result<()> {
                     "task_id",
                     "plan_id",
                     "source_life_event_id",
+                    "source_memory_id",
+                    "source_memory_revision",
                     "authority_device_id",
                     "host_device_id",
                     "source_device_id",

@@ -103,4 +103,5 @@ jobs:
       source_sha: ${{ github.sha }}
       signed_android: false
       android_compile_only: true
+      android_production_candidate: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
       fresh_test_identity: true

@@ -1,4 +1,4 @@
-name: Authorized stage prerelease
+name: Authorized native release
 on:
   workflow_dispatch:
     inputs:
@@ -7,9 +7,17 @@ on:
         required: true
         type: string
       authorized_version:
-        description: 'Explicit stage release authorization; enter 0.0.2 for this stage'
+        description: 'Explicitly authorized version from VERSION.json'
         required: true
         type: string
+      build_only:
+        description: 'Build for offline signing with the original key. Never creates a release.'
+        default: false
+        type: boolean
+      formal_release:
+        description: 'Publish a formal release only after the signed Android upgrade test succeeds.'
+        default: false
+        type: boolean
 permissions:
   contents: read
 concurrency:
@@ -72,14 +80,22 @@ jobs:
     uses: ./.github/workflows/native-packages.yml
     with:
       source_sha: ${{ needs.preflight.outputs.sha }}
-      signed_android: true
+      signed_android: ${{ !inputs.build_only }}
+      android_production_candidate: ${{ inputs.build_only }}
     secrets:
       ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+  android-upgrade:
+    needs: [preflight, packages]
+    if: inputs.formal_release && !inputs.build_only
+    uses: ./.github/workflows/android-upgrade.yml
+    with:
+      source_sha: ${{ needs.preflight.outputs.sha }}
   publish:
-    needs: [preflight, tests, packages]
+    needs: [preflight, tests, packages, android-upgrade]
+    if: ${{ !cancelled() && !inputs.build_only && needs.preflight.result == 'success' && needs.tests.result == 'success' && needs.packages.result == 'success' && (!inputs.formal_release || needs.android-upgrade.result == 'success') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -94,9 +110,22 @@ jobs:
           path: artifacts
       - name: Verify both packages come from this commit
         run: python3 .github/scripts/collect-packages.py artifacts release-files
+      - if: inputs.formal_release
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          pattern: android-upgrade-*
+          path: release-files/android-upgrade
+          merge-multiple: true
+      - if: inputs.formal_release
+        name: Attach Android upgrade and launch evidence
+        run: |
+          mv release-files/android-upgrade/ANDROID-UPGRADE.json release-files/
+          mv release-files/android-upgrade/ANDROID-APP.png release-files/
+          rm -rf release-files/android-upgrade
       - name: Publish only after both validated native builds and tests succeed
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          RELEASE_STABLE: ${{ inputs.formal_release }}
         run: |
           python3 .github/scripts/publish-release.py

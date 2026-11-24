@@ -747,6 +747,7 @@ async fn companion_context_reaches_the_actual_request_without_extra_analysis_cal
                 importance_milli: 900,
                 pinned: true,
                 api_allowed: true,
+                context: None,
             },
         )
         .unwrap();

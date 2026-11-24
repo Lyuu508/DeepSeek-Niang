@@ -1196,6 +1196,11 @@ fn real_tls_sync_converges_bond_mood_memory_preferences_and_virtual_life() {
                 importance_milli: 900,
                 pinned: true,
                 api_allowed: true,
+                context: Some(companion_core::companion::intelligence::MemoryContext {
+                    occurred_at_ms: now,
+                    recall_allowed: true,
+                    ..Default::default()
+                }),
             },
         )
         .unwrap();
@@ -1219,6 +1224,11 @@ fn real_tls_sync_converges_bond_mood_memory_preferences_and_virtual_life() {
         "我最喜欢的饮料是红茶"
     );
     assert!(
+        pc.store.lock().unwrap().managed_memories(&host).unwrap()[0]
+            .context
+            .recall_allowed
+    );
+    assert!(
         !pc.store
             .lock()
             .unwrap()
@@ -1226,6 +1236,59 @@ fn real_tls_sync_converges_bond_mood_memory_preferences_and_virtual_life() {
             .unwrap()
             .memory_context
     );
+    let later = now + 3 * 86_400_000;
+    {
+        let mut store = pc.store.lock().unwrap();
+        prefs.memory_context = true;
+        prefs.proactive_enabled = true;
+        prefs.proactive_model_enabled = true;
+        prefs.proactive_token_budget = 8192;
+        prefs.quiet_start_minute = 0;
+        prefs.quiet_end_minute = 0;
+        store.save_companion_preferences(&host, &prefs).unwrap();
+        store.stage_memory_recollection(later).unwrap();
+        let (_, share, model) = store.next_proactive_target(later, true).unwrap().unwrap();
+        assert!(model);
+        let job = store
+            .prepare_proactive_candidate(later, 100, Some(&share))
+            .unwrap()
+            .unwrap();
+        assert!(job.recollection && job.prompt[1].content.contains("红茶"));
+        let payload =
+            r#"{"send":true,"intent":"recall","message":"刚才聊到饮料，想到了你爱喝的红茶。"}"#;
+        assert!(
+            store
+                .finish_proactive_share(&job, later + 1000, 1100, payload, None, None)
+                .unwrap()
+        );
+    }
+    for _ in 0..3 {
+        phone.tick().unwrap();
+    }
+    {
+        let mut store = phone.store.lock().unwrap();
+        store.stage_memory_recollection(later + 2000).unwrap();
+        assert!(
+            store
+                .next_proactive_target(later + 2000, true)
+                .unwrap()
+                .is_none()
+        );
+        let life = store.life_snapshot(&host, later + 2000).unwrap();
+        let share = &life["proactive_messages"][0];
+        assert_eq!(share["source_memory_id"], memory.id);
+        assert_eq!(share["intent"], "recall");
+        assert_eq!(share["state"], "delivered");
+        assert_eq!(
+            store
+                .chat_messages(&host)
+                .unwrap()
+                .iter()
+                .filter(|row| row.content.contains("爱喝的红茶"))
+                .count(),
+            1
+        );
+    }
     phone
         .store
         .lock()

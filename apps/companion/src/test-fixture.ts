@@ -29,7 +29,28 @@ export const fixtureApi:RuntimeAPI={
  shareReceipt:async id=>{owned(id);},claimNotification:async()=>false,
  companion:async id=>{owned(id);const zero={requests:0,measured_requests:0,unknown_requests:0,prompt_tokens:0,completion_tokens:0};return structuredClone({persona_id:id,preferences:companionPreferences(id),relationship:{familiarity:5000,trust:10000,affection:10000,intimacy:0,comfort:30000,stage:'初识',rule_version:2,applied_events:0,distinct_days:0,history:[]},mood:{kind:'calm',label:'平静',intensity_milli:200,source:'UI 模拟夹具',started_at_ms:null,expires_at_ms:null},memories:memories[id].map(m=>managed[m.id]??{id:m.id,text:m.text,version:m.version_lamport,revision:m.id,source_excerpt:null,kind:'semantic',importance_milli:500,pinned:false,api_allowed:false,owner_locked:true,source_kind:'legacy',source_message_id:null,created_at_ms:null,updated_at_ms:null}),memory_candidates:[],life:{can_control:!window.matchMedia("(pointer:coarse)").matches,plans:plans[id]??[],host_device_id:null,heartbeat_at_ms:null,host_online:false,current:null,next_activity:null,today_events:[],proactive_messages:[],day_start_ms:0,execution_kind:'virtual',external_media_executed:false},daily_usage:{day_start_ms:0,timezone_offset_minutes:480,by_purpose:{chat:{...zero,...usage[id],unknown_requests:usage[id].requests-usage[id].measured_requests},memory:{...zero},life:{...zero}},memory_and_life_provider:'UI fixture'}} satisfies CompanionSnapshot);},
  saveCompanionPreferences:async(id,value)=>{owned(id);preferences[id]=structuredClone(value);},
- editMemory:async(id,edit)=>{owned(id);let row=edit.id?memories[id].find(m=>m.id===edit.id):undefined;if(edit.id&&(!row||edit.expected_version!==row.version_lamport||edit.expected_revision!==(managed[row.id]?.revision??row.id)))throw {code:'DATA_VERSION_CONFLICT',message:'模拟测试：记忆版本已改变。',retryable:false};if(!row){row={id:crypto.randomUUID(),text:'',version_lamport:0};memories[id].push(row);}row.text=edit.text;row.version_lamport++;managed[row.id]={id:row.id,text:row.text,version:row.version_lamport,revision:crypto.randomUUID(),source_excerpt:null,kind:edit.kind,importance_milli:edit.importance_milli,pinned:edit.pinned,api_allowed:edit.api_allowed,owner_locked:true,source_kind:'manual',source_message_id:null,created_at_ms:managed[row.id]?.created_at_ms??Date.now(),updated_at_ms:Date.now()};return row.id;},
+ editMemory:async(id,edit)=>{
+  owned(id);
+  let row=edit.id?memories[id].find(m=>m.id===edit.id):undefined;
+  if(edit.id&&(!row||edit.expected_version!==row.version_lamport||edit.expected_revision!==(managed[row.id]?.revision??row.id)))throw {code:'DATA_VERSION_CONFLICT',message:'模拟测试：记忆版本已改变。',retryable:false};
+  if(!row){row={id:crypto.randomUUID(),text:'',version_lamport:0};memories[id].push(row);}
+  const prior=managed[row.id];
+  row.text=edit.text;row.version_lamport++;
+  managed[row.id]={id:row.id,text:row.text,version:row.version_lamport,revision:crypto.randomUUID(),source_excerpt:prior?.source_excerpt??null,kind:edit.kind,importance_milli:edit.importance_milli,pinned:edit.pinned,api_allowed:edit.api_allowed,owner_locked:true,source_kind:prior?.source_kind??'manual',source_message_id:prior?.source_message_id??null,created_at_ms:prior?.created_at_ms??Date.now(),updated_at_ms:Date.now(),context:edit.context??prior?.context};
+  return row.id;
+ },
+ collectSharedMemory:async(id,messageId)=>{
+  owned(id);
+  const source=messages[id].find(m=>m.id===messageId&&m.role==='user');
+  if(!source)throw {code:'UNTRUSTED',message:'模拟测试：找不到当前人格的来源聊天。',retryable:false};
+  const existing=memories[id].find(m=>managed[m.id]?.source_message_id===messageId);
+  if(existing)return existing.id;
+  const row={id:crypto.randomUUID(),text:source.content.split('\n[连续消息]\n')[0],version_lamport:1};
+  memories[id].push(row);
+  const occurred=source.created_at_ms??Date.now();
+  managed[row.id]={id:row.id,text:row.text,version:row.version_lamport,revision:crypto.randomUUID(),source_excerpt:row.text,kind:'episodic',importance_milli:700,pinned:false,api_allowed:false,owner_locked:true,source_kind:'chat',source_message_id:messageId,created_at_ms:occurred,updated_at_ms:occurred,context:{is_event:false,shared_story:true,state:'active',occurred_at_ms:occurred,due_at_ms:null,confidence_milli:1000,recall_allowed:false,reminder_allowed:false,shared_with_personas:false}};
+  return row.id;
+ },
  resolveMemoryCandidate:async()=>{throw {code:'MOCK_NO_CANDIDATE',message:'UI 夹具没有真实记忆候选。',retryable:false};},
  bootstrap:async()=>structuredClone({version:packageInfo.version,platform:window.matchMedia('(pointer:coarse)').matches?'android':'windows',settings:settings[selected],personas,active_persona_id:selected,persona_summary:{memory_count:memories[selected].length,activity_count:0,interest_count:0,relationship:{status:'not_evaluated'},mood:{status:'unknown'},life:{status:'not_started'}},key_status:status(),usage:usage[selected],active_request:active?.request??null,active_conversation:active?.persona??null,schema_version:10} satisfies Bootstrap),
  messages:async id=>{owned(id);const snapshot=structuredClone(messages[id]);const delay=Math.min(3000,Math.max(0,Number(new URLSearchParams(location.search).get('read-delay'))||0));if(delay)await new Promise(resolve=>setTimeout(resolve,delay));return snapshot;},
@@ -44,7 +65,9 @@ export const fixtureApi:RuntimeAPI={
   if(!input.regenerate_user_id)list.push(user);list.filter(m=>m.user_message_id===user.id).forEach(m=>{m.selected=false;});
   const message:ChatMessage={id:crypto.randomUUID(),conversation_id:owner.id,role:'assistant',content:'',state:'sending',created_at_ms:Date.now(),model_id:settings[owner.id].model,request_id:input.request_id,user_message_id:user.id,revision:0,selected:true,error_code:null,finish_reason:null};list.push(message);
   const request:PreparedChat={request_id:input.request_id,conversation_id:owner.id,user_message_id:user.id,assistant_id:message.id,is_new:true};callback({type:'started',request,user:{...user},message:{...message}});
-  const chunks=Array.from(`模拟测试回复：这里是${owner.name}的独立时间线。这段文字来自 UI 测试夹具，不是真实 DeepSeek API。`);let index=0;
+  const chunks=Array.from(user.content.includes('多气泡夹具')
+   ? '模拟测试：忙了一下午呀。\n[气泡]\n先休息一下吧。'
+   : `模拟测试回复：这里是${owner.name}的独立时间线。这段文字来自 UI 测试夹具，不是真实 DeepSeek API。`);let index=0;
   const next=()=>{if(!active)return;if(user.content.includes('触发错误')){end(true);return;}if(index===chunks.length){end();return;}message.content+=chunks[index++];message.state='generating';message.revision++;callback({type:'delta',request_id:request.request_id,conversation_id:owner.id,message_id:message.id,content:message.content,revision:message.revision});active.timer=setTimeout(next,22);};
   active={request:request.request_id,persona:owner.id,message,timer:setTimeout(next,30),callback};return request;
  },

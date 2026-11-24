@@ -23,6 +23,8 @@ persona_tables = {"personas", "conversation_personas", "persona_chat_preferences
 assert persona_tables <= tables
 companion_tables=set('persona_links lan_host_binding companion_preferences companion_bond_events companion_mood_events companion_memory_meta companion_memory_candidates companion_hosts companion_activities companion_life_events companion_proactive companion_processed_sources companion_worker_status'.split())
 assert companion_tables <= tables
+assert {'companion_memory_context', 'companion_memory_usage', 'companion_device_clock',
+        'companion_interest_overrides'} <= tables
 assert {"persona_lifecycle", "persona_erased_keys", "lan_erasure_queue",
         "app_plugins", "app_plugin_personas", "app_plugin_reminders", "app_plugin_audit"} <= tables
 

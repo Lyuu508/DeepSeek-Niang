@@ -55,20 +55,25 @@ export interface CompanionPreferences {
 export interface BondHistory {id:string;source_message_id:string;kind:string;explanation:string;occurred_at_ms:number;delta:number[];applied:boolean;decision:string}
 export interface BondSnapshot {familiarity:number;trust:number;affection:number;intimacy:number;comfort:number;stage:string;rule_version:number;applied_events: number;distinct_days:number;history:BondHistory[]}
 export interface MoodSnapshot {kind:string;label:string;intensity_milli:number;source:string;started_at_ms:number|null;expires_at_ms:number|null}
-export interface ManagedMemory {id:string;text:string;version:number;revision:string;source_excerpt:string|null;source_life_event_id?:string|null;kind:string;importance_milli:number;pinned:boolean;api_allowed:boolean;owner_locked:boolean;source_kind:string;source_message_id:string|null;created_at_ms:number|null;updated_at_ms:number|null}
-export interface MemoryEdit {id:string|null;expected_version:number|null;expected_revision:string|null;text:string;kind:string;importance_milli:number;pinned:boolean;api_allowed:boolean}
+export type MemoryState = 'active'|'completed'|'superseded'|'dismissed';
+export interface MemoryContext {
+ is_event:boolean;shared_story:boolean;state:MemoryState;occurred_at_ms:number;due_at_ms:number|null;
+ confidence_milli:number;recall_allowed:boolean;reminder_allowed:boolean;shared_with_personas:boolean;
+}
+export interface ManagedMemory {id:string;text:string;version:number;revision:string;source_excerpt:string|null;source_life_event_id?:string|null;kind:string;importance_milli:number;pinned:boolean;api_allowed:boolean;owner_locked:boolean;source_kind:string;source_message_id:string|null;created_at_ms:number|null;updated_at_ms:number|null;last_used_at_ms?:number|null;context?:MemoryContext}
+export interface MemoryEdit {id:string|null;expected_version:number|null;expected_revision:string|null;text:string;kind:string;importance_milli:number;pinned:boolean;api_allowed:boolean;context?:MemoryContext}
 export interface MemoryCandidate {id:string;content:string;kind:string;source_message_id:string;created_at_ms:number;conflicting_memory_id:string|null}
 export interface LifeSnapshot {
  host_device_id:string|null;heartbeat_at_ms:number|null;host_online:boolean;
  current:null|{id:string;kind:string;label:string;state:string;started_at_ms:number;scheduled_end_at_ms:number;updated_at_ms:number;execution_kind:'virtual';elapsed_ms?:number;progress_milli?:number;task_id?:string|null;plan_id?:string|null;error_code?:string|null};
  next_activity:string|null;today_events:{id:string;description:string;occurred_at_ms:number;kind:string}[];
- proactive_messages:{id:string;content:string;state:string;created_at_ms:number;delivered_at_ms:number|null;message_id:string|null;read_at_ms?:number|null;notification_state?:string|null;source_life_event_id?:string}[];
+ proactive_messages:{id:string;content:string;state:string;created_at_ms:number;delivered_at_ms:number|null;message_id:string|null;read_at_ms?:number|null;notification_state?:string|null;source_life_event_id?:string|null;source_memory_id?:string|null;intent?:string|null}[];
  can_control?:boolean;completed_today?:number;offline_notice?:string;plans?:LifePlan[];interests?:LifeInterest[];diary?:LifeDiary;daily_cost?:LifeCost;
  day_start_ms:number;execution_kind:'virtual';external_media_executed:false;
 }
 export interface LifePlanInput {name:string;kind:string;steps:number;duration_ms:number}
 export interface LifePlan {id:string;name:string;state:string;next_step:number;steps:number;next_due_at_ms:number}
-export interface LifeInterest {id:string;name:string;strength:number;history:{source_event_id:string;at_ms:number;reason:string;from:number;to:number}[]}
+export interface LifeInterest {id:string;name:string;strength:number;customized?:boolean;history:{source_event_id:string;at_ms:number;reason:string;from:number;to:number}[]}
 export interface LifeDiary {day:number;timezone_offset_minutes:number;events:{id:string;text:string;at_ms:number;source_id:string;source_kind:string;kind:string}[];chats:{source_id:string;text:string;at_ms:number;source_kind:string}[];moods:{source_id:string;mood:string;at_ms:number;source_kind:string}[];generator:string;api_requests:number}
 export interface LifeCost {by_activity:{activity:string;requests:number;measured_requests:number;prompt_tokens:number;completion_tokens:number;cost_micros:number|null;priced_requests:number}[];local_rule_tokens:number}
 export interface DailyUsage {weekly?:LifeCost;day_start_ms:number;timezone_offset_minutes:number;by_purpose:Record<'chat'|'memory'|'life',{requests:number;measured_requests:number;unknown_requests:number;prompt_tokens:number;completion_tokens:number}>;memory_and_life_provider:string}

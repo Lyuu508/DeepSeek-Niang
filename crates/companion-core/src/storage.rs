@@ -28,7 +28,7 @@ pub struct Store {
     pub(crate) authority_epoch: i64,
     _file_lock: Option<std::fs::File>,
 }
-pub const SCHEMA_VERSION: u32 = 10;
+pub const SCHEMA_VERSION: u32 = 11;
 #[derive(Debug, Serialize)]
 pub struct MemoryRecord {
     pub id: String,
@@ -149,6 +149,10 @@ impl Store {
             (
                 10,
                 include_str!("../../../db/migrations/0010_persona_lifecycle.sql"),
+            ),
+            (
+                11,
+                include_str!("../../../db/migrations/0011_conversation_memory.sql"),
             ),
         ];
         for (number, sql) in migrations {

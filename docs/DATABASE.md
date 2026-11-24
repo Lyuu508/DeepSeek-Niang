@@ -1,5 +1,7 @@
 # 本地数据与迁移
 
+v0.1.2 使用 **schema 11**。增量迁移为 [0011_conversation_memory.sql](../db/migrations/0011_conversation_memory.sql)。迁移前创建一致性备份，事务内保留原人格、消息、记忆版本和主动分享记录，检查外键和完整性后提交。[记忆和同步实现](V012_MEMORIES.md)
+
 v0.0.9 使用 **schema 10**，生产迁移顺序为 `0001`～`0010`。新增人格生命周期、永久删除标记和声明式插件数据。旧迁移按原字节保留。字号复用设备设置表。
 
 - 升级前执行 SQLite Online Backup，保留含已提交 WAL 的一致性副本，再在一笔事务执行迁移。失败回滚。[schema 10 迁移说明](V009_RECYCLE_MIGRATION.md)

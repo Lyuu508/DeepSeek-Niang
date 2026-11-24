@@ -217,5 +217,40 @@ async function configure(page){await settings(page);await setting(page,'API 配�
   assert.match(await input.inputValue(),/请读一下[\s\S]*notes\.txt/);
   assert.equal(await page.getByText('海洋实验记录',{exact:true}).count(),0);
  });
+ await check('two quick user messages and two reply bubbles share one generation',async()=>{
+  const input=page.getByLabel('发送给当前人格的消息');
+  await input.fill('多气泡夹具，今天做了好多图片。');await input.press('Enter');
+  await input.fill('还有一些设计没做完。');await input.press('Enter');
+  const reply=page.locator('.message.assistant[data-state="complete"]').filter({hasText:'忙了一下午呀'});
+  await reply.waitFor();
+  const result=page.locator(`.message.assistant[data-message-group="${await reply.getAttribute('data-message-group')}"]`);
+  assert.equal(await result.count(),2);
+  const user=page.locator('.message.user').filter({hasText:'多气泡夹具'});
+  const sent=page.locator(`.message.user[data-message-group="${await user.getAttribute('data-message-group')}"]`);
+  assert.equal(await sent.count(),2);
+  assert.match(await sent.last().innerText(),/还有一些设计/);
+  await page.screenshot({path:path.join(artifact,'memory-chat-bubbles-windows-layout-fixture.png'),animations:'disabled'});
+ });
+ await check('actual fixture chat can be collected, found, favorited and opened on desktop and phone',async()=>{
+  await phone.getByRole('button',{name:'手机聊天',exact:true}).click();
+  for(const [display,surface] of [['windows-layout',page],['android-layout',phone]]){
+   const source=surface.locator('.message.user').last();
+   const group=await source.getAttribute('data-message-group');
+   const term=(await surface.locator(`[data-message-id="${group}"] .bubble`).innerText()).slice(0,8);
+   await source.getByRole('button',{name:'收录共同回忆',exact:true}).click();
+   await source.getByRole('button',{name:'已收录',exact:true}).waitFor();
+   await menu(surface);await surface.getByRole('button',{name:'本地数据',exact:true}).click();
+   await surface.getByRole('button',{name:'共同回忆',exact:true}).click();
+   await surface.getByLabel('搜索共同回忆').fill(term);
+   const story=surface.locator('.shared-memory-timeline .memory');
+   await story.getByRole('button',{name:'收藏',exact:true}).click();
+   await story.getByRole('button',{name:'取消收藏',exact:true}).waitFor();
+   await story.scrollIntoViewIfNeeded();
+   await surface.screenshot({path:path.join(artifact,`shared-memory-${display}-fixture.png`),animations:'disabled'});
+   await story.getByRole('button',{name:'查看来源聊天',exact:true}).click();
+   const target=surface.locator(`[data-message-id="${group}"][data-source-highlight="true"]`);
+   await target.waitFor();assert(await target.evaluate(el=>document.activeElement===el));
+  }
+ });
  fs.writeFileSync(path.join(artifact,'results.json'),JSON.stringify({scope:'Explicit UI Mock; no real API, SQLite, file migration or OS credentials; camera lifecycle uses a synthetic browser stream',passed:checks.length,checks,browser:browser.version()},null,2)+'\n');console.log(JSON.stringify({scope:'explicit UI Mock',passed:checks.length,checks}));
 })().catch(e=>{console.error(e);process.exitCode=1;}).finally(async()=>{await browser?.close();server?.kill('SIGTERM');});

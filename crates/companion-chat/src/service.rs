@@ -162,7 +162,7 @@ impl ChatService {
             }
             let settings = store.settings_for_conversation(&input.conversation_id)?;
             let prepared = store.begin_chat_with_images(&input, &settings, images)?;
-            let prompt = match store.companion_context_with_images(
+            let prompt = match store.build_conversation_context(
                 &prepared.conversation_id,
                 &settings,
                 observations,
@@ -234,7 +234,7 @@ impl ChatService {
         &self,
         task: PreparedChat,
         settings: ChatSettings,
-        prompt: Vec<companion_core::chat::PromptMessage>,
+        prompt: companion_core::companion::intelligence::ConversationContext,
         cancel: CancellationToken,
         observer: Observer,
     ) {
@@ -243,7 +243,7 @@ impl ChatService {
         let result = match self.vault.get() {
             Ok(key) => {
                 self.provider
-                    .stream(&key, &settings, &prompt, &cancel, |content| {
+                    .stream_conversation(&key, &settings, &prompt, &cancel, |content| {
                         let saved = self
                             .store
                             .lock()

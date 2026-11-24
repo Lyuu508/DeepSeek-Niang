@@ -7,7 +7,7 @@ import {notifyShare} from './notifications';
 import {StrictMode,useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import type {Bootstrap,ChatEvent,ChatFailure,ChatMessage,ChatSettings,Diagnostics,CompanionSnapshot} from '@deepseek/contracts';
-import {failure,native,nativeAvailable,runtimeMode} from './native';
+import {failure,native,nativeAvailable,rememberDeviceClock,runtimeMode} from './native';
 import {previewSettings} from './defaults';
 import './design-tokens.css';
 import './style.css';
@@ -36,6 +36,7 @@ import {brandingReady} from './branding';
 import {VoiceSettings} from './voice/VoiceControls';
 import {CloudVoiceSettings} from './voice/CloudVoiceSettings';
 import {useVoice,type VoiceController} from './voice/useVoice';
+import {messageParts, USER_FRAGMENT_SEPARATOR} from './chat-rhythm';
 
 const terminal=(m:ChatMessage)=>['complete','failed','interrupted'].includes(m.state);
 function merge(rows:ChatMessage[],incoming:ChatMessage):ChatMessage[]{
@@ -118,11 +119,11 @@ function SettingsPanel({boot,onRefresh,onError,voice,font,appearance,initialSect
   </div>
  </div>;
 }
-function StoragePanel({personaId,onError,onRefresh}:{personaId:string;onError:(e:ChatFailure|null)=>void;onRefresh:()=>Promise<void>}){
+function StoragePanel({personaId,onError,onRefresh,onSource}:{personaId:string;onError:(e:ChatFailure|null)=>void;onRefresh:()=>Promise<void>;onSource:(id:string)=>void}){
  const [diag,setDiag]=useState<Diagnostics>();
  const refresh=useCallback(async()=>{if(!nativeAvailable)return;try{setDiag(await native.diagnostics());}catch(e){onError(failure(e));}},[onError]);
  useEffect(()=>{void refresh();},[refresh]);
- return <div className="settings-content"><PageHeader title="记忆与本地数据" icon="memory" art="thinking" scene="scene-settings" description="每个人格的记忆独立保存，配对后使用同一身份同步。"/><MemoryPanel personaId={personaId} onError={onError} onRefresh={onRefresh}/><section className="settings-card"><div className="card-heading"><h2>数据库诊断</h2><button disabled={!nativeAvailable} onClick={()=>void refresh()}>刷新</button></div>{diag?<dl><dt>SQLite / 迁移版本</dt><dd>{diag.sqlite_version} / {diag.schema_version}</dd><dt>完整性</dt><dd>{diag.integrity}</dd><dt>整个本地档案：消息 / 记忆 / 事件</dt><dd>{diag.message_count} / {diag.memory_count} / {diag.event_count}</dd></dl>:<p>请通过原生客户端读取本地数据库。</p>}</section></div>;
+ return <div className="settings-content"><PageHeader title="记忆与本地数据" icon="memory" art="thinking" scene="scene-settings" description="每个人格的记忆独立保存，配对后使用同一身份同步。"/><MemoryPanel personaId={personaId} onError={onError} onRefresh={onRefresh} onSource={onSource}/><section className="settings-card"><div className="card-heading"><h2>数据库诊断</h2><button disabled={!nativeAvailable} onClick={()=>void refresh()}>刷新</button></div>{diag?<dl><dt>SQLite / 迁移版本</dt><dd>{diag.sqlite_version} / {diag.schema_version}</dd><dt>完整性</dt><dd>{diag.integrity}</dd><dt>整个本地档案：消息 / 记忆 / 事件</dt><dd>{diag.message_count} / {diag.memory_count} / {diag.event_count}</dd></dl>:<p>请通过原生客户端读取本地数据库。</p>}</section></div>;
 }
 function App(){
  const [boot,setBoot]=useState<Bootstrap|null>(null);
@@ -156,6 +157,8 @@ function App(){
  },[companion,page,boot?.active_persona_id]);
 
  const [allMessages,setAllMessages]=useState<Record<string,ChatMessage[]>>({});
+ const [sourceMessage,setSourceMessage]=useState<string|null>(null);
+ const burst=useRef<{conversation:string;parts:string[];first:number;timer:number}|null>(null);
  const [drafts,setDrafts]=useState<Record<string,string>>({});
  const [images,setImages]=useState<Record<string,ChatImage[]>>({});
  const [videoDraft,setVideoDraft]=useState<{persona:string;file:File;question:string;mode:VideoMode}|undefined>();
@@ -163,6 +166,7 @@ function App(){
  const videoResume=useRef<{persona:string;file:File;record:VideoQuestion}|null>(null);
  const [localImages,setLocalImages]=useState<Record<string,string[]>>({});
  const [copied,setCopied]=useState('');
+ const [collected,setCollected]=useState('');
  const [error,setError]=useState<ChatFailure|null>(null);const [loading,setLoading]=useState(false);
  const [active,setActive]=useState<{request:string;conversation:string;started:boolean;detached?:boolean}|null>(null);
  const activeRef=useRef(active);const initialized=useRef(false);const refreshSequence=useRef(0);const switchLock=useRef(false);const eventEpoch=useRef<Record<string,number>>({});
@@ -179,6 +183,9 @@ function App(){
  const settings=boot?.settings??previewSettings;
  const persona=boot?.personas.find(p=>p.id===boot.active_persona_id);
  const conversation=persona?.main_conversation_id??'';
+ const currentThread=useRef(conversation);
+ currentThread.current=conversation;
+ useEffect(()=>()=>{if(burst.current)window.clearTimeout(burst.current.timer);},[]);
  useEffect(()=>{
   if(!conversation||runtimeMode!=='native')return;
   let current=true;
@@ -201,7 +208,12 @@ function App(){
   const companionData=await native.companion(data.active_persona_id);if(sequence!==refreshSequence.current)return;setCompanion(companionData);
   if(!initialized.current){initialized.current=true;if(data.active_request&&data.active_conversation){const restored={request:data.active_request,conversation:data.active_conversation,started:true,detached:true};activeRef.current=restored;setActive(restored);}}
  },[]);
- useEffect(()=>{void refresh().catch(e=>setError(failure(e)));},[refresh]);
+ useEffect(()=>{
+  const clock=()=>void rememberDeviceClock().catch(()=>{});
+  void rememberDeviceClock().catch(()=>{}).then(refresh).catch(e=>setError(failure(e)));
+  window.addEventListener('focus',clock);
+  return()=>window.removeEventListener('focus',clock);
+ },[refresh]);
  useEffect(()=>{
   if(runtimeMode!=='native')return;let stopped=false;let last='';
   const timer=setInterval(()=>{void syncAPI.status().then(async status=>{
@@ -319,26 +331,45 @@ function App(){
    if(requestIsActive(request))updateActive(null);
   }
  }
- async function send(regenerateUserId?:string,imageConsent=false,videoConsent=false){
+ async function send(regenerateUserId?:string,imageConsent=false,videoConsent=false,queuedText?:string){
   if(!conversation||activeRef.current||!boot?.key_status.configured||switching)return;
-  const pictures=regenerateUserId?undefined:images[conversation];
-  const draft=drafts[conversation]??'';
-  if(!regenerateUserId && videoDraft && videoDraft.persona===boot?.active_persona_id){
+  const pictures=regenerateUserId||queuedText?undefined:images[conversation];
+  const draft=queuedText??drafts[conversation]??'';
+  if(!queuedText && !regenerateUserId && videoDraft && videoDraft.persona===boot?.active_persona_id){
    if(videoConsent && !pictures?.length)await sendVideo(videoDraft.file,videoDraft.persona,draft,videoDraft.mode);
    return;
   }
   const text=draft.trim()?draft:pictures?.length?(imageConsent?'请描述我发的图片。':'［发送了本机图片附件，请等我描述画面。］'):'';
   if(!regenerateUserId&&!text.trim())return;
+  if (!queuedText && !regenerateUserId && !pictures?.length && text.length<=500 && !text.includes(USER_FRAGMENT_SEPARATOR)) {
+   const now=performance.now();
+   const previous=burst.current;
+   if(previous?.conversation===conversation)window.clearTimeout(previous.timer);
+   const parts=[...(previous?.conversation===conversation?previous.parts:[]),text];
+   const first=previous?.conversation===conversation?previous.first:now;
+   const flush=()=>{
+    if(burst.current?.conversation===conversation)burst.current=null;
+    if(currentThread.current!==conversation||activeRef.current){
+     setDrafts(old=>({...old,[conversation]:[...parts,old[conversation]].filter(Boolean).join('\n')}));
+     return;
+    }
+    void send(undefined,false,false,parts.join(USER_FRAGMENT_SEPARATOR));
+   };
+   setDrafts(old=>({...old,[conversation]:''}));
+   burst.current={conversation,parts,first,timer:window.setTimeout(flush,parts.length>=3?0:Math.max(0,Math.min(600,first+1050-now)))};
+   return;
+  }
   const request=crypto.randomUUID();const selected=conversation;setError(null);nearBottom.current=true;updateActive({request,conversation:selected,started:false});
-  if(!regenerateUserId)setDrafts(old=>({...old,[selected]:''}));
+  if(!regenerateUserId&&!queuedText)setDrafts(old=>({...old,[selected]:''}));
   try{
+   await rememberDeviceClock().catch(()=>{});
    const result=await native.startChat({request_id:request,conversation_id:selected,text:regenerateUserId?null:text,regenerate_user_id:regenerateUserId??null},onEvent,pictures,imageConsent);
    if(pictures?.length){
     setImages(old=>({...old,[selected]:old[selected]===pictures?[]:old[selected]}));
     setLocalImages(old=>({...old,[selected]:[...new Set([...(old[selected]??[]),result.user_message_id])]}));
    }
   }
-  catch(e){setError(failure(e));if(requestIsActive(request)){updateActive(null);if(!regenerateUserId)setDrafts(old=>({...old,[selected]:old[selected]||draft}));}}
+  catch(e){setError(failure(e));if(requestIsActive(request)){updateActive(null);if(!regenerateUserId)setDrafts(old=>({...old,[selected]:[draft.split(USER_FRAGMENT_SEPARATOR).join('\n'),old[selected]].filter(Boolean).join('\n')}));}}
  }
  async function stopCurrent(){const job=activeRef.current;if(!job)return;try{await native.stop(job.request);const list=await native.messages(job.conversation);setAllMessages(old=>({...old,[job.conversation]:list}));if(activeRef.current?.request===job.request)updateActive(null);await refresh();}catch(e){setError(failure(e));}}
  const lastUser=[...rows].reverse().find(m=>m.role==='user');const variants=rows.filter(m=>m.role==='assistant'&&!m.selected).length;
@@ -348,9 +379,20 @@ function App(){
  const currentCompanion=companion?.persona_id===boot?.active_persona_id?companion:null;
  const navigate=(destination:AppPage)=>{if(destination==='settings')setSettingsSection('appearance');setPage(destination);setDrawer(false);};
  const openSettings=(section:SettingsSection)=>{setSettingsSection(section);setPage('settings');setDrawer(false);};
- async function copyMessage(message:ChatMessage){
-  try{await navigator.clipboard.writeText(message.content);setCopied(message.id);}
+ const openSource=(id:string)=>{nearBottom.current=false;setSourceMessage(id);navigate('chat');};
+ useLayoutEffect(()=>{
+  if(page!=='chat'||!sourceMessage||loading)return;
+  const item=document.querySelector(`[data-message-id="${CSS.escape(sourceMessage)}"]`);
+  if(item instanceof HTMLElement){item.scrollIntoView({block:'center'});item.focus({preventScroll:true});}
+ },[page,sourceMessage,visible,loading]);
+ async function copyMessage(id:string,content:string){
+  try{await navigator.clipboard.writeText(content);setCopied(id);}
   catch{setError({code:'CLIPBOARD_UNAVAILABLE',message:'无法复制到系统剪贴板。可以选中文字后手动复制。',retryable:true});}
+ }
+ async function collectSharedMemory(id:string){
+  if(!persona||!nativeAvailable)return;
+  try{await native.collectSharedMemory(persona.id,id);setCollected(id);await refresh();}
+  catch(e){setError(failure(e));}
  }
  return <div className="app" data-theme={dark?'dark':'light'} data-palette={appearance.value.palette} data-platform={mobile?'android':'desktop'} data-page={page} data-ime={imeOpen}>
   <header>
@@ -396,7 +438,7 @@ function App(){
    {page==='about'?<div className="page-scroll"><AboutPage version={boot?.version}/></div>:page==='plugins'?<div className="page-scroll"><PluginManager key={persona?.id} persona={persona?.id??''} name={persona?.name??''}/></div>:page==='video'?<div className="page-scroll"><CloudVideoPanel key={boot?.active_persona_id} personaId={boot?.active_persona_id??''} deepseekConfigured={!!boot?.key_status.configured} memories={currentCompanion?.memories??[]} previousWindows={boot?.platform==='windows'}
         initialVideo={videoDraft?.persona===boot?.active_persona_id?videoDraft:undefined}
         onSaved={()=>{setVideoDraft(undefined);navigate('chat');void refresh();}}
-        onMemories={()=>navigate('storage')}/></div>:page==='companion'?<div className="page-scroll"><CompanionPanel key={boot?.active_persona_id} data={currentCompanion} persona={persona} onRefresh={refresh} onError={setError} onMemories={()=>setPage('storage')}/></div>:page==='sync'?<div className="page-scroll"><SyncPanel mobile={mobile} onPaired={refresh}/></div>:page==='settings'?<div className="page-scroll"><SettingsPanel key={boot?.active_persona_id??'loading'} boot={boot} voice={voice} font={font} appearance={appearance} initialSection={settingsSection} onRefresh={refresh} onError={setError}/></div>:page==='storage'?<div className="page-scroll"><StoragePanel key={boot?.active_persona_id??'loading'} personaId={boot?.active_persona_id??''} onError={setError} onRefresh={refresh}/></div>:page==='personas'?<div className="page-scroll"><PersonaManager boot={boot} onSwitch={switchPersona} onRefresh={refresh} onError={setError} onSettings={()=>openSettings('character')} onErased={threads=>{
+        onMemories={()=>navigate('storage')}/></div>:page==='companion'?<div className="page-scroll"><CompanionPanel key={boot?.active_persona_id} data={currentCompanion} persona={persona} onRefresh={refresh} onError={setError} onMemories={()=>setPage('storage')}/></div>:page==='sync'?<div className="page-scroll"><SyncPanel mobile={mobile} onPaired={refresh}/></div>:page==='settings'?<div className="page-scroll"><SettingsPanel key={boot?.active_persona_id??'loading'} boot={boot} voice={voice} font={font} appearance={appearance} initialSection={settingsSection} onRefresh={refresh} onError={setError}/></div>:page==='storage'?<div className="page-scroll"><StoragePanel key={boot?.active_persona_id??'loading'} personaId={boot?.active_persona_id??''} onError={setError} onRefresh={refresh} onSource={openSource}/></div>:page==='personas'?<div className="page-scroll"><PersonaManager boot={boot} onSwitch={switchPersona} onRefresh={refresh} onError={setError} onSettings={()=>openSettings('character')} onErased={threads=>{
       setAllMessages(old=>Object.fromEntries(Object.entries(old).filter(([id])=>!threads.includes(id))));
       setDrafts(old=>Object.fromEntries(Object.entries(old).filter(([id])=>!threads.includes(id))));
       setImages(old=>Object.fromEntries(Object.entries(old).filter(([id])=>!threads.includes(id))));
@@ -406,9 +448,35 @@ function App(){
     <div className="message-scroll" ref={scroll} onScroll={()=>{const n=scroll.current;if(n)nearBottom.current=n.scrollHeight-n.scrollTop-n.clientHeight<100;}}>
      {!visible.length&&!loading&&<div className="welcome">{persona?.is_builtin!==false?<Art name="peeking" className="welcome-character" eager/>:<Avatar persona={persona}/>}<h1>和{persona?.name??'DeepSeek娘'}，接着聊</h1><div className="suggestions">{['聊聊今天的小事','一起想一个新点子','今天想学点什么？'].map(s=><button key={s} disabled={!connected} onClick={()=>{setDrafts(old=>({...old,[conversation]:s}));input.current?.focus();}}>{s}<span>↗</span></button>)}</div></div>}
      {loading&&<div className="loading-history" role="status"><Art name="waiting"/>正在读取人格时间线…</div>}
-     <div className="messages" aria-label="永久聊天时间线">{visible.map(m=><article className={`message ${m.role==='user'?'user':'assistant'} ${!m.selected?'old-variant':''}`} key={m.id} data-message-id={m.id} data-state={m.state}>
-      {m.role!=='user'&&<Avatar persona={persona} small/>}<div className="message-body"><div className="message-meta"><strong>{m.role==='user'?'你':persona?.name??settings.character_name}</strong><time>{time(m.created_at_ms)}</time>{!m.selected&&<span>历史回复</span>}</div><div className={`bubble ${m.state==='failed'?'failed':''}`}>{m.content?<MessageText text={m.content}/>:('sending'===m.state||'generating'===m.state)?<span className="typing" aria-label="正在等待回复"><i/><i/><i/></span>:m.state==='failed'?'本次未收到回复。':'生成已中断，尚未收到正文。'}{m.state==='generating'&&<span className="stream-caret"/>}{m.role==='user'&&localImages[conversation]?.includes(m.id)&&<ChatImagePreview conversation={conversation} id={m.id}/>}</div><div className="message-foot">{m.state==='sending'?'发送中 · 等待模型':m.state==='generating'?'正在生成':m.state==='interrupted'?(m.error_code==='APP_RESTARTED'?'应用退出时中断':'已停止 / 中断'):m.state==='failed'?'生成失败':'已保存本地'}{m.finish_reason==='length'&&<span> · 达到输出 Token 上限</span>}{voice.enabled&&m.role==='assistant'&&terminal(m)&&!!m.content.trim()&&<button type="button" disabled={!voice.prefs||switching||['starting','recording','transcribing'].includes(voice.phase)} onClick={()=>void voice.play(m.content)} title="朗读"><Icon name="speaker"/>朗读</button>}{m.role==='assistant'&&m.selected&&m.user_message_id===lastUser?.id&&terminal(m)&&<button disabled={!!active||!boot?.key_status.configured} onClick={()=>void send(m.user_message_id!)}><Icon name="sync"/> {m.state==='failed'?'重试':'重新生成'}</button>}{m.content&&terminal(m)&&<button type="button" aria-label="复制消息" title="复制消息" onClick={()=>void copyMessage(m)}><Icon name="copy"/>{copied===m.id?'已复制':'复制'}</button>}</div></div>{m.role==='user'&&<span className="user-avatar" aria-label="你的头像"><Icon name="persona"/></span>}
-     </article>)}</div>
+     <div className="messages" aria-label="永久聊天时间线">{visible.flatMap(message=>{
+      const parts=messageParts(message.role,message.content);
+      const user=message.role==='user';
+      return parts.map((part,index)=>{
+       const id=index===0?message.id:`${message.id}-${index}`;
+       const finalPart=index===parts.length-1;
+       const source=sourceMessage===message.id&&index===0;
+       return <article className={`message ${user?'user':'assistant'} ${!message.selected?'old-variant':''}`} key={id} data-message-id={id} data-message-group={message.id} data-state={message.state} data-source-highlight={source||undefined} tabIndex={source?-1:undefined}>
+        {!user&&<Avatar persona={persona} small/>}
+        <div className="message-body">
+         <div className="message-meta"><strong>{user?'你':persona?.name??settings.character_name}</strong><time>{time(message.created_at_ms)}</time>{!message.selected&&<span>历史回复</span>}</div>
+         <div className={`bubble ${message.state==='failed'?'failed':''}`}>
+          {part?<MessageText text={part}/>:message.state==='sending'||message.state==='generating'?<span className="typing" aria-label="正在等待回复"><i/><i/><i/></span>:message.state==='failed'?'本次未收到回复。':'生成已中断，尚未收到正文。'}
+          {finalPart&&message.state==='generating'&&<span className="stream-caret"/>}
+          {user&&finalPart&&localImages[conversation]?.includes(message.id)&&<ChatImagePreview conversation={conversation} id={message.id}/>}
+         </div>
+         <div className="message-foot">
+          {finalPart&&(message.state==='sending'?'发送中 · 等待模型':message.state==='generating'?'正在生成':message.state==='interrupted'?(message.error_code==='APP_RESTARTED'?'应用退出时中断':'已停止 / 中断'):message.state==='failed'?'生成失败':'已保存本地')}
+          {finalPart&&message.finish_reason==='length'&&<span> · 达到输出 Token 上限</span>}
+          {voice.enabled&&!user&&terminal(message)&&!!part.trim()&&<button type="button" disabled={!voice.prefs||switching||['starting','recording','transcribing'].includes(voice.phase)} onClick={()=>void voice.play(part)} title="朗读"><Icon name="speaker"/>朗读</button>}
+          {finalPart&&!user&&message.selected&&message.user_message_id===lastUser?.id&&terminal(message)&&<button disabled={!!active||!boot?.key_status.configured} onClick={()=>void send(message.user_message_id!)}><Icon name="sync"/> {message.state==='failed'?'重试':'重新生成'}</button>}
+          {part&&terminal(message)&&<button type="button" aria-label="复制消息" title="复制消息" onClick={()=>void copyMessage(id,part)}><Icon name="copy"/>{copied===id?'已复制':'复制'}</button>}
+          {finalPart&&user&&nativeAvailable&&terminal(message)&&<button type="button" disabled={collected===message.id} onClick={()=>void collectSharedMemory(message.id)}>{collected===message.id?'已收录':'收录共同回忆'}</button>}
+         </div>
+        </div>
+        {user&&<span className="user-avatar" aria-label="你的头像"><Icon name="persona"/></span>}
+       </article>;
+      });
+     })}</div>
      {variants>0&&<button className="variant-toggle" onClick={()=>setShowHistory(!showHistory)}>{showHistory?'收起历史回复':`查看历史回复（${variants}）`}</button>}<div ref={bottom}/>
     </div>
     <ChatComposer key={conversation} field={input} draft={drafts[conversation]??''} name={persona?.name} personaId={persona?.id} images={images[conversation]??[]}

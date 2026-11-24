@@ -343,3 +343,7 @@
 .app[data-platform=android] .composer-video-mode { min-height: 44px; }
 .composer-video [role=status] { display: flex; align-items: center; gap: .4rem; margin: 0; font-size: .76rem; }
 .composer-video progress { width: 4rem; accent-color: var(--button-accent); }
+.memory-tabs button[aria-current='page'] { font-weight: 650; }
+.shared-memory-timeline { display: grid; gap: .6rem; border-inline-start: 2px solid var(--line); padding-inline-start: .75rem; }
+.shared-memory-timeline .memory h3 { margin-block: .35rem; overflow-wrap: anywhere; }
+.message[data-source-highlight='true'] .bubble { outline: 2px solid var(--focus); outline-offset: .15rem; }

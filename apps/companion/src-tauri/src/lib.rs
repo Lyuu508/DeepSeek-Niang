@@ -445,6 +445,31 @@ async fn stop_generation(
     state.0.stop_and_wait(&request_id).await
 }
 #[tauri::command]
+fn remember_device_clock(offset_minutes: i64, zone_name: String, state: State<'_, AppState>) -> Result<(), ChatFailure> {
+    state.0.store.lock().map_err(|_| ChatFailure::new("STORAGE_ERROR"))?
+        .remember_device_clock(offset_minutes, &zone_name)?;
+    Ok(())
+}
+
+#[tauri::command]
+fn search_managed_memories(persona_id: String, search: String, state: State<'_, AppState>) -> Result<Vec<companion_core::companion::memory::ManagedMemory>, ChatFailure> {
+    Ok(state.0.store.lock().map_err(|_| ChatFailure::new("STORAGE_ERROR"))?
+        .search_managed_memories(&persona_id, &search)?)
+}
+
+#[tauri::command]
+fn collect_shared_memory(persona_id: String, message_id: String, state: State<'_, AppState>) -> Result<String, ChatFailure> {
+    Ok(state.0.store.lock().map_err(|_| ChatFailure::new("STORAGE_ERROR"))?
+        .collect_shared_memory(&persona_id, &message_id)?)
+}
+
+#[tauri::command]
+fn set_persona_interest(persona_id: String, interest_id: String, weight: Option<i64>, state: State<'_, AppState>) -> Result<(), ChatFailure> {
+    state.0.store.lock().map_err(|_| ChatFailure::new("STORAGE_ERROR"))?.set_persona_interest(&persona_id, &interest_id, weight)?;
+    Ok(())
+}
+
+#[tauri::command]
 async fn diagnostics(state: State<'_, AppState>) -> Result<Diagnostics, ChatFailure> {
     Ok(state
         .0
@@ -625,6 +650,10 @@ pub fn run() {
             start_chat,
             stop_generation,
             diagnostics,
+            remember_device_clock,
+            search_managed_memories,
+            collect_shared_memory,
+            set_persona_interest,
             list_memories,
             save_memory,
             delete_memory,

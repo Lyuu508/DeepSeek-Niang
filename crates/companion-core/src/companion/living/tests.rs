@@ -636,7 +636,10 @@ fn schema9_recycle_upgrade_backs_up_and_rolls_back_before_retry() {
         store.life_snapshot(&persona, 1000000).unwrap()["current"]["id"],
         activity
     );
-    assert_eq!(store.diagnostics().unwrap().schema_version, 10);
+    assert_eq!(
+        store.diagnostics().unwrap().schema_version,
+        crate::storage::SCHEMA_VERSION
+    );
     assert_eq!(store.diagnostics().unwrap().integrity, "ok");
     let backups = std::fs::read_dir(&dir)
         .unwrap()

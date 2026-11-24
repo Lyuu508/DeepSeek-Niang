@@ -586,33 +586,57 @@ impl Store {
         injection: &ContextInjection,
     ) -> Result<Vec<PromptMessage>> {
         settings.validate()?;
-        let all = self.chat_messages(conversation)?;
-        let users: Vec<_> = all.iter().filter(|m| m.role == "user").collect();
         let take = if settings.include_history {
-            settings.history_turns as usize
+            settings.history_turns
         } else {
             1
         };
-        let first = users.len().saturating_sub(take);
-        let included: std::collections::BTreeSet<_> =
-            users[first..].iter().map(|m| m.id.clone()).collect();
-        let mut history: Vec<_> = all
-            .into_iter()
-            .filter(|m| {
-                (m.role == "user" && included.contains(m.id.as_str()))
-                    || (m.role == "assistant"
-                        && m.selected
-                        && matches!(m.state.as_str(), "complete" | "interrupted")
-                        && !m.content.is_empty()
-                        && m.user_message_id
-                            .as_deref()
-                            .is_some_and(|u| included.contains(u)))
-            })
-            .map(|m| PromptMessage {
-                role: m.role,
-                content: m.content,
-            })
-            .collect();
+        let threads = serde_json::to_string(&self.thread_ids(conversation)?)?;
+        let mut query = self.conn.prepare(
+            "WITH threads AS (SELECT value FROM json_each(?1)),
+             recent AS MATERIALIZED (
+               SELECT m.id,m.content,m.created_lamport,m.origin_device_id
+               FROM messages m WHERE m.conversation_id IN threads AND m.role='user' AND m.is_deleted=0
+                 AND (m.profile_id=?2 OR m.profile_id IN (SELECT profile_id FROM lan_profiles))
+               ORDER BY m.created_lamport DESC,m.origin_device_id DESC,m.id DESC LIMIT ?3
+             ),
+             visible AS (
+               SELECT * FROM recent r WHERE r.id=(
+                 SELECT id FROM recent ORDER BY created_lamport DESC,origin_device_id DESC,id DESC LIMIT 1
+               ) OR NOT EXISTS (
+                 SELECT 1 FROM companion_memory_meta d JOIN memories m ON m.id=d.memory_id
+                 LEFT JOIN companion_memory_context x ON x.memory_id=m.id WHERE d.source_message_id=r.id
+                   AND (m.is_deleted=1 OR m.sensitivity<>'api_allowed' OR x.state IN ('superseded','dismissed')))
+             )
+             SELECT role,content FROM (
+               SELECT 'user' AS role,v.content,v.created_lamport,v.origin_device_id,v.id,0 AS reply,
+                 v.created_lamport AS part_clock,v.origin_device_id AS part_origin,v.id AS part_id FROM visible v
+               UNION ALL
+               SELECT m.role,m.content,v.created_lamport,v.origin_device_id,v.id,1,
+                 m.created_lamport,m.origin_device_id,m.id FROM visible v
+               JOIN messages m ON m.reply_to_id=v.id AND m.is_deleted=0 AND m.role='assistant'
+               LEFT JOIN chat_generations g ON g.id=m.id
+               LEFT JOIN chat_turn_choices c ON c.user_message_id=g.user_message_id
+               WHERE m.conversation_id IN threads AND m.status IN ('complete','interrupted') AND m.content<>''
+                 AND (m.profile_id=?2 OR m.profile_id IN (SELECT profile_id FROM lan_profiles))
+                 AND (g.id IS NULL OR c.selected_generation_id=g.id)
+             ) ORDER BY created_lamport,origin_device_id,id,reply,part_clock,part_origin,part_id",
+        )?;
+        let mut history = query
+            .query_map(params![threads, self.profile_id, take], |row| {
+                let role: String = row.get(0)?;
+                let content: String = row.get(1)?;
+                let content = if role == "assistant" {
+                    crate::companion::intelligence::plain_reply(&content)
+                } else {
+                    content.replace(
+                        crate::companion::intelligence::USER_FRAGMENT_SEPARATOR,
+                        "\n",
+                    )
+                };
+                Ok(PromptMessage { role, content })
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
         let mut bytes: usize = history.iter().map(|m| m.content.len()).sum();
         while bytes > 120_000 && history.len() > 1 {
             bytes -= history.remove(0).content.len();

@@ -11,6 +11,9 @@ on:
       android_compile_only:
         type: boolean
         default: false
+      android_production_candidate:
+        type: boolean
+        default: false
       fresh_test_identity:
         type: boolean
         default: false
@@ -185,6 +188,7 @@ jobs:
         env:
           SIGNED: ${{ inputs.signed_android }}
           COMPILE_ONLY: ${{ inputs.android_compile_only }}
+          PRODUCTION_CANDIDATE: ${{ inputs.android_production_candidate }}
           COMPANION_FRESH_TEST_IDENTITY: ${{ inputs.fresh_test_identity }}
           COMPANION_ANDROID_KEYSTORE_FILE: ${{ runner.temp }}/deepseek-signing.jks
           COMPANION_ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -198,6 +202,12 @@ jobs:
             variant=release
             package_name="DeepSeek-Niang_$(python3 -c 'import json;print(json.load(open("VERSION.json"))["version"])')_android-arm64.apk"
             verify_mode=()
+          elif [ "$PRODUCTION_CANDIDATE" = 'true' ]; then
+            python3 scripts/run_logged.py "$RUNNER_TEMP/deepseek-android-artifacts/android-build.log" sh scripts/build-android.sh --unsigned-ci
+            variant=release
+            package_name="DeepSeek-Niang_$(python3 -c 'import json;print(json.load(open("VERSION.json"))["version"])')_android-arm64-unsigned-production.apk"
+            verify_mode=(--unsigned-ci)
+            echo 'Unsigned production candidate. Requires the verified original Android certificate before installation or publication.' > "$RUNNER_TEMP/deepseek-android-artifacts/ANDROID-DISTRIBUTION.txt"
           elif [ "$COMPILE_ONLY" = 'true' ]; then
             python3 scripts/run_logged.py "$RUNNER_TEMP/deepseek-android-artifacts/android-build.log" sh scripts/build-android.sh --unsigned-test-ci
             variant=debug
@@ -241,9 +251,12 @@ jobs:
           ARTIFACT_URL: ${{ steps.android_artifact.outputs.artifact-url }}
           SIGNED: ${{ inputs.signed_android }}
           COMPILE_ONLY: ${{ inputs.android_compile_only }}
+          PRODUCTION_CANDIDATE: ${{ inputs.android_production_candidate }}
         run: |
           echo "APK, SHA256SUMS, signature/identity report and build log: $ARTIFACT_URL" >> "$GITHUB_STEP_SUMMARY"
-          if [ "$SIGNED" != 'true' ] && [ "$COMPILE_ONLY" = 'true' ]; then
+          if [ "$SIGNED" != 'true' ] && [ "$PRODUCTION_CANDIDATE" = 'true' ]; then
+            echo 'Android production candidate is unsigned and cannot be installed until signed with the original identity.' >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$SIGNED" != 'true' ] && [ "$COMPILE_ONLY" = 'true' ]; then
             echo 'Android compile check only: unsigned and not installable. No new signing identity or replacement APK is published.' >> "$GITHUB_STEP_SUMMARY"
           elif [ "$SIGNED" != 'true' ]; then
             echo 'Isolated development test APK: io.local.deepseekcompanion.test. Separate data; cannot replace v0.0.1. Development signer may change between runners. Physical-device LAN acceptance is pending.' >> "$GITHUB_STEP_SUMMARY"

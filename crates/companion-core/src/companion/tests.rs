@@ -5,6 +5,194 @@ use crate::{
 };
 use memory::MemoryEdit;
 
+#[test]
+fn sleep_goal_is_recalled_then_replaced_without_losing_provenance() {
+    let mut store = Store::open(":memory:").unwrap();
+    let persona = store.profile_id.clone();
+    let source = chat(&mut store, &persona, "我以后尽量十二点前睡觉。");
+    let goal = store.managed_memories(&persona).unwrap().remove(0);
+    assert!(goal.context.is_event);
+    assert_eq!(goal.source_message_id.as_deref(), Some(source.as_str()));
+    assert_eq!(
+        store
+            .retrieve_companion_memories(&persona, "昨晚又三点睡了", 2, 1500)
+            .unwrap()[0]
+            .id,
+        goal.id
+    );
+    chat(&mut store, &persona, "昨晚又三点睡了。");
+    assert_eq!(store.managed_memories(&persona).unwrap().len(), 1);
+    chat(&mut store, &persona, "我现在已经改成晚上十一点睡了。");
+    let rows = store.managed_memories(&persona).unwrap();
+    assert_eq!(
+        rows.iter()
+            .find(|row| row.id == goal.id)
+            .unwrap()
+            .context
+            .state,
+        intelligence::MemoryState::Superseded
+    );
+    let recall = store
+        .retrieve_companion_memories(&persona, "最近的作息", 4, 2000)
+        .unwrap();
+    assert_eq!(recall.len(), 1);
+    assert!(recall[0].text.contains("晚上十一点"));
+    assert!(
+        !serde_json::to_string(
+            &store
+                .companion_context(&persona, &ChatSettings::default())
+                .unwrap()
+        )
+        .unwrap()
+        .contains("十二点前睡觉")
+    );
+}
+
+#[test]
+fn shared_memories_are_collected_from_a_real_message_and_enter_recall_only_when_allowed() {
+    let mut store = Store::open(":memory:").unwrap();
+    let persona = store.profile_id.clone();
+    let other = store.create_persona("测试人格", "理性").unwrap();
+    let source = chat(&mut store, &persona, "我们一起规划了海边旅行。");
+    let id = store.collect_shared_memory(&persona, &source).unwrap();
+    assert_eq!(store.collect_shared_memory(&persona, &source).unwrap(), id);
+    assert!(store.collect_shared_memory(&other.id, &source).is_err());
+    let entry = store
+        .managed_memories(&persona)
+        .unwrap()
+        .into_iter()
+        .find(|m| m.id == id)
+        .unwrap();
+    assert!(entry.context.shared_story && !entry.api_allowed && entry.source_excerpt.is_some());
+    assert!(
+        store
+            .retrieve_companion_memories(&persona, "海边旅行", 4, 1500)
+            .unwrap()
+            .is_empty()
+    );
+    let mut ctx = entry.context.clone();
+    ctx.shared_with_personas = true;
+    store
+        .edit_companion_memory(
+            &persona,
+            &MemoryEdit {
+                id: Some(id.clone()),
+                expected_version: Some(entry.version),
+                expected_revision: Some(entry.revision),
+                text: entry.text,
+                kind: entry.kind,
+                importance_milli: 900,
+                pinned: true,
+                api_allowed: true,
+                context: Some(ctx),
+            },
+        )
+        .unwrap();
+    let shared = store
+        .retrieve_companion_memories(&other.id, "海边旅行", 4, 1500)
+        .unwrap();
+    assert_eq!(shared.len(), 1);
+    assert!(shared[0].source_message_id.is_none());
+    assert!(store.managed_memories(&other.id).unwrap().is_empty());
+    store.delete_persona_memory(&persona, &id).unwrap();
+    assert!(
+        store
+            .retrieve_companion_memories(&other.id, "海边旅行", 4, 1500)
+            .unwrap()
+            .is_empty()
+    );
+    assert!(store.collect_shared_memory(&persona, &source).is_err());
+}
+
+#[test]
+fn model_only_recollection_uses_old_authorized_evidence_and_rechecks_before_publish() {
+    let mut store = Store::open(":memory:").unwrap();
+    let persona = store.profile_id.clone();
+    let now = 30 * intelligence::DAY_MS + 13 * 3_600_000;
+    store.set_device_platform("windows").unwrap();
+    store.remember_device_clock(0, "UTC").unwrap();
+    store
+        .save_companion_preferences(
+            &persona,
+            &CompanionPreferences {
+                proactive_enabled: true,
+                proactive_model_enabled: true,
+                proactive_token_budget: 8000,
+                quiet_start_minute: 0,
+                quiet_end_minute: 0,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+    store.advance_life_deferred(now, 1000).unwrap();
+    let id = store
+        .edit_companion_memory(
+            &persona,
+            &MemoryEdit {
+                id: None,
+                expected_version: None,
+                expected_revision: None,
+                text: "我还有几个设计需求没做完".into(),
+                kind: "episodic".into(),
+                importance_milli: 900,
+                pinned: true,
+                api_allowed: true,
+                context: Some(intelligence::MemoryContext {
+                    is_event: true,
+                    occurred_at_ms: now - 4 * intelligence::DAY_MS,
+                    due_at_ms: Some(now - intelligence::DAY_MS),
+                    recall_allowed: true,
+                    ..Default::default()
+                }),
+            },
+        )
+        .unwrap();
+    store.stage_memory_recollection(now).unwrap();
+    let (_, share, model) = store.next_proactive_target(now, true).unwrap().unwrap();
+    assert!(model);
+    let job = store
+        .prepare_proactive_candidate(now, 1000, Some(&share))
+        .unwrap()
+        .unwrap();
+    assert!(job.recollection && job.prompt[1].content.contains("我还有几个设计需求没做完"));
+    assert_eq!(job.settings.max_tokens, 256);
+    assert_eq!(
+        store.life_snapshot(&persona, now).unwrap()["proactive_messages"][0]["source_memory_id"],
+        id
+    );
+    store.delete_persona_memory(&persona, &id).unwrap();
+    let usage = TokenUsage {
+        prompt_tokens: 200,
+        completion_tokens: 30,
+        total_tokens: 230,
+    };
+    let output = r#"{"send":true,"intent":"follow_up","message":"设计需求进展怎么样了？"}"#;
+    assert!(
+        !store
+            .finish_proactive_share(&job, now + 2000, 3000, output, Some(&usage), None)
+            .unwrap()
+    );
+    assert!(
+        !store
+            .finish_proactive_share(&job, now + 3000, 4000, output, Some(&usage), None)
+            .unwrap()
+    );
+    assert_eq!(
+        store.life_snapshot(&persona, now + 3000).unwrap()["proactive_messages"][0]["state"],
+        "dismissed"
+    );
+    assert!(store.chat_messages(&persona).unwrap().is_empty());
+    store
+        .stage_memory_recollection(now + intelligence::DAY_MS)
+        .unwrap();
+    assert!(
+        store
+            .next_proactive_target(now + intelligence::DAY_MS, true)
+            .unwrap()
+            .is_none()
+    );
+}
+
 fn chat(store: &mut Store, persona: &str, text: &str) -> String {
     let input = StartChat {
         request_id: Uuid::new_v4().to_string(),
@@ -38,6 +226,7 @@ fn memory(store: &mut Store, persona: &str, text: &str, pinned: bool, allowed: b
                 importance_milli: 800,
                 pinned,
                 api_allowed: allowed,
+                context: None,
             },
         )
         .unwrap()
@@ -220,6 +409,7 @@ fn stale_candidate_and_stale_manual_edit_preserve_current_memory() {
         importance_milli: 900,
         pinned: true,
         api_allowed: true,
+        context: None,
     };
     store.edit_companion_memory(&p, &edit).unwrap();
     assert!(matches!(
@@ -494,6 +684,7 @@ fn equal_logical_clock_with_a_different_revision_cannot_pass_manual_edit_check()
         importance_milli: 900,
         pinned: true,
         api_allowed: true,
+        context: None,
     };
     assert!(matches!(
         store.edit_companion_memory(&p, &edit),
@@ -592,8 +783,7 @@ fn old_conversation_is_recalled_after_many_new_turns_with_a_shared_bounded_budge
         .lines()
         .find(|line| line.contains("previous_chat_excerpts"))
         .unwrap();
-    let evidence: serde_json::Value =
-        serde_json::from_str(line.split_once('：').unwrap().1).unwrap();
+    let evidence: serde_json::Value = serde_json::from_str(line).unwrap();
     assert!(serde_json::to_vec(&evidence).unwrap().len() <= 2000);
     assert!(
         evidence["previous_chat_excerpts"]

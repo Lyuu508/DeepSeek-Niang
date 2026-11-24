@@ -46,9 +46,11 @@ impl ChatService {
             {
                 return Ok(0);
             }
-            let Some(selection) =
-                store.next_proactive_target(now, self.vault.has().unwrap_or(false))?
-            else {
+            let model_available = self.vault.has().unwrap_or(false);
+            if model_available {
+                store.stage_memory_recollection(now)?;
+            }
+            let Some(selection) = store.next_proactive_target(now, model_available)? else {
                 return Ok(0);
             };
             let token = CancellationToken::new();

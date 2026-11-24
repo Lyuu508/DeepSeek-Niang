@@ -357,12 +357,17 @@ impl Store {
 const CLEANUP: &[(&str, &str)] = &[
     (
         "companion_receipts",
-        "proactive_id IN (SELECT id FROM companion_proactive WHERE persona_id=?1)",
+        "proactive_id IN (SELECT id FROM companion_proactive WHERE persona_id=?1 OR source_memory_id IN(SELECT id FROM memories WHERE persona_id=?1))",
     ),
-    ("companion_proactive", "persona_id=?1"),
+    (
+        "companion_proactive",
+        "persona_id=?1 OR source_memory_id IN(SELECT id FROM memories WHERE persona_id=?1)",
+    ),
+    ("companion_interest_overrides", "persona_id=?1"),
     ("companion_mood_events", "persona_id=?1"),
     ("companion_bond_events", "persona_id=?1"),
     ("companion_memory_meta", "persona_id=?1"),
+    ("companion_memory_context", "persona_id=?1"),
     ("companion_memory_candidates", "persona_id=?1"),
     ("companion_life_events", "persona_id=?1"),
     ("companion_activities", "persona_id=?1"),
@@ -625,6 +630,8 @@ pub(crate) fn erased_owner(
         ("proactive_id", "companion_proactive"),
         ("from_memory_id", "memories"),
         ("to_memory_id", "memories"),
+        ("source_memory_id", "memories"),
+        ("source_memory_revision", "sync_events"),
         ("source_event_id", "sync_events"),
         ("delete_event_id", "sync_events"),
         ("version_event_id", "sync_events"),

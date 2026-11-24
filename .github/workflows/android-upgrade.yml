@@ -1,0 +1,106 @@
+name: Verify signed Android upgrade
+on:
+  workflow_call:
+    inputs:
+      source_sha:
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Exact main commit for the signed candidate
+        required: true
+        type: string
+      draft_asset_id:
+        description: APK asset ID from the unpublished release
+        required: true
+        type: string
+      apk_sha256:
+        description: Expected SHA-256 of the signed production APK
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  emulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ANDROID_SERIAL: emulator-5554
+      SOURCE_SHA: ${{ inputs.source_sha }}
+      EVIDENCE: ${{ runner.temp }}/deepseek-android-upgrade
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.source_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify authorized main source
+        run: |
+          [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ && "$(git rev-parse HEAD)" = "$SOURCE_SHA" ]]
+          git merge-base --is-ancestor "$SOURCE_SHA" origin/main
+          mkdir -p "$EVIDENCE"
+      - if: inputs.draft_asset_id == ''
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131
+        with:
+          pattern: android-package-*
+          path: ${{ runner.temp }}/signed-package
+      - if: inputs.draft_asset_id != ''
+        name: Retrieve exact staged signed APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DRAFT_ASSET: ${{ inputs.draft_asset_id }}
+          EXPECTED_HASH: ${{ inputs.apk_sha256 }}
+        run: |
+          [[ "$DRAFT_ASSET" =~ ^[0-9]+$ && "$EXPECTED_HASH" =~ ^[0-9a-f]{64}$ ]]
+          mkdir -p "$RUNNER_TEMP/signed-package"
+          gh api -H 'Accept: application/octet-stream' "repos/$GITHUB_REPOSITORY/releases/assets/$DRAFT_ASSET" > "$RUNNER_TEMP/signed-package/candidate.apk"
+          printf '%s  %s\n' "$EXPECTED_HASH" "$RUNNER_TEMP/signed-package/candidate.apk" | sha256sum --check
+      - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407
+        with:
+          cmdline-tools-version: '12266719'
+          packages: 'platform-tools build-tools;36.0.0'
+          log-accepted-android-sdk-licenses: false
+      - name: Verify both actual APKs against the production identity
+        run: |
+          mapfile -t apks < <(find "$RUNNER_TEMP/signed-package" -name '*.apk' | sort)
+          test "${#apks[@]}" -eq 1
+          cp "${apks[0]}" "$RUNNER_TEMP/candidate.apk"
+          curl --fail --silent --show-error --location --retry 3 'https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.1/DeepSeek-Niang_0.0.1_android-arm64.apk' --output "$RUNNER_TEMP/original.apk"
+          python3 scripts/verify_android.py --reference-apk "$RUNNER_TEMP/original.apk" --output "$EVIDENCE/original.json"
+          python3 scripts/verify_android.py --apk "$RUNNER_TEMP/candidate.apk" --output "$EVIDENCE/candidate.json"
+      - name: Boot official Android 35 emulator with ARM translation
+        run: |
+          test -c /dev/kvm
+          if ! test -r /dev/kvm || ! test -w /dev/kvm; then sudo setfacl -m "u:$(id -un):rw" /dev/kvm; fi
+          image='system-images;android-35;google_apis;x86_64'
+          sdkmanager --install emulator "$image"
+          export ANDROID_AVD_HOME="$RUNNER_TEMP/avd" ANDROID_USER_HOME="$RUNNER_TEMP/android-user"
+          export ANDROID_EMULATOR_HOME="$ANDROID_USER_HOME"
+          mkdir -p "$ANDROID_AVD_HOME" "$ANDROID_USER_HOME"
+          avdmanager create avd -n deepseek-upgrade -k "$image" -d pixel_7 -p "$ANDROID_AVD_HOME/deepseek-upgrade.avd" --force </dev/null
+          if ! test -f "$ANDROID_AVD_HOME/deepseek-upgrade.ini"; then
+            printf 'avd.ini.encoding=UTF-8\npath=%s/deepseek-upgrade.avd\ntarget=android-35\n' "$ANDROID_AVD_HOME" > "$ANDROID_AVD_HOME/deepseek-upgrade.ini"
+          fi
+          adb start-server
+          "$ANDROID_HOME/emulator/emulator" -avd deepseek-upgrade -port 5554 -no-snapshot -no-window -noaudio -no-boot-anim -gpu swiftshader_indirect -memory 3072 -cores 2 > "$EVIDENCE/emulator.log" 2>&1 &
+          pid=$!
+          for attempt in {1..150}; do
+            if [[ "$(adb shell getprop sys.boot_completed 2>/dev/null || true)" = 1 ]]; then break; fi
+            kill -0 "$pid"
+            sleep 2
+          done
+          test "$(adb shell getprop sys.boot_completed)" = 1
+          adb shell svc power stayon true
+          adb shell input keyevent 224
+          adb shell wm dismiss-keyguard
+          adb shell am force-stop com.google.android.apps.nexuslauncher
+      - name: Upgrade in place and inspect native app UI
+        run: python3 tests/android_upgrade.py "$RUNNER_TEMP/original.apk" "$RUNNER_TEMP/candidate.apk" "$EVIDENCE"
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: android-upgrade-${{ github.run_attempt }}
+          path: ${{ env.EVIDENCE }}/
+          if-no-files-found: warn
+          retention-days: 30

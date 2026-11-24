@@ -1,6 +1,6 @@
 import {Channel,invoke,isTauri} from '@tauri-apps/api/core';
 import type {Bootstrap,ChatEvent,ChatFailure,ChatMessage,ChatSettings,Persona,Diagnostics,KeyStatus,MemoryRecord,PreparedChat,StartChat} from '@deepseek/contracts';
-import type {CompanionSnapshot,CompanionPreferences,MemoryEdit,LifeDiary,LifePlanInput} from '@deepseek/contracts';
+import type {CompanionSnapshot,CompanionPreferences,ManagedMemory,MemoryEdit,LifeDiary,LifePlanInput} from '@deepseek/contracts';
 import type {ChatImage} from './ChatAttachment';
 export const runtimeMode:'native'|'mock'|'preview'=isTauri()?'native':import.meta.env.DEV&&new URLSearchParams(location.search).get('test')==='mock'?'mock':'preview';
 export const nativeAvailable=runtimeMode!=='preview';
@@ -18,6 +18,7 @@ export interface RuntimeAPI {
  companion(personaId:string):Promise<CompanionSnapshot>;
  saveCompanionPreferences(personaId:string,preferences:CompanionPreferences):Promise<void>;
  editMemory(personaId:string,edit:MemoryEdit):Promise<string>;
+ collectSharedMemory(personaId:string,messageId:string):Promise<string>;
  resolveMemoryCandidate(personaId:string,id:string,accept:boolean):Promise<void>;
  bootstrap():Promise<Bootstrap>;messages(id:string):Promise<ChatMessage[]>;
  createPersona(name:string,personality:string):Promise<Persona>;selectPersona(id:string):Promise<void>;
@@ -29,6 +30,15 @@ async function call<T>(command:string,args?:Record<string,unknown>):Promise<T>{
  if(!isTauri())throw {code:'NATIVE_REQUIRED',message:'浏览器仅提供界面预览。请使用 Windows 或 Android 原生应用。',retryable:false};
  return invoke<T>(command,args);
 }
+
+export function rememberDeviceClock(): Promise<void> {
+ if (runtimeMode !== 'native') return Promise.resolve();
+ return call('remember_device_clock', {offsetMinutes:-new Date().getTimezoneOffset(), zoneName:Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'});
+}
+
+export function searchManagedMemories(personaId: string, search: string): Promise<ManagedMemory[]> {
+ return call('search_managed_memories', {personaId, search});
+}
 const channels=new Map<string,Channel<ChatEvent>>();
 const nativeApi:RuntimeAPI={
  createLifePlan:(personaId,input)=>call('life_plan_create',{personaId,input}),
@@ -39,6 +49,7 @@ const nativeApi:RuntimeAPI={
  companion:personaId=>call('companion_snapshot',{personaId}),
  saveCompanionPreferences:(personaId,preferences)=>call('save_companion_preferences',{personaId,preferences}),
  editMemory:(personaId,edit)=>call('edit_companion_memory',{personaId,edit}),
+ collectSharedMemory:(personaId,messageId)=>call('collect_shared_memory',{personaId,messageId}),
  resolveMemoryCandidate:(personaId,id,accept)=>call('resolve_memory_candidate',{personaId,id,accept}),
  bootstrap:()=>call('bootstrap'),messages:conversationId=>call('list_messages',{conversationId}),
  createPersona:(name,personality)=>call('create_persona',{name,personality}),selectPersona:id=>call('select_persona',{id}),

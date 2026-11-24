@@ -438,7 +438,7 @@ impl Store {
                 && !prefs.proactive_model_enabled
                 && policy(&self.conn, p, &prefs, now, &stage)?
             {
-                let item:Option<(String,String)>=self.conn.query_row("SELECT id,content FROM companion_proactive WHERE persona_id=?1 AND host_device_id=?2 AND state='candidate' ORDER BY created_at_ms,id LIMIT 1",params![p,self.device_id],|r|Ok((r.get(0)?,r.get(1)?))).optional()?;
+                let item:Option<(String,String)>=self.conn.query_row("SELECT id,content FROM companion_proactive WHERE persona_id=?1 AND host_device_id=?2 AND state='candidate' AND source_memory_id IS NULL ORDER BY created_at_ms,id LIMIT 1",params![p,self.device_id],|r|Ok((r.get(0)?,r.get(1)?))).optional()?;
                 if let Some((id, content)) = item {
                     let name = self.persona_settings(p)?.user_title;
                     let style = super::bond::style(&stage);
@@ -467,8 +467,8 @@ impl Store {
                 continue;
             }
             let selected: Option<String> = self.conn.query_row(
-                "SELECT id FROM companion_proactive WHERE persona_id=?1 AND host_device_id=?2 AND state='candidate' ORDER BY created_at_ms,id LIMIT 1",
-                params![id, self.device_id], |row| row.get(0),
+                "SELECT id FROM companion_proactive WHERE persona_id=?1 AND host_device_id=?2 AND state='candidate' AND (source_memory_id IS NULL OR ?3=1) ORDER BY (source_memory_id IS NOT NULL) DESC, created_at_ms,id LIMIT 1",
+                params![id, self.device_id, prefs.proactive_model_enabled], |row| row.get(0),
             ).optional()?;
             if let Some(candidate) = selected {
                 return Ok(Some((persona.id, candidate, prefs.proactive_model_enabled)));
@@ -487,7 +487,7 @@ impl Store {
             return Ok(false);
         }
         let item: Option<String> = self.conn.query_row(
-            "SELECT content FROM companion_proactive WHERE id=?1 AND persona_id=?2 AND host_device_id=?3 AND state='candidate'",
+            "SELECT content FROM companion_proactive WHERE id=?1 AND persona_id=?2 AND host_device_id=?3 AND state='candidate' AND source_memory_id IS NULL",
             params![id, persona, self.device_id], |row| row.get(0),
         ).optional()?;
         let Some(content) = item else {
