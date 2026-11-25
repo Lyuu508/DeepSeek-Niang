@@ -185,6 +185,24 @@
       "androidApplicationId": "io.local.deepseekcompanion.acceptance",
       "androidCertificateSha256": "5d92ada7e0187559964c075fb7b285697f6b4357fcea877b5def20b7a15b6c12",
       "physicalWindowsAndroidTested": false
+    },
+    {
+      "version": "0.1.2",
+      "androidVersionCode": 1013,
+      "tag": "v0.1.2",
+      "commit": "09487fbac03694358a023506e83efca47d359c8b",
+      "releaseId": 456306580,
+      "ciRun": 45328123589,
+      "artifactStagingRun": 45532231185,
+      "distribution": "upgrade",
+      "androidApplicationId": "io.local.deepseekcompanion",
+      "androidCertificateSha256": "9de96ea5fb1d0b3f91ea73d9a16c030428453b15838927a85f86773eaef208a1",
+      "androidSha256": "de58f123d88687c4b4122724666359020be26b7f275b791c8aa3edae7fe63008",
+      "windowsSha256": "e80e969943e256bed84693823b0e79fe3ded63170830f723c7bdfbf90bffd48e",
+      "windowsHostedUpgradeFrom": "0.1.1",
+      "androidEmulatorUpgradeFrom": "0.0.1",
+      "physicalWindowsAndroidTested": false,
+      "deepseekLiveTested": false
     }
   ]
 }

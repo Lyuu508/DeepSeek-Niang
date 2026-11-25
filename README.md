@@ -2,13 +2,11 @@
 
 一款面向 Windows 与 Android 的本地优先 AI 陪伴软件，让不同人格拥有各自延续的聊天、记忆与虚拟日常。
 
-v0.1.2 的记忆升级支持带来源的事件、共同回忆时间轴、按话题找回旧记忆，以及由有授权的记忆触发的主动对话。正式 Android 应用延续原包名和证书，发布流程会核对签名并测试覆盖安装。[本次变更与验证范围](docs/V012_MEMORIES.md)
+**[下载 v0.1.2 Windows EXE](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.2/DeepSeek-Niang_0.1.2_windows-x64-setup.exe) · [下载 v0.1.2 Android APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.2/DeepSeek-Niang_0.1.2_android-arm64.apk) · [安装与首次使用](#安装与首次使用)**
 
-**[下载 v0.1.1 Windows EXE](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/DeepSeek-Niang_0.1.1_windows-x64-setup.exe) · [下载 v0.1.1 Android APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/DeepSeek-Niang_0.1.1_android-arm64-acceptance.apk) · [安装与首次使用](#安装与首次使用)**
+**v0.1.2 正式版**加入带来源的长期记忆与事件、共同回忆时间轴，以及由授权记忆触发的主动对话。Android 正式包延续原包名与证书，版本代码为 1013。[发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.2) · [记忆使用与验证范围](docs/V012_MEMORIES.md) · [更新日志](CHANGELOG.md)
 
-当前公开下载为 **v0.1.1 双端界面返工验收包**，Android 版本代码为 1012。更新了聊天输入、设置切换和手机窄屏布局，并接通授权图片识别、聊天视频问答和本地表情包导入。[发布页](https://github.com/Lyuu508/DeepSeek-Niang/releases/tag/v0.1.1-acceptance.1) · [返工验收记录](docs/V011_REWORK.md) · [更新日志](CHANGELOG.md)
-
-本次返工的客户端、核心库、测试和发布文档已同步到默认分支 `main`。双端安装包的构建提交为 `6b762c9`。[查看完整改动的 33 个文件](https://github.com/Lyuu508/DeepSeek-Niang/compare/b6b05cd6da5e749b7cd4aae0f458fdf3ccaff696...bfe9a8fa20cf7ab38d1f1d2f21901248bc4d60bd) · [安装包对应源码](https://github.com/Lyuu508/DeepSeek-Niang/tree/6b762c9de0619af7e9f285f75c35de90bd4ee1c1)
+双端安装包均来自 `09487fb`。Windows 托管运行器验证了 v0.1.1 覆盖升级及数据库备份。Android 36 模拟器验证了沿用原签名覆盖 v0.0.1、启动聊天和共同回忆页面。[源码](https://github.com/Lyuu508/DeepSeek-Niang/tree/09487fbac03694358a023506e83efca47d359c8b) · [构建报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.2/BUILD-RESULTS.json)
 
 v0.0.10 为 Windows 和 Android 更新海洋主题，包含三视图生成的角色素材、主题配色、深海夜色和全套页面设计。[设计与验收](docs/V010_OCEAN_UI.md) · [素材清单](assets/branding/ocean-art.json)
 
@@ -31,6 +29,8 @@ v0.0.6 的桌宠已整合到 Windows 主客户端。透明角色能在桌面上�
 
 ## 界面预览
 
+v0.1.2 的安装后截图和共同回忆交互截图见本次报告。截图资料标注了 Windows 托管运行器、Android 模拟器或浏览器夹具来源。[界面截图 ZIP](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.2/UI-EVIDENCE.zip)
+
 v0.1.1 返工的桌面与竖屏修改前后截图、布局测量及浏览页已打包，使用合成数据的浏览器窗口验证。[v0.1.1 界面对照 ZIP](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/UI-COMPARISON.zip) · [v0.0.10 海洋主题预览](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.0.10/UI-EVIDENCE.zip)
 
 ## 主要功能
@@ -50,6 +50,15 @@ v0.1.1 返工的桌面与竖屏修改前后截图、布局测量及浏览页已�
 自动记忆和旧聊检索采用本地规则，可能遗漏或未命中。重要信息建议手动核对、保存，不承诺无限记忆。
 
 ## 下载安装
+
+### v0.1.2 正式版
+
+| 平台 | 安装包 | 系统要求 |
+| --- | --- | --- |
+| Windows | [下载安装程序 EXE](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.2/DeepSeek-Niang_0.1.2_windows-x64-setup.exe) | Windows 10/11，x64 |
+| Android | [下载 ARM64 APK](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.2/DeepSeek-Niang_0.1.2_android-arm64.apk) | Android 10 及以上，ARM64 |
+
+Android 原正式身份是 `io.local.deepseekcompanion`。v0.1.1 的 `.acceptance` 使用独立安装身份，本次未取得匹配的验收签名，请保留现有验收版及其数据。[SHA-256 校验](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.2/SHA256SUMS.txt) · [测试报告](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.2/TEST-REPORT.md)
 
 ### v0.1.1 双端界面返工验收包
 

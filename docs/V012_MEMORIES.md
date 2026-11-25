@@ -33,8 +33,8 @@
 
 ### Android 签名交接
 
-正式身份 `io.local.deepseekcompanion` 绑定原证书 SHA-256 `9de96ea5fb1d0b3f91ea73d9a16c030428453b15838927a85f86773eaef208a1`。v0.1.1 的 `.acceptance` 安装包有独立包名及证书。保留验收包数据时继续使用对应验收身份，或使用现有配对与备份能力保留可迁移的数据。
+正式身份 `io.local.deepseekcompanion` 绑定原证书 SHA-256 `9de96ea5fb1d0b3f91ea73d9a16c030428453b15838927a85f86773eaef208a1`。v0.1.2 使用找到的原密钥离线签名，随后用原 APK 完成覆盖验证。当前 GitHub 授权访问 Secrets 公钥接口返回 403，原正式密钥尚未写入仓库 Secrets。v0.1.1 的 `.acceptance` 安装包使用另一套包名及证书，请保留现有应用及数据。[正式 APK 验证](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.2/ANDROID-UPGRADE.json)
 
 仓库所有者或获授权管理员可在 Actions Secrets 保存原正式密钥和密码。设置名称为 `ANDROID_KEYSTORE_B64`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`。将 Base64 直接输送给 GitHub Secrets CLI，并通过交互输入密码，避免把私密值传给命令参数、日志、仓库文件或聊天。安装包验签报告可以公开，密钥应保管在受控的原存放位置和安全备份中。[仓库 Actions Secrets](https://github.com/Lyuu508/DeepSeek-Niang/settings/secrets/actions)
 
-其他账号由仓库所有者赋予相应权限后可以触发「Authorized native release」，提供最新经测试的 main 提交 SHA 和已授权版本，勾选正式发布。Actions 在临时文件中完成签名和清理，流程核对原公开 APK、当前证书、同源构建和模拟器升级。使用 `build_only` 可以获得等待签名的正式身份候选，适用于暂时无法配置 Secrets 的发布过程。
+四项 Secrets 配置并经仓库所有者授权后，其他账号可以在同一仓库触发「Authorized native release」，填写经测试的 main 提交和明确授权的版本，勾选正式发布。Actions 在临时文件中完成签名和清理，并核对证书、同源构建和模拟器升级。`build_only` 会生成等待原密钥签名的候选包。[签名构建工作流](https://github.com/Lyuu508/DeepSeek-Niang/actions/workflows/release.yml)

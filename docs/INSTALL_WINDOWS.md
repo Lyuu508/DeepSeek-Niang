@@ -1,23 +1,23 @@
 # Windows 安装说明
 
-**v0.1.1 验收版**适用于 Windows 10/11 x64。EXE 随主客户端安装桌宠。[下载 EXE](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/DeepSeek-Niang_0.1.1_windows-x64-setup.exe)
+**v0.1.2 正式版**适用于 Windows 10/11 x64。EXE 随主客户端安装桌宠。[下载 EXE](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.2/DeepSeek-Niang_0.1.2_windows-x64-setup.exe)
 
 从「设置 → 语音与麦克风」试听朗读和原创唱段。Windows 使用系统安装的语音包。语音输入需要已安装的 whisper-cli 与本机模型。[语音使用与验收](phases/07-voice-singing.md)
 
 ## 安装步骤
 
 1. 已有用户先阅读[升级与数据保护](USAGE.md#升级与数据保护)，退出旧应用，保留当前用户应用数据目录的完整备份，不先卸载或删库。
-2. 下载 EXE 和同版校验清单，在文件目录运行以下命令。[SHA256SUMS.txt](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.1-acceptance.1/SHA256SUMS.txt)
+2. 下载 EXE 和同版校验清单，在文件目录运行以下命令。[SHA256SUMS.txt](https://github.com/Lyuu508/DeepSeek-Niang/releases/download/v0.1.2/SHA256SUMS.txt)
 
    ```powershell
-   Get-FileHash -Algorithm SHA256 .\DeepSeek-Niang_0.1.1_windows-x64-setup.exe
+   Get-FileHash -Algorithm SHA256 .\DeepSeek-Niang_0.1.2_windows-x64-setup.exe
    ```
 
    与清单逐字核对摘要；不一致时停止使用该文件。
-3. 运行安装器。v0.1.1 验收 EXE 未做 Authenticode 签名，系统可能显示未知发布者。请保留系统防护。
+3. 运行安装器。v0.1.2 EXE 未做 Authenticode 签名，系统可能显示未知发布者。请保留系统防护。
 4. 缺少 WebView2 时，从[微软官方页面](https://developer.microsoft.com/microsoft-edge/webview2/)安装 Evergreen Runtime 后再尝试启动。
 5. 打开“设置”验证安全存储，再输入自己的 DeepSeek API Key。聊天需要互联网和提供商额度；密钥由 Windows Credential Manager 保管。
-6. 两端均使用 v0.1.1 时，再通过扫码配对。扫码可向本次认证手机交接电脑已配置的模型服务，请仅向可信手机展示二维码。[连接说明](USAGE.md#连接电脑与手机)
+6. 两端均使用 v0.1.2 时，再通过扫码配对。扫码可向本次认证手机交接电脑已配置的模型服务，请仅向可信手机展示二维码。[连接说明](USAGE.md#连接电脑与手机)
 
 ## 显示桌宠
 

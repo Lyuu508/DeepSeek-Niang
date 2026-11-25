@@ -6,6 +6,6 @@
 - 聊天结合真实设备时间、人格、关系和生活活动。日常回复可分为多个短气泡，短时间内的连续输入可共用一次生成。
 - 人格虚拟兴趣可管理，保留原有聊天、关系、记忆和核心人设。
 
-Android 正式包 `io.local.deepseekcompanion` 使用原签名，版本代码为 1013。可覆盖同身份的原正式版。使用 v0.1.1 `.acceptance` 的设备请保留现有资料并核对对应的独立签名。文件的来源提交、构建和签名验证见附件中的 `BUILD-RESULTS.json`、`ANDROID-UPGRADE.json` 与 `SHA256SUMS.txt`。
+Windows 已在托管运行器验证从 v0.1.1 覆盖安装、窗口启动及 SQLite 备份。Android 正式包 `io.local.deepseekcompanion` 使用原签名，版本代码为 1013。Android 36 模拟器验证了覆盖 v0.0.1 原正式包、聊天界面和共同回忆。v0.1.1 `.acceptance` 采用独立包名与证书，当前未取得匹配的验收签名，请保留现有验收版和资料。文件来源提交、构建与签名验证见附件中的 `BUILD-RESULTS.json`、`ANDROID-UPGRADE.json`、`WINDOWS-UPGRADE.json` 和 `SHA256SUMS.txt`。
 
 安装后可从「本地数据」查看 schema 11 和数据库诊断。两台设备升级后可验证记忆、共同回忆和删除的同步。真实 DeepSeek 对话与实体设备验收使用由你在客户端管理的凭据。[实现与验收说明](https://github.com/Lyuu508/DeepSeek-Niang/blob/main/docs/V012_MEMORIES.md)
